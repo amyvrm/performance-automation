@@ -1,0 +1,9 @@
+<IntegrityRuleOverride id="${override_id}">
+	<SecurityProfileID>${security_profile_id}</SecurityProfileID>
+	<HostID isNull="true"/>
+	<IntegrityRuleID>${filter_id}</IntegrityRuleID>
+	<Alert isNull="true"/>
+	<AllowOnChange isNull="true"/>
+	<OverrideMetadata>true</OverrideMetadata>
+	<RecommendationsMode isNull="true"/>
+</IntegrityRuleOverride>

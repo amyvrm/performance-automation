@@ -1,0 +1,6 @@
+<PayloadFilter2MetadataOverride id="${metadata_override_id}">
+	<SecurityProfileID>${security_profile_id}</SecurityProfileID>
+	<HostID isNull="true"/>
+	<PayloadFilter2MetadataID>${filter_metadata_id}</PayloadFilter2MetadataID>
+	<Value>192.168.1.5,192.168.1.6</Value>
+</PayloadFilter2MetadataOverride>

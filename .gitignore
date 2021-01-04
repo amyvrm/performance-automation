@@ -1,0 +1,11 @@
+.idea
+scripts/Windows/filter_enable_diable.py
+src/__pycache__/
+automation.groovy
+server_upload.html
+update-info/
+update-packages/
+*stats.html
+*band.png
+pkg_path/
+templates/perf_policy_changed.xml

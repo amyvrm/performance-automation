@@ -1,0 +1,6 @@
+<PayloadFilter2MetadataOverride id="${metadata_override_id}">
+	<SecurityProfileID>${security_profile_id}</SecurityProfileID>
+	<HostID isNull="true"/>
+	<PayloadFilter2MetadataID>${filter_metadata_id}</PayloadFilter2MetadataID>
+	<Value>google.com,yahoo.com</Value>
+</PayloadFilter2MetadataOverride>
