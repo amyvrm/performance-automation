@@ -80,7 +80,7 @@ node(nodeLabel)
 							checkout changelog: false, poll: false, scm: [$class         : 'GitSCM',
 																		branches         : [[name: "${infra_branch}"]],
 																		extensions       : [[$class: 'RelativeTargetDirectory', relativeTargetDir: TERRAFORM_DIR]],
-																		userRemoteConfigs: [[credentialsId: 'ghe-token',
+																		userRemoteConfigs: [[credentialsId: 'su-dslabs-automation-token',
 																							url           : 'https://dsgithub.trendmicro.com/dslabs/performance-automation.git']]]
 						}
                         def machineIP = sh(script:'''/sbin/ifconfig eth0 | grep 'inet ' | awk '{print $2}' | cut -d: -f2 ''', returnStdout:true).trim()
