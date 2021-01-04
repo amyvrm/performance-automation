@@ -81,7 +81,7 @@ node(nodeLabel)
 																		branches         : [[name: "${infra_branch}"]],
 																		extensions       : [[$class: 'RelativeTargetDirectory', relativeTargetDir: TERRAFORM_DIR]],
 																		userRemoteConfigs: [[credentialsId: 'ghe-token',
-																							url           : 'https://dsgithub.trendmicro.com/amit-verma/infra-perf-auto.git']]]
+																							url           : 'https://dsgithub.trendmicro.com/dslabs/performance-automation.git']]]
 						}
                         def machineIP = sh(script:'''/sbin/ifconfig eth0 | grep 'inet ' | awk '{print $2}' | cut -d: -f2 ''', returnStdout:true).trim()
                         dockerOptions = "-v /tmp:/tmp -h ${machineIP}"
@@ -219,7 +219,8 @@ node(nodeLabel)
                                     msg += "${scenario[i]} Average Iteration: <${nexus_url}/${graph_file}|Bar Chart>\n\n"
                                 }
 							    msg += "Manifest File: <${nexus_url}/${machine_info}|Machine Details>"
-							    slackSend channel: 'dslabs_auto_monitoring', color: "good", message: "${msg}"
+							    //slackSend channel: 'dslabs_auto_monitoring', color: "good", message: "${msg}"
+							    slackSend channel: 'debug_amit', color: "good", message: "${msg}"
 							}
 						}
 						stage("Destroy Infra") {
@@ -243,7 +244,8 @@ node(nodeLabel)
 					    msg = "Pipeline: <${env.BUILD_URL}|Perform Automation> User: ${user_name}\n"
 					    msg += "${currentBuild.result}: :dot-red:\nError: ${e}\n"
 					    msg += "Infrastructure may be kept for Debug Purpose."
-						slackSend channel: 'dslabs_auto_monitoring', color: "good", message: "${msg}"
+						//slackSend channel: 'dslabs_auto_monitoring', color: "good", message: "${msg}"
+						slackSend channel: 'debug_amit', color: "good", message: "${msg}"
 						println(e)
 						throw e
 					} 
