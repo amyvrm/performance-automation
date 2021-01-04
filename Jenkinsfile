@@ -17,7 +17,7 @@ node(nodeLabel)
 		{
 			withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', accessKeyVariable: 'AWS_ACCESS_KEY_ID',credentialsId: 'STAGING_AWS', secretKeyVariable: 'AWS_SECRET_ACCESS_KEY']])
 		    {
-				def infra_branch = "performance"
+				def infra_branch = "master"
 				def dsm_package_url = params.DSM_PACKAGE_URL
 				def dsm_license_key = params.DSM_LICENSE_KEY
 				def agents = params.AGENTS
@@ -219,8 +219,7 @@ node(nodeLabel)
                                     msg += "${scenario[i]} Average Iteration: <${nexus_url}/${graph_file}|Bar Chart>\n\n"
                                 }
 							    msg += "Manifest File: <${nexus_url}/${machine_info}|Machine Details>"
-							    //slackSend channel: 'dslabs_auto_monitoring', color: "good", message: "${msg}"
-							    slackSend channel: 'debug_amit', color: "good", message: "${msg}"
+							    slackSend channel: 'dslabs_auto_monitoring', color: "good", message: "${msg}"
 							}
 						}
 						stage("Destroy Infra") {
@@ -244,8 +243,7 @@ node(nodeLabel)
 					    msg = "Pipeline: <${env.BUILD_URL}|Perform Automation> User: ${user_name}\n"
 					    msg += "${currentBuild.result}: :dot-red:\nError: ${e}\n"
 					    msg += "Infrastructure may be kept for Debug Purpose."
-						//slackSend channel: 'dslabs_auto_monitoring', color: "good", message: "${msg}"
-						slackSend channel: 'debug_amit', color: "good", message: "${msg}"
+						slackSend channel: 'dslabs_auto_monitoring', color: "good", message: "${msg}"
 						println(e)
 						throw e
 					} 
