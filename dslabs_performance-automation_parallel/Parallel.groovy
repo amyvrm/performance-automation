@@ -10,6 +10,7 @@ node('aws&&docker')
     def pkg = "update-packages"
     def msg = ""
     def user_name = "None"
+    def perf_pipeline = "Perf-Automation/test_pipelines/test-perf-scenario"
     def scenario = ["Server_Upload", "Server_Download", "Client_Download"]
 
     wrap([$class: 'BuildUser']) { user_name = "${env.BUILD_USER}" }
