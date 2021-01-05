@@ -33,7 +33,7 @@ node(nodeLabel)
                 def target_path = "Temp"
 				def bucket_name = "perf-auto-pkg"
 				def machine_info = "manifest.json"
-				def nexus_url = "https://dsnexus.trendmicro.com:8443/nexus/repository/dslabs/Performance-test/${env.BUILD_NUMBER}"
+				def nexus_url = "https://dsnexus.trendmicro.com:8443/nexus/repository/dslabs/performance-test/${env.JOB_BASE_NAME}/${env.BUILD_NUMBER}"
 				def stats = "stats.html"
 				def graph = "band.png"
 				def pkg = "update-packages"
