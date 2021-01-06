@@ -39,6 +39,7 @@ node(nodeLabel)
 				def machine_info = "manifest.json"
 				def msg = ""
 				def user_name = "None"
+				def pkg_name = ""
 				def scenario = [params.SCENARIO]
 
                 wrap([$class: 'BuildUser']) { user_name = "${env.BUILD_USER}" }
@@ -80,6 +81,7 @@ node(nodeLabel)
                                     }
                                     dsru_file = sh(script: "ls -1 ${WORKSPACE}/${MAIN_DIR}/${pkg}/*.dsru", returnStdout: true).trim()
 							        sh "java -jar dsrusigning/DSRUCrypt.jar decrypt ${dsru_file}/"
+							        env.pkg_name = sh(script: "basename ${dsru_file}", returnStdout: true).trim()
 							    }
 							    stage('Parse Package') {
 							        sh("python src/parse_update.py ${pkg}")
