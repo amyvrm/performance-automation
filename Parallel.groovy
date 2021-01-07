@@ -4,13 +4,13 @@ node('aws&&docker')
 {
     def dsru_file
     def nexus_url = "https://dsnexus.trendmicro.com:8443/nexus/repository/dslabs/performance-test"
+    def perf_pipeline = "Perf-Automation/test_pipelines/test-perf-scenario"
     def stats = "stats.html"
     def graph = "band.png"
     def machine_info = "manifest.json"
     def pkg = "update-packages"
     def msg = ""
     def user_name = "None"
-    def perf_pipeline = "Perf-Automation/test_pipelines/test-perf-scenario"
     def dsru_name = ""
     def scenario = ["Server_Upload", "Server_Download", "Client_Download"]
 
@@ -50,15 +50,15 @@ node('aws&&docker')
 
         stage("Parallel Perf Test") {
             parallel Server_Upload: {
-                dsru_name = server_upload()
+                dsru_name = server_upload(perf_pipeline, dsru_file)
             }, Server_Download: {
                 echo "Waiting 2 min before running parallel scenario pipeline"
                 sleep time: 2, unit: 'MINUTES'
-                dsru_name = server_download()
+                dsru_name = server_download(perf_pipeline, dsru_file)
             }, Client_Download: {
                 echo "Waiting 2 min before running parallel scenario pipeline"
                 sleep time: 2, unit: 'MINUTES'
-                dsru_name = client_download()
+                dsru_name = client_download(perf_pipeline, dsru_file)
             }
             failFast: true
         }
@@ -117,48 +117,51 @@ node('aws&&docker')
     }
 }
 
-def server_upload() {
+def server_upload(perf_pipeline, dsru_file) {
     scenario = "Server_Upload"
     echo "Calling ${scenario} test"
-    perf = build quietPeriod: 5, job: perf_pipeline, parameters: [string(name: 'DSM_PACKAGE_URL', value: params.DSM_PACKAGE_URL),
-                      credentials(description: 'DSM License Key for Automation', name: 'DSM_LICENSE_KEY', value: params.DSM_LICENSE_KEY),
-                      extendedChoice(name: 'AGENTS', value: params.AGENTS),
-                      text(name: 'AGENT_DOWNLOAD_URL', value: params.AGENT_DOWNLOAD_URL),
-                      string(name: 'PACKAGE_URL', value: dsru_file),
-                      string(name: 'SCENARIO', value: scenario),
-                      string(name: 'DEBUG', value: params.DEBUG)]
+    perf = build quietPeriod: 5, job: perf_pipeline,
+                 parameters: [string(name: 'DSM_PACKAGE_URL', value: params.DSM_PACKAGE_URL),
+                    credentials(description: 'DSM License Key for Automation', name: 'DSM_LICENSE_KEY', value: params.DSM_LICENSE_KEY),
+                    extendedChoice(name: 'AGENTS', value: params.AGENTS),
+                    text(name: 'AGENT_DOWNLOAD_URL', value: params.AGENT_DOWNLOAD_URL),
+                    string(name: 'PACKAGE_URL', value: dsru_file),
+                    string(name: 'SCENARIO', value: scenario),
+                    booleanParam(name: 'DEBUG', value: params.DEBUG)]
 
     copyArtifacts filter: "${scenario}_${stats}, ${scenario}_${graph} ${scenario}_${machine_info}",
                   projectName: perf_pipeline, selector: specific(perf.number)
     return perf.buildVariables.pkg_name
 }
 
-def server_download() {
+def server_download(perf_pipeline, dsru_file) {
     scenario = "Server_Download"
     echo "Calling ${scenario} test"
-    perf = build quietPeriod: 5, job: perf_pipeline, parameters: [string(name: 'DSM_PACKAGE_URL', value: params.DSM_PACKAGE_URL),
-                      credentials(description: 'DSM License Key for Automation', name: 'DSM_LICENSE_KEY', value: params.DSM_LICENSE_KEY),
-                      extendedChoice(name: 'AGENTS', value: params.AGENTS),
-                      text(name: 'AGENT_DOWNLOAD_URL', value: params.AGENT_DOWNLOAD_URL),
-                      string(name: 'PACKAGE_URL', value: dsru_file),
-                      string(name: 'SCENARIO', value: scenario),
-                      string(name: 'DEBUG', value: params.DEBUG)]
+    perf = build quietPeriod: 5, job: perf_pipeline,
+                 parameters: [string(name: 'DSM_PACKAGE_URL', value: params.DSM_PACKAGE_URL),
+                    credentials(description: 'DSM License Key for Automation', name: 'DSM_LICENSE_KEY', value: params.DSM_LICENSE_KEY),
+                    extendedChoice(name: 'AGENTS', value: params.AGENTS),
+                    text(name: 'AGENT_DOWNLOAD_URL', value: params.AGENT_DOWNLOAD_URL),
+                    string(name: 'PACKAGE_URL', value: dsru_file),
+                    string(name: 'SCENARIO', value: scenario),
+                    booleanParam(name: 'DEBUG', value: params.DEBUG)]
 
     copyArtifacts filter: "${scenario}_${stats}, ${scenario}_${graph}, ${scenario}_${machine_info}",
                   projectName: perf_pipeline, selector: specific(perf.number)
     return perf.buildVariables.pkg_name
 }
 
-def client_download() {
+def client_download(perf_pipeline, dsru_file) {
     scenario = "Client_Download"
     echo "Calling ${scenario} test"
-    perf = build quietPeriod: 5, job: perf_pipeline, parameters: [string(name: 'DSM_PACKAGE_URL', value: params.DSM_PACKAGE_URL),
-                      credentials(description: 'DSM License Key for Automation', name: 'DSM_LICENSE_KEY', value: params.DSM_LICENSE_KEY),
-                      extendedChoice(name: 'AGENTS', value: params.AGENTS),
-                      text(name: 'AGENT_DOWNLOAD_URL', value: params.AGENT_DOWNLOAD_URL),
-                      string(name: 'PACKAGE_URL', value: dsru_file),
-                      string(name: 'SCENARIO', value: scenario),
-                      string(name: 'DEBUG', value: params.DEBUG)]
+    perf = build quietPeriod: 5, job: perf_pipeline,
+                 parameters: [string(name: 'DSM_PACKAGE_URL', value: params.DSM_PACKAGE_URL),
+                    credentials(description: 'DSM License Key for Automation', name: 'DSM_LICENSE_KEY', value: params.DSM_LICENSE_KEY),
+                    extendedChoice(name: 'AGENTS', value: params.AGENTS),
+                    text(name: 'AGENT_DOWNLOAD_URL', value: params.AGENT_DOWNLOAD_URL),
+                    string(name: 'PACKAGE_URL', value: dsru_file),
+                    string(name: 'SCENARIO', value: scenario),
+                    booleanParam(name: 'DEBUG', value: params.DEBUG)]
 
     copyArtifacts filter: "${scenario}_${stats}, ${scenario}_${graph}, ${scenario}_${machine_info}",
                   projectName: perf_pipeline, selector: specific(perf.number)
