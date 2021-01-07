@@ -40,7 +40,6 @@ node(nodeLabel)
 				def msg = ""
 				def user_name = "None"
 				def pkg_name = ""
-				def scenario = params.SCENARIO
 
                 wrap([$class: 'BuildUser']) { user_name = "${env.BUILD_USER}" }
 				deleteDir()
