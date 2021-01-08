@@ -74,11 +74,12 @@ class PerfCommon(object):
         return html_header
 
     def run_band_test(self, suser, sip, spwd, s_priv_ip, cuser, cip, cpwd, c_priv_ip, scenario_name):
-        if scenario_name == "Client Download":
+        if scenario_name == "Server Download":
             # Run Nginx
             self.run_nginx(sip, suser, spwd)
             # Run Apache Bench
             self.run_ab(cip, cuser, cpwd, sip)
+
         self.clean(cip, cuser, cpwd)
         self.clean(sip, suser, spwd)
         time.sleep(4)
@@ -223,7 +224,7 @@ class PerfCommon(object):
         print("# Run Apache Bench #")
         self.clean_ab(ip, user, pwd)
         tool = "Powershell.exe"
-        cmd = "{}ab.exe -n 100 -c 10 http://{}/test.html".format(self.path, target_ip)
+        cmd = "{}ab.exe -n 100 -c 10 http://{}:80/test.html".format(self.path, target_ip)
         self.execute_cmd(cmd, ip, user, pwd, tool=tool, bandwidth=False, asynchronous=True)
 
     def disable_dsa(self, ip, user, pwd):

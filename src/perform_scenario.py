@@ -59,13 +59,21 @@ class PerformanceScenario(PerfCommon):
         if scenario == "Server_Upload" or scenario == "All":
             self.perf_scenario_test(cuser, cip, cpwd, c_priv_ip, suser, sip, spwd, s_priv_ip, "Server Upload")
         # Testing Server Upload Scenario based on discussion with Arun and Sunil on 7-Jan-2021
+        if scenario == "Server_Download" or scenario == "All":
+            if scenario == "All":
+                # Clean Rules from DSM
+                self.dsm.clean_rules_from_dsm()
+                # Enable both agents and filter
+                self.enable_agent_filter(sip, suser, spwd, cip, cuser, cpwd)
+            # Server Download
+            # Win 7 -> server
+            # Win 8 -> client
+            # --> Server side rule on server
+            # self.run_nginx(sip, suser, spwd) -> Server machine
+            # self.run_ab(cip, cuser, cpwd, sip) -> Client machine -> Reading
+            # 80,5001
+            self.perf_scenario_test(cuser, cip, cpwd, c_priv_ip, suser, sip, spwd, s_priv_ip, "Server Download")
         """
-        # Clean Rules from DSM
-        self.dsm.clean_rules_from_dsm()
-        # Enable both agents and filter
-        self.enable_agent_filter(sip, suser, spwd, cip, cuser, cpwd)
-        # Server Download
-        self.test_scenario(cip, cpwd, sip, spwd, c_priv_ip, s_priv_ip, cuser, suser, "Server Download")
         # Clean Rules from DSM
         self.dsm.clean_rules_from_dsm()
         # Enable both agents and filter

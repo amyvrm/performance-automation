@@ -39,7 +39,8 @@ node(nodeLabel)
 				def pkg = "update-packages"
 				def msg = ""
 				def user_name = "None"
-				def scenario = ["Server_Upload", "Server_Download", "Client_Download"]
+				//def scenario = ["Server_Upload", "Server_Download", "Client_Download"]
+				def scenario = ["Server_Upload", "Server_Download"]
 
                 wrap([$class: 'BuildUser']) { user_name = "${env.BUILD_USER}" }
 				deleteDir()
