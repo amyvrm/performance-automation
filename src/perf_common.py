@@ -47,7 +47,7 @@ class PerfCommon(object):
 
         ax.set_xlabel("Scenario", fontsize=16, alpha=0.8)
         ax.set_ylabel("Throughput (MBps)", fontsize=16, alpha=0.8)
-        ax.set_title("Server (Upload)", fontsize=18)
+        ax.set_title(scenario_name, fontsize=18)
         ax.set_xticklabels(scenario_sort, fontsize=14)
 
         # map names to colors
@@ -73,8 +73,8 @@ class PerfCommon(object):
                       "</head>\n<body>\n"
         return html_header
 
-    def run_band_test(self, sip, suser, spwd, cip, cuser, cpwd, s_priv_ip, c_priv_ip, scenario_name):
-        if scenario_name == "client_download":
+    def run_band_test(self, suser, sip, spwd, s_priv_ip, cuser, cip, cpwd, c_priv_ip, scenario_name):
+        if scenario_name == "Client Download":
             # Run Nginx
             self.run_nginx(sip, suser, spwd)
             # Run Apache Bench

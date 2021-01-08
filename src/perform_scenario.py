@@ -8,15 +8,16 @@ from get_machine_info import MachineInfo
 
 
 class PerformanceScenario(PerfCommon):
-    def __init__(self, machine_info, ver, access_key, secret_key, stats, graph, path_json, nexus_uname, nexus_pwd):
+    def __init__(self, machine_info, ver, access_key, secret_key, stats, graph, path_json, nexus_uname, nexus_pwd, scenario):
         machine = MachineInfo(machine_info)
         PerfCommon.__init__(self, stats, graph)
 
         grule = "1006436"
+        port = "80,5001"
         self.policy_name = "perf_policy"
         self.best_iteration = 5
 
-        self.dsm = DsmPolicy(ver, nexus_uname, nexus_pwd, machine, path_json, self.policy_name)
+        self.dsm = DsmPolicy(ver, nexus_uname, nexus_pwd, machine, path_json, self.policy_name, port)
         self.dsm.upload_basic_policy()
         self.dsm.apply_pkg_create_applied_rule_list()
 
@@ -48,7 +49,17 @@ class PerformanceScenario(PerfCommon):
         self.s_adap_name = self.get_adaptor_name(sip, suser, spwd)
         self.c_adap_name = self.get_adaptor_name(cip, cuser, cpwd)
         # Server Upload
-        self.test_scenario(sip, spwd, cip, cpwd, s_priv_ip, c_priv_ip, suser, cuser, "Server Upload")
+        # self.test_scenario(sip, spwd, cip, cpwd, s_priv_ip, c_priv_ip, suser, cuser, "Server Upload")
+        # Win 7 -> Client
+        # Win 8 -> Server
+        # --> Server side rule on server
+        # pcattcp(sip, suser, spwd) -> Server machine
+        # pcattcp(cip, cuser, cpwd, sip) -> Client machine -> Reading
+        # 80,5001
+        if scenario == "Server_Upload" or scenario == "All":
+            self.perf_scenario_test(cuser, cip, cpwd, c_priv_ip, suser, sip, spwd, s_priv_ip, "Server Upload")
+        # Testing Server Upload Scenario based on discussion with Arun and Sunil on 7-Jan-2021
+        """
         # Clean Rules from DSM
         self.dsm.clean_rules_from_dsm()
         # Enable both agents and filter
@@ -61,6 +72,79 @@ class PerformanceScenario(PerfCommon):
         self.enable_agent_filter(sip, suser, spwd, cip, cuser, cpwd)
         # Client Download
         self.test_scenario(sip, spwd, cip, cpwd, s_priv_ip, c_priv_ip, suser, cuser, "Client Download")
+        """
+
+    def perf_scenario_test(self, suser, sip, spwd, s_priv_ip, cuser, cip, cpwd, c_priv_ip, scenario_name):
+        print("{0}\n### {1} ###\n{0}".format("#" * 50, scenario_name))
+        # Disable Server filter
+        self.disable_filter(sip, suser, spwd, self.s_adap_name)
+        ################## Without Filter Driver ###########################
+        print("{0}\n# Without Filter Driver #\n{0}\n".format(self.header))
+        # Disable Server Agent
+        self.disable_dsa(sip, suser, spwd)
+        # Disable Client Agent
+        self.disable_dsa(cip, cuser, cpwd)
+        # Disable Client filter
+        self.disable_filter(cip, cuser, cpwd, self.c_adap_name)
+        print("{0}\nWaiting 2 min\n{3}-{1} and {4}-{2} Machines: Agent Disabled from DSM\n{3}-{1} Machine: Filter "
+              "Disabled from network driver\n{0}".format(self.header, cip, sip, self.ip_type[cip], self.ip_type[sip]))
+        time.sleep(120)
+        wo_filter_all_stats = self.run_band_test(suser, sip, spwd, s_priv_ip, cuser, cip, cpwd, c_priv_ip,scenario_name)
+        wo_filter_stats = wo_filter_all_stats[:self.best_iteration]
+        wof_avg = round(sum(map(float, wo_filter_stats)) / len(wo_filter_stats), 2)
+        print("{0}{0}\n- Without Filter Driver Bandwidth: {1}\n- Average Bandwidth: {2} MBps\n{0}{0}\n".format(
+            self.header, wo_filter_stats, wof_avg))
+        ################## With Filter Driver ###########################
+        print("{0}\n# With Filter Driver #\n{0}\n".format(self.header))
+        # Enable Client Filter
+        self.enable_filter(cip, cuser, cpwd, self.c_adap_name)
+        # Activate Cleint Agent
+        self.activate_dsa(cip, cuser, cpwd)
+        print("{0}\nWaiting 2 min\n{2}-{1} Machine: Agent Enabled from DSM\n{2}-{1} Machine: Filter Enabled "
+              "from Network Driver\n{0}".format(self.header, cip, self.ip_type[cip]))
+        time.sleep(120)
+        w_filter_all_stats = self.run_band_test(suser, sip, spwd, s_priv_ip, cuser, cip, cpwd, c_priv_ip,scenario_name)
+        w_filter_stats = w_filter_all_stats[:self.best_iteration]
+        wf_avg = round(sum(map(float, w_filter_stats)) / len(w_filter_stats), 2)
+        print("{0}{0}\n- With Filter Driver Bandwidth: {1}\n- Average Bandwidth: {2} MBps\n{0}{0}\n".format(self.header,
+                                                                                                            w_filter_stats,
+                                                                                                            wf_avg))
+        ################## With 1 Good Server Rule ###########################
+        print("{0}\n# With {1} Good Server Rule with Dependency #\n{0}\n".format(self.header, self.grule_list))
+        # 1006436
+        identifier = self.dsm.apply_rule(rule_list=self.grule_list)
+        print("{0}{0}\nWaiting 2 min After {1} Good Rule Applied \n{0}{0}".format(self.header, identifier))
+        time.sleep(120)
+        good_rule_all_stats = self.run_band_test(suser, sip, spwd, s_priv_ip, cuser, cip, cpwd, c_priv_ip,scenario_name)
+        good_rule = good_rule_all_stats[:self.best_iteration]
+        gr_avg = round(sum(map(float, good_rule)) / len(good_rule), 2)
+        print("{0}{0}\n- With 1 Good Server Rule: {1}\n- Average Bandwidth: {2} MBps\n{0}{0}\n".format(self.header,
+                                                                                                       good_rule,
+                                                                                                       gr_avg))
+        ################## With All Server side rule ###########################
+        print("{0}\n# With All Server side rule #\n{0}\n".format(self.header))
+        identifier = self.dsm.apply_rule()
+        print("{0}{0}\nWaiting 2 min, After {1} Rule Applied\n{0}{0}".format(self.header, identifier))
+        time.sleep(120)
+        with_all_server_rule_all_stats = self.run_band_test(suser, sip, spwd, s_priv_ip, cuser, cip, cpwd, c_priv_ip,scenario_name)
+        with_all_server_rule = with_all_server_rule_all_stats[:self.best_iteration]
+        all_rule_avg = round(sum(map(float, with_all_server_rule)) / len(with_all_server_rule), 2)
+        print("{0}{0}\n- With All Server side rule: {1}\n- Average Bandwidth: {2} MBps\n{0}{0}\n".format(self.header,
+                                                                                                         with_all_server_rule,
+                                                                                                         all_rule_avg))
+        wo_filter_stats.append(wof_avg)
+        w_filter_stats.append(wf_avg)
+        good_rule.append(gr_avg)
+        with_all_server_rule.append(all_rule_avg)
+        ############################### Scenrario complete ###################################
+        print("- Without filter: {}\n- With filter: {}\n- One-Good Rule: {}\n- All Server Rule: {}".format(
+            wo_filter_stats, w_filter_stats, good_rule, with_all_server_rule))
+        df = pd.DataFrame([wo_filter_stats, w_filter_stats, good_rule, with_all_server_rule], index=self.col,
+                          columns=self.title)
+        # Create Html
+        self.create_html_table(df, scenario_name)
+        # Create Bar Diagram
+        self.create_bar_chart([wof_avg, wf_avg, gr_avg, all_rule_avg], scenario_name)
 
     def test_scenario(self, sip, spwd, cip, cpwd, s_priv_ip, c_priv_ip, suser, cuser, scenario_name):
         print("{0}\n### {1} ###\n{0}".format("#" * 50, scenario_name))
@@ -157,6 +241,7 @@ if __name__ == '__main__':
     parser.add_argument('--path', type=str, help="Graph file name")
     parser.add_argument('--uname', type=str, help="Nexus username")
     parser.add_argument('--pwd', type=str, help="Nexus password")
+    parser.add_argument('--scenario', type=str, help="Scenario name to test")
     args = parser.parse_args()
 
     with open(args.machine_info) as fout:
@@ -165,5 +250,6 @@ if __name__ == '__main__':
                                    args.dsm_version,
                                    args.access_key, args.secret_key,
                                    args.stats, args.graph, args.path,
-                                   args.uname, args.pwd
+                                   args.uname, args.pwd,
+                                   args.scenario
                                    )

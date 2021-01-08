@@ -14,9 +14,10 @@ from get_machine_info import MachineInfo
 
 
 class DsmPolicy(object):
-    def __init__(self, dsm_ver, nexus_uname, nexus_pwd, machine, path, policy_name):
+    def __init__(self, dsm_ver, nexus_uname, nexus_pwd, machine, path, policy_name, port):
         dsm_ip = machine.get_dsm_public_ip()
         self.policy_name = policy_name
+        self.port = port
         self.pkg_path = path
         urllib3.disable_warnings()
         self.wsdl_url = f"https://{dsm_ip}:4119/webservice/Manager?WSDL"
@@ -65,7 +66,7 @@ class DsmPolicy(object):
         fname = self.get_policy()
         if change_policy:
             dest_fname = os.path.join("templates", "perf_policy_changed.xml")
-            fname = DsmPolicy.override_portlist(fname, dest_fname)
+            fname = self.override_portlist(fname, dest_fname)
 
         xml_root = ET.parse(fname)
         xml_root = xml_root.getroot()
@@ -108,8 +109,7 @@ class DsmPolicy(object):
         self.session.post(self.import_policy_url, data=data)
         time.sleep(20)
 
-    @staticmethod
-    def override_portlist(source_fname, dest_fname):
+    def override_portlist(self, source_fname, dest_fname):
         print("{0}\n# Updating policy for perf test port list #\n{0}".format("#" * 50))
         port1, port2 = "PortLists", "PortList"
         with open(os.path.join("update-info", "port_list.txt"), "r") as f:
@@ -132,7 +132,7 @@ class DsmPolicy(object):
                 gchild = ET.SubElement(child, "Description")
                 gchild.text = "Assigning 5001 port for perf test"
                 gchild = ET.SubElement(child, "Items")
-                gchild.text = "5001"
+                gchild.text = self.port
                 gchild = ET.SubElement(child, "Version")
                 gchild.text = port_info["Version"]
                 gchild = ET.SubElement(child, "UserEdited")

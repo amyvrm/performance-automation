@@ -33,7 +33,7 @@ node(nodeLabel)
                 def target_path = "Temp"
 				def bucket_name = "perf-auto-pkg"
 				def machine_info = "manifest.json"
-				def nexus_url = "https://dsnexus.trendmicro.com:8443/nexus/repository/dslabs/performance-test/${env.JOB_BASE_NAME}/${env.BUILD_NUMBER}"
+				def nexus_url = "https://dsnexus.trendmicro.com:8443/nexus/repository/dslabs/performance-test/${env.JOB_BASE_NAME}"
 				def stats = "stats.html"
 				def graph = "band.png"
 				def pkg = "update-packages"
@@ -162,7 +162,8 @@ node(nodeLabel)
                                                                        --graph ${graph} \
                                                                        --path ${pkg} \
                                                                        --uname ${NEX_USER} \
-                                                                       --pwd ${NEX_PASS}")
+                                                                       --pwd ${NEX_PASS} \
+                                                                       --scenario All")
                                     }
                                     sh "ls -1"
                                     archiveArtifacts allowEmptyArchive: true,
@@ -188,6 +189,8 @@ node(nodeLabel)
 							}
 							currentBuild.result = 'SUCCESS'
 							stage("Nexus Upload") {
+							    dsru_name = sh(script: "basename ${dsru_file}", returnStdout: true).trim()
+							    nexus_url = "${nexus_url}/${dsru_name}/${env.BUILD_NUMBER}"
 							    withCredentials([usernamePassword(credentialsId: 'dslabs-nexus', usernameVariable: "NEX_USER",
 							                                      passwordVariable: 'NEX_PASS')]) {
                                     def manifest_file = sh(script: "ls -1 ${WORKSPACE}/${MAIN_DIR}/${machine_info}", returnStdout: true).trim()
