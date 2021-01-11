@@ -224,8 +224,8 @@ class PerfCommon(object):
         print("# Run Apache Bench #")
         self.clean_ab(ip, user, pwd)
         tool = "Powershell.exe"
-        cmd = "{}ab.exe -n 100 -c 10 http://{}:80/test.html".format(self.path, target_ip)
-        self.execute_cmd(cmd, ip, user, pwd, tool=tool, bandwidth=False, asynchronous=True)
+        cmd = "{}ab.exe -n 100 -c 10 http://{}/test.html".format(self.path, target_ip)
+        self.execute_cmd(cmd, ip, user, pwd, tool=tool, bandwidth=False, asynchronous=False)
 
     def disable_dsa(self, ip, user, pwd):
         print("{0}\n # {2}-{1} Disable DSA #\n{0}".format(self.header, ip, self.ip_type[ip]))
