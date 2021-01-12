@@ -23,6 +23,7 @@ node(nodeLabel)
 				def agents = params.AGENTS
 				def agents_download_urls = params.AGENT_DOWNLOAD_URL
 				def destroy_param = "null"
+				def scenario = params.SCENARIO
 				def debug = params.DEBUG
                 def dsru_file
 
@@ -164,7 +165,7 @@ node(nodeLabel)
                                                                        --path ${pkg} \
                                                                        --uname ${NEX_USER} \
                                                                        --pwd ${NEX_PASS} \
-                                                                       --scenario All")
+                                                                       --scenario ${scenario}")
                                     }
                                     sh "ls -1"
                                     archiveArtifacts allowEmptyArchive: true,
@@ -223,8 +224,8 @@ node(nodeLabel)
                                     msg += "${scenario[i]} Average Iteration: <${nexus_url}/${graph_file}|Bar Chart>\n\n"
                                 }
 							    msg += "Manifest File: <${nexus_url}/${machine_info}|Machine Details>"
-							    slackSend channel: 'dslabs_auto_monitoring', color: "good", message: "${msg}"
-							    //slackSend channel: 'debug_amit', color: "good", message: "${msg}"
+							    //slackSend channel: 'dslabs_auto_monitoring', color: "good", message: "${msg}"
+							    slackSend channel: 'debug_amit', color: "good", message: "${msg}"
 							}
 						}
 						stage("Destroy Infra") {
@@ -248,8 +249,8 @@ node(nodeLabel)
 					    msg = "Pipeline: <${env.BUILD_URL}|Perform Automation> User: ${user_name}\n"
 					    msg += "${currentBuild.result}: :dot-red:\nError: ${e}\n"
 					    msg += "Infrastructure may be kept for Debug Purpose."
-						slackSend channel: 'dslabs_auto_monitoring', color: "good", message: "${msg}"
-						//slackSend channel: 'debug_amit', color: "good", message: "${msg}"
+						//slackSend channel: 'dslabs_auto_monitoring', color: "danger", message: "${msg}"
+						slackSend channel: 'debug_amit', color: "danger", message: "${msg}"
 						println(e)
 						throw e
 					} 

@@ -17,9 +17,10 @@ class PerformanceScenario(PerfCommon):
         self.policy_name = "perf_policy"
         self.best_iteration = 5
 
-        self.dsm = DsmPolicy(ver, nexus_uname, nexus_pwd, machine, path_json, self.policy_name, port)
+        self.dsm = DsmPolicy(ver, nexus_uname, nexus_pwd, machine, path_json, self.policy_name, port,
+                             self.server_rule_file, self.client_rule_file)
         self.dsm.upload_basic_policy()
-        self.dsm.apply_pkg_create_applied_rule_list()
+        self.dsm.apply_pkg_create_applied_rule_list(self.rule_file)
 
         instance1 = machine.get_instance_one_id()
         instance2 = machine.get_instance_two_id()
@@ -36,10 +37,9 @@ class PerformanceScenario(PerfCommon):
         cpwd = PerformanceScenario.get_pwd(region, access_key, secret_key, instance2, pem_file, "Client")
 
         # Get the Server Rule and dependency with portlist
-        self.grule_list, identifier = self.get_dependency_portlist(path_json, grule)
+        self.grule_list, self.server_rule, self.client_rules = self.get_dependency_portlist(path_json, grule)
         self.dsm.upload_basic_policy(change_policy=True)
-        self.col = ['Without Filter Driver', 'With Filter Driver + No Rule', 'One Good Rule',
-                    'Server Rule (No. of Rules: {})'.format(len(identifier))]
+        self.col = ['Without Filter Driver', 'With Filter Driver + No Rule', 'One Good Rule']
         self.title = ["iter-1 (MB/s)", "iter-2 (MB/s)", "iter-3 (MB/s)", "iter-4 (MB/s)", "iter-5 (MB/s)",
                       "Average (MB/s)"]
         self.path = machine.get_pkg_path()
@@ -57,6 +57,8 @@ class PerformanceScenario(PerfCommon):
         # pcattcp(cip, cuser, cpwd, sip) -> Client machine -> Reading
         # 80,5001
         if scenario == "Server_Upload" or scenario == "All":
+            print("Server Machine Public IP:{}, Private IP: {}".format(sip, s_priv_ip))
+            print("Client Machine Public IP:{}, Private IP: {}".format(cip, c_priv_ip))
             self.perf_scenario_test(cuser, cip, cpwd, c_priv_ip, suser, sip, spwd, s_priv_ip, "Server Upload")
         # Testing Server Upload Scenario based on discussion with Arun and Sunil on 7-Jan-2021
         if scenario == "Server_Download" or scenario == "All":
@@ -72,7 +74,25 @@ class PerformanceScenario(PerfCommon):
             # self.run_nginx(sip, suser, spwd) -> Server machine
             # self.run_ab(cip, cuser, cpwd, sip) -> Client machine -> Reading
             # 80,5001
+            print("Server Machine Public IP:{}, Private IP: {}".format(sip, s_priv_ip))
+            print("Client Machine Public IP:{}, Private IP: {}".format(cip, c_priv_ip))
             self.perf_scenario_test(cuser, cip, cpwd, c_priv_ip, suser, sip, spwd, s_priv_ip, "Server Download")
+        if scenario == "Client_Download" or scenario == "All":
+            if scenario == "All":
+                # Clean Rules from DSM
+                self.dsm.clean_rules_from_dsm()
+                # Enable both agents and filter
+                self.enable_agent_filter(sip, suser, spwd, cip, cuser, cpwd)
+            # Server Download
+            # Win 7 -> server
+            # Win 8 -> client
+            # --> Server side rule on server
+            # self.run_nginx(sip, suser, spwd) -> Server machine
+            # self.run_ab(cip, cuser, cpwd, sip) -> Client machine -> Reading
+            # 80,5001
+            print("Server Machine Public IP:{}, Private IP: {}".format(sip, s_priv_ip))
+            print("Client Machine Public IP:{}, Private IP: {}".format(cip, c_priv_ip))
+            self.perf_scenario_test(cuser, cip, cpwd, c_priv_ip, suser, sip, spwd, s_priv_ip, "Client Download")
         """
         # Clean Rules from DSM
         self.dsm.clean_rules_from_dsm()
@@ -120,7 +140,7 @@ class PerformanceScenario(PerfCommon):
         ################## With 1 Good Server Rule ###########################
         print("{0}\n# With {1} Good Server Rule with Dependency #\n{0}\n".format(self.header, self.grule_list))
         # 1006436
-        identifier = self.dsm.apply_rule(rule_list=self.grule_list)
+        identifier = self.dsm.apply_rule(scenario_name, rule_list=self.grule_list)
         print("{0}{0}\nWaiting 2 min After {1} Good Rule Applied \n{0}{0}".format(self.header, identifier))
         time.sleep(120)
         good_rule_all_stats = self.run_band_test(suser, sip, spwd, s_priv_ip, cuser, cip, cpwd, c_priv_ip,scenario_name)
@@ -130,8 +150,7 @@ class PerformanceScenario(PerfCommon):
                                                                                                        good_rule,
                                                                                                        gr_avg))
         ################## With All Server side rule ###########################
-        print("{0}\n# With All Server side rule #\n{0}\n".format(self.header))
-        identifier = self.dsm.apply_rule()
+        identifier = self.dsm.apply_rule(scenario_name)
         print("{0}{0}\nWaiting 2 min, After {1} Rule Applied\n{0}{0}".format(self.header, identifier))
         time.sleep(120)
         with_all_server_rule_all_stats = self.run_band_test(suser, sip, spwd, s_priv_ip, cuser, cip, cpwd, c_priv_ip,scenario_name)
@@ -146,7 +165,11 @@ class PerformanceScenario(PerfCommon):
         with_all_server_rule.append(all_rule_avg)
         ############################### Scenrario complete ###################################
         print("- Without filter: {}\n- With filter: {}\n- One-Good Rule: {}\n- All Server Rule: {}".format(
-            wo_filter_stats, w_filter_stats, good_rule, with_all_server_rule))
+              wo_filter_stats, w_filter_stats, good_rule, with_all_server_rule))
+        if scenario_name == "Server Upload" or scenario_name == "Server Download":
+            self.col.append('Server Rule (No. of Rules: {})'.format(len(self.server_rule)))
+        elif scenario_name == "Client Download":
+            self.col.append('Client Rule (No. of Rules: {})'.format(len(self.client_rules)))
         df = pd.DataFrame([wo_filter_stats, w_filter_stats, good_rule, with_all_server_rule], index=self.col,
                           columns=self.title)
         # Create Html
@@ -155,7 +178,7 @@ class PerformanceScenario(PerfCommon):
         self.create_bar_chart([wof_avg, wf_avg, gr_avg, all_rule_avg], scenario_name)
 
     def test_scenario(self, sip, spwd, cip, cpwd, s_priv_ip, c_priv_ip, suser, cuser, scenario_name):
-        print("{0}\n### {1} ###\n{0}".format("#" * 50, scenario_name))
+        print("{0}\n### {1} ###\n{0}".format("#"*50, scenario_name))
         # Disable Server filter
         self.disable_filter(sip, suser, spwd, self.s_adap_name)
         ################## Without Filter Driver ###########################
