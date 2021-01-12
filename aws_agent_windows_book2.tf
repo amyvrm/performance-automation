@@ -64,14 +64,14 @@ resource "aws_instance" "dsa_windows_machine_2" {
 		destination = "C:/temp/install_openssh.ps1"
 	}
 
-	provisioner "file" {
-		source      = "${var.pkg_path}/nginx-1.19.2ready.zip"
-		destination = "C:/temp/nginx-1.19.2ready.zip"
-	}
-	provisioner "file" {
-		source      = "${var.script_file_path}//Windows/install_nginx.ps1"
-		destination = "C:/temp/install_nginx.ps1"
-	}
+//	provisioner "file" {
+//		source      = "${var.pkg_path}/nginx-1.19.2ready.zip"
+//		destination = "C:/temp/nginx-1.19.2ready.zip"
+//	}
+//	provisioner "file" {
+//		source      = "${var.script_file_path}//Windows/install_nginx.ps1"
+//		destination = "C:/temp/install_nginx.ps1"
+//	}
 
 	provisioner "remote-exec"  {
 		inline = [
@@ -79,7 +79,7 @@ resource "aws_instance" "dsa_windows_machine_2" {
 					"powershell.exe -File C:\\temp\\install_pcattcp.ps1",
 					"powershell.exe -File C:\\temp\\install_ab.ps1",
 					"powershell.exe -File C:\\temp\\install_openssh.ps1",
-					"powershell.exe -File C:\\temp\\install_nginx.ps1",
+//					"powershell.exe -File C:\\temp\\install_nginx.ps1",
 				]
 	}
 }

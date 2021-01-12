@@ -39,6 +39,7 @@ resource "aws_instance" "dsa_windows_machine" {
 		source      = "${var.script_file_path}/AgentDeploymentScript/WindowsAgentDeploymentScript.ps1"
 		destination = "C:/temp/WindowsAgentDeploymentScript.ps1"
 	}
+
 	provisioner "file" {
 		source      = "${var.pkg_path}/PCATTCP.zip"
 		destination = "C:/temp/PCATTCP.zip"
@@ -62,14 +63,14 @@ resource "aws_instance" "dsa_windows_machine" {
 		destination = "C:/temp/install_openssh.ps1"
 	}
 
-	provisioner "file" {
-		source      = "${var.pkg_path}/ab.exe"
-		destination = "C:/temp/ab.exe"
-	}
-	provisioner "file" {
-		source      = "${var.script_file_path}//Windows/install_ab.ps1"
-		destination = "C:/temp/install_ab.ps1"
-	}
+//	provisioner "file" {
+//		source      = "${var.pkg_path}/ab.exe"
+//		destination = "C:/temp/ab.exe"
+//	}
+//	provisioner "file" {
+//		source      = "${var.script_file_path}//Windows/install_ab.ps1"
+//		destination = "C:/temp/install_ab.ps1"
+//	}
 	
 	provisioner "remote-exec"  {
 		inline = [
@@ -77,7 +78,7 @@ resource "aws_instance" "dsa_windows_machine" {
 					"powershell.exe -File C:\\temp\\install_pcattcp.ps1",
 					"powershell.exe -File C:\\temp\\install_nginx.ps1",
 					"powershell.exe -File C:\\temp\\install_openssh.ps1",
-					"powershell.exe -File C:\\temp\\install_ab.ps1",
+//					"powershell.exe -File C:\\temp\\install_ab.ps1",
 				]
 	}
 }
