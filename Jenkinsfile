@@ -23,7 +23,7 @@ node(nodeLabel)
 				def agents = params.AGENTS
 				def agents_download_urls = params.AGENT_DOWNLOAD_URL
 				def destroy_param = "null"
-				def scenario = params.SCENARIO
+				def scenario_name = params.SCENARIO
 				def debug = params.DEBUG
                 def dsru_file
 
@@ -40,8 +40,8 @@ node(nodeLabel)
 				def pkg = "update-packages"
 				def msg = ""
 				def user_name = "None"
-				//def scenario = ["Server_Upload", "Server_Download", "Client_Download"]
-				def scenario = ["Server_Upload", "Server_Download"]
+				def scenario = ["Server_Upload", "Server_Download", "Client_Download"]
+				//def scenario = ["Server_Upload", "Server_Download"]
 
                 wrap([$class: 'BuildUser']) { user_name = "${env.BUILD_USER}" }
 				deleteDir()
@@ -165,7 +165,7 @@ node(nodeLabel)
                                                                        --path ${pkg} \
                                                                        --uname ${NEX_USER} \
                                                                        --pwd ${NEX_PASS} \
-                                                                       --scenario ${scenario}")
+                                                                       --scenario ${scenario_name}")
                                     }
                                     sh "ls -1"
                                     archiveArtifacts allowEmptyArchive: true,
