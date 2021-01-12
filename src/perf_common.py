@@ -94,10 +94,10 @@ class PerfCommon(object):
             self.clean(sip, suser, spwd)
             time.sleep(4)
             # receiver
-            pid = self.run_pcattcp_rec(cip, cuser, cpwd, s_priv_ip, asynchronous=True)
+            pid = self.run_pcattcp_rec(sip, suser, spwd, c_priv_ip, asynchronous=True)
             time.sleep(2)
             # transmitter
-            through_put = self.run_pcattcp_tran(sip, suser, spwd, c_priv_ip, bandwidth=True)
+            through_put = self.run_pcattcp_tran(cip, cuser, cpwd, s_priv_ip, bandwidth=True)
             print("Through put: {}".format(through_put))
             # print("sum: {}, len: {}, Average: {} MBps".format(sum(map(float, through_put)), len(through_put),
             #                                                   round(sum(map(float, through_put)) / len(through_put), 2)))

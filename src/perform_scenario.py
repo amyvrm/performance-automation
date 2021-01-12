@@ -59,7 +59,7 @@ class PerformanceScenario(PerfCommon):
         if scenario == "Server_Upload" or scenario == "All":
             print("Server Machine Public IP:{}, Private IP: {}".format(sip, s_priv_ip))
             print("Client Machine Public IP:{}, Private IP: {}".format(cip, c_priv_ip))
-            self.perf_scenario_test(cuser, cip, cpwd, c_priv_ip, suser, sip, spwd, s_priv_ip, "Server Upload")
+            self.perf_scenario_test(suser, sip, spwd, s_priv_ip, cuser, cip, cpwd, c_priv_ip, "Server Upload")
         # Testing Server Upload Scenario based on discussion with Arun and Sunil on 7-Jan-2021
         if scenario == "Server_Download" or scenario == "All":
             if scenario == "All":
