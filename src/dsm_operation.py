@@ -15,7 +15,8 @@ from get_machine_info import MachineInfo
 
 class DsmPolicy(object):
     def __init__(self, dsm_ver, nexus_uname, nexus_pwd, machine, path, policy_name, port, server_rule, client_rule):
-        dsm_ip = machine.get_dsm_public_ip()
+        # dsm_ip = machine.get_dsm_public_ip()
+        dsm_ip = "35.183.177.170"
         self.header = "-" * 50
         self.policy_name = policy_name
         self.port = port

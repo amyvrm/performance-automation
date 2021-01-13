@@ -84,20 +84,27 @@ class PerfCommon(object):
         return html_header
 
     def run_band_test(self, suser, sip, spwd, s_priv_ip, cuser, cip, cpwd, c_priv_ip, scenario_name):
-        if scenario_name == "Server Download" or scenario_name == "Client Download":
+        if scenario_name == "Server Download":
             # Run Nginx
             self.run_nginx(cip, cuser, cpwd)
             # Run Apache Bench
             through_put = self.run_ab(sip, suser, spwd, c_priv_ip)
-        else:
+            print("Through put: {}".format(through_put))
+        elif scenario_name == "Client Download":
+            # Run Nginx
+            self.run_nginx(sip, suser, spwd)
+            # Run Apache Bench
+            through_put = self.run_ab(cip, cuser, cpwd, s_priv_ip)
+            print("Through put: {}".format(through_put))
+        elif scenario_name == "Server Upload":
             self.clean(cip, cuser, cpwd)
             self.clean(sip, suser, spwd)
             time.sleep(4)
             # receiver
-            pid = self.run_pcattcp_rec(sip, suser, spwd, c_priv_ip, asynchronous=True)
+            pid = self.run_pcattcp_rec(cip, cuser, cpwd, s_priv_ip, asynchronous=True)
             time.sleep(2)
             # transmitter
-            through_put = self.run_pcattcp_tran(cip, cuser, cpwd, s_priv_ip, bandwidth=True)
+            through_put = self.run_pcattcp_tran(sip, suser, spwd, c_priv_ip, bandwidth=True)
             print("Through put: {}".format(through_put))
             # print("sum: {}, len: {}, Average: {} MBps".format(sum(map(float, through_put)), len(through_put),
             #                                                   round(sum(map(float, through_put)) / len(through_put), 2)))
@@ -227,12 +234,13 @@ class PerfCommon(object):
         return self.execute_cmd(cmd, ip, user, pwd, tool=tool)
 
     def run_pcattcp_rec(self, ip, user, pwd, target_ip, asynchronous=False):
-        print("# run_pcattcp_rec #")
+        print("# Run PCATTCP on {}-{} #".format(self.ip_type[ip], ip))
         tool = "Powershell.exe"
         cmd = '{}PCATTCP\PCATTCP.exe -r -l 490000 {} -c'.format(self.path, target_ip)
         return self.execute_cmd(cmd, ip, user, pwd, tool=tool, bandwidth=False, asynchronous=asynchronous)
 
     def run_pcattcp_tran(self, ip, user, pwd, target_ip, bandwidth=False, asynchronous=False):
+        print("# Run PCATTCP on {}-{} and take Reading #".format(self.ip_type[ip], ip))
         print("# run_pcattcp_tran #")
         tool = "Powershell.exe"
         cmd = '{}PCATTCP\PCATTCP.exe -t -l 490000 {}'.format(self.path, target_ip)
@@ -249,7 +257,7 @@ class PerfCommon(object):
         print("# Run Apache Bench {}-{} #".format(self.ip_type[ip], ip))
         self.clean_ab(ip, user, pwd)
         tool = "Powershell.exe"
-        cmd = "{}ab.exe -n 100 -c 10 http://{}/test.html".format(self.path, target_ip)
+        cmd = "{}ab.exe -n 100 -c 10 http://{}/test.htm".format(self.path, target_ip)
         return self.execute_cmd(cmd, ip, user, pwd, tool=tool, bandwidth=True, asynchronous=False)
 
     def disable_dsa(self, ip, user, pwd):
@@ -347,7 +355,7 @@ class PerfCommon(object):
         client_rules_iden = client_rules[:]
         print("{}\nClient Rules: {}\nDependency of Client Rules: {}".format("*" * 100, client_rules, client_dep_rules))
         print("Good Rule with Dependency: {}\nNon DPI Rule: {}\n".format(grule_list, non_dpi_rules))
-        print("\nPortList: {}\n\n{}".format(port_list, "*"*100))
+        print("PortList: {}\n{}".format(port_list, "*"*100))
 
         if len(all_dep_rules) > 0:
             server_rules.extend(list(all_dep_rules))

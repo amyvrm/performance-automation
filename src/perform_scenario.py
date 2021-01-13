@@ -39,7 +39,6 @@ class PerformanceScenario(PerfCommon):
         # Get the Server Rule and dependency with portlist
         self.grule_list, self.server_rule, self.client_rules = self.get_dependency_portlist(path_json, grule)
         self.dsm.upload_basic_policy(change_policy=True)
-        self.col = ['Without Filter Driver', 'With Filter Driver + No Rule', 'One Good Rule']
         self.title = ["iter-1 (MB/s)", "iter-2 (MB/s)", "iter-3 (MB/s)", "iter-4 (MB/s)", "iter-5 (MB/s)",
                       "Average (MB/s)"]
         self.path = machine.get_pkg_path()
@@ -57,8 +56,9 @@ class PerformanceScenario(PerfCommon):
         # pcattcp(cip, cuser, cpwd, sip) -> Client machine -> Reading
         # 80,5001
         if scenario == "Server_Upload" or scenario == "All":
-            print("Server Machine Public IP:{}, Private IP: {}".format(sip, s_priv_ip))
-            print("Client Machine Public IP:{}, Private IP: {}".format(cip, c_priv_ip))
+            self.ip_type = {cip: "Server", sip: "Client"}
+            print("Server Machine Public IP:{}, Private IP: {}".format(cip, c_priv_ip))
+            print("Client Machine Public IP:{}, Private IP: {}".format(sip, s_priv_ip))
             self.perf_scenario_test(suser, sip, spwd, s_priv_ip, cuser, cip, cpwd, c_priv_ip, "Server Upload")
         # Testing Server Upload Scenario based on discussion with Arun and Sunil on 7-Jan-2021
         if scenario == "Server_Download" or scenario == "All":
@@ -74,6 +74,7 @@ class PerformanceScenario(PerfCommon):
             # self.run_nginx(sip, suser, spwd) -> Server machine
             # self.run_ab(cip, cuser, cpwd, sip) -> Client machine -> Reading
             # 80,5001
+            self.ip_type = {sip: "Server", cip: "Client"}
             print("Server Machine Public IP:{}, Private IP: {}".format(sip, s_priv_ip))
             print("Client Machine Public IP:{}, Private IP: {}".format(cip, c_priv_ip))
             self.perf_scenario_test(cuser, cip, cpwd, c_priv_ip, suser, sip, spwd, s_priv_ip, "Server Download")
@@ -90,9 +91,10 @@ class PerformanceScenario(PerfCommon):
             # self.run_nginx(sip, suser, spwd) -> Server machine
             # self.run_ab(cip, cuser, cpwd, sip) -> Client machine -> Reading
             # 80,5001
+            self.ip_type = {sip: "Server", cip: "Client"}
             print("Server Machine Public IP:{}, Private IP: {}".format(sip, s_priv_ip))
             print("Client Machine Public IP:{}, Private IP: {}".format(cip, c_priv_ip))
-            self.perf_scenario_test(cuser, cip, cpwd, c_priv_ip, suser, sip, spwd, s_priv_ip, "Client Download")
+            self.perf_scenario_test(suser, sip, spwd, s_priv_ip, cuser, cip, cpwd, c_priv_ip, "Client Download")
         """
         # Clean Rules from DSM
         self.dsm.clean_rules_from_dsm()
@@ -166,6 +168,7 @@ class PerformanceScenario(PerfCommon):
         ############################### Scenrario complete ###################################
         print("- Without filter: {}\n- With filter: {}\n- One-Good Rule: {}\n- All Server Rule: {}".format(
               wo_filter_stats, w_filter_stats, good_rule, with_all_server_rule))
+        self.col = ['Without Filter Driver', 'With Filter Driver + No Rule', 'One Good Rule']
         if scenario_name == "Server Upload" or scenario_name == "Server Download":
             self.col.append('Server Rule (No. of Rules: {})'.format(len(self.server_rule)))
         elif scenario_name == "Client Download":
