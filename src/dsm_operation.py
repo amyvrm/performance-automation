@@ -16,6 +16,7 @@ from get_machine_info import MachineInfo
 class DsmPolicy(object):
     def __init__(self, dsm_ver, nexus_uname, nexus_pwd, machine, path, policy_name, port, server_rule, client_rule):
         dsm_ip = machine.get_dsm_public_ip()
+        # dsm_ip = "35.183.137.93"
         self.header = "-" * 50
         self.policy_name = policy_name
         self.port = port
@@ -37,7 +38,7 @@ class DsmPolicy(object):
         transport = zeep.Transport()
         transport.session.verify = False  # Bypass self-signed certificate errors
         for retry in range(3):
-            print("Attempt-{} Create Connection...".format(retry))
+            print("Attempt-{} to Create DSM Connection...".format(retry+1))
             try:
                 self.client = zeep.Client(wsdl=self.wsdl_url, transport=transport)
                 break
