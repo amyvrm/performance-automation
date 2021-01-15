@@ -25,6 +25,8 @@ class PerfCommon(object):
     def create_html_table(self, df, scenario_name):
         print(df)
         fname = "{}_{}".format(scenario_name.replace(" ", "_"), self.stats)
+        if os.path.exists(fname):
+            os.remove(fname)
         # create table
         with open(fname, "a") as fin:
             fin.write(self.create_html_header())
@@ -72,6 +74,8 @@ class PerfCommon(object):
         sns.despine()
         # plt.show()
         fname = "{}_{}".format(scenario_name.replace(" ", "_"), self.graph)
+        if os.path.exists(fname):
+            os.remove(fname)
         plt.savefig(fname, bbox_extra_artists=(lgd, text), bbox_inches='tight')
 
     def create_html_header(self):
@@ -121,6 +125,7 @@ class PerfCommon(object):
             print("# IP: {}, Tool: {}, Command: {} #".format(ip, tool, cmd))
             if tool == "Powershell.exe":
                 if bandwidth:
+                    print("- Taking Bandwidth Reading...")
                     all_through_put = []
                     for i in range(iteration):
                         stdout, stderr, rc = machine.run_executable(tool, arguments=cmd, asynchronous=asynchronous)
@@ -130,6 +135,7 @@ class PerfCommon(object):
                     all_through_put.sort(reverse=True)
                     return all_through_put
                 else:
+                    print("- Running Remote Command...")
                     stdout, stderr, rc = machine.run_executable(tool, arguments=cmd, asynchronous=asynchronous)
                     print("Tool: {}, Output: [{}], Error: {}".format(tool, stdout, stderr))
                 if stdout:

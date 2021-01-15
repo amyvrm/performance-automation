@@ -27,10 +27,10 @@ class PerformanceScenario(PerfCommon):
         instance2 = machine.get_instance_two_id()
         region = machine.get_region()
         pem_file = machine.get_pem_file()
-        sip, s_priv_ip = "15.223.3.41", "172.31.27.249"
+        sip, s_priv_ip = "99.79.75.156", "172.31.31.252"
         # sip, s_priv_ip = self.reboot_instance(instance1, access_key, secret_key, region)
         print("Server Agent {} instance -> Public IP:{}, Private IP: {}".format(instance1, sip, s_priv_ip))
-        cip, c_priv_ip = "35.183.131.91", "172.31.27.146"
+        cip, c_priv_ip = "15.223.69.107", "172.31.18.185"
         # cip, c_priv_ip = self.reboot_instance(instance2, access_key, secret_key, region)
         print("Client Agent {} instance -> Public IP:{}, Private IP: {}".format(instance2, cip, c_priv_ip))
 
@@ -38,8 +38,8 @@ class PerformanceScenario(PerfCommon):
         # Get the password
         # spwd = PerformanceScenario.get_pwd(region, access_key, secret_key, instance1, pem_file)
         # cpwd = PerformanceScenario.get_pwd(region, access_key, secret_key, instance2, pem_file)
-        spwd = "&oYOI%N?HQyQhZVbD7v?yzqlrP(?KP!L"
-        cpwd = "!(i@S=suaqdmjzbQ*fH5T-vM65!(4?UR"
+        spwd = "*9(X.*YgkdZ;!fNRRRaOm.R&eRMOLFQm"
+        cpwd = "l)9Ze.$.k.q67DOgb7*dETYyQPyk@$M?"
         # Get the Server Rule and dependency with portlist
         self.grule_list, self.server_rule, self.client_rules = self.get_dependency_portlist(path_json, grule)
         self.dsm.upload_basic_policy(change_policy=True)
@@ -162,9 +162,8 @@ class PerformanceScenario(PerfCommon):
         with_all_server_rule_all_stats = self.run_band_test(suser, sip, spwd, s_priv_ip, cuser, cip, cpwd, c_priv_ip,scenario_name)
         with_all_server_rule = with_all_server_rule_all_stats[:self.best_iteration]
         all_rule_avg = round(sum(map(float, with_all_server_rule)) / len(with_all_server_rule), 2)
-        print("{0}{0}\n- With All Server side rule: {1}\n- Average Bandwidth: {2} MBps\n{0}{0}\n".format(self.header,
-                                                                                                         with_all_server_rule,
-                                                                                                         all_rule_avg))
+        print("{0}{0}\n- With All {3} side rule: {1}\n- Average Bandwidth: {2} MBps\n{0}{0}\n".format(self.header,
+                                                    with_all_server_rule, all_rule_avg, scenario_name.split(" ")[0]))
         wo_filter_stats.append(wof_avg)
         w_filter_stats.append(wf_avg)
         good_rule.append(gr_avg)
