@@ -146,8 +146,8 @@ class PerformanceScenario(PerfCommon):
         rule_stats, iter_rule, rule_avg = self.apply_rule_get_stats(suser, sip, spwd, s_priv_ip, cuser, cip, cpwd,
                                                                     c_priv_ip, False, scenario_name)
         for retry in range(2):
-            print("# Attempt-{} to recheck {} MBps and {} MBps stats #".format(retry+1, rule_avg, rulelist_avg))
             if rule_avg > rulelist_avg:
+                print("# Attempt-{} to recheck {} MBps and {} MBps stats #".format(retry + 1, rule_avg, rulelist_avg))
                 ################## With 1 Good Server Rule ###########################
                 rulelist_stats, iter_rulelist, rulelist_avg = self.apply_rule_get_stats(suser, sip, spwd, s_priv_ip,
                                                               cuser, cip, cpwd, c_priv_ip, self.grule_list, scenario_name)
