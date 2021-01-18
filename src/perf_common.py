@@ -436,3 +436,11 @@ class PerfCommon(object):
                     return "client"
                 else:
                     return False
+
+    def enable_agent_filter(self, sip, suser, spwd, cip, cuser, cpwd):
+        self.enable_filter(sip, suser, spwd, self.s_adap_name)
+        self.enable_filter(cip, cuser, cpwd, self.c_adap_name)
+        self.activate_dsa(sip, suser, spwd)
+        self.activate_dsa(cip, cuser, cpwd)
+        print("Waiting 30 sec, Both machine Agent: Enabled, Filter Driver: Enable")
+        time.sleep(30)
