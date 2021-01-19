@@ -205,18 +205,20 @@ class PerfCommon(object):
         return name.replace(" ", "` ") if " " in name else name
 
     def enable_filter(self, ip, user, pwd, adaptor_name):
-        print("{0}\n # {2}-{1} Enable Filter #\n{0}".format(self.header, ip, self.ip_type[ip]))
-        tool = "Powershell.exe"
-        cmd = 'Enable-NetAdapterBinding -Name "{}" -DisplayName "Trend` Micro` LightWeight` Filter` Driver"'.format(
-            adaptor_name)
-        return self.execute_cmd(cmd, ip, user, pwd, tool=tool)
+        print("{0}\n # {2}-{1} Enable Filter #\n{0}".format("+" * 50, ip, self.ip_type[ip]))
+        for retry in range(2):
+            tool = "Powershell.exe"
+            cmd = 'Enable-NetAdapterBinding -Name "{}" -DisplayName "Trend` Micro` LightWeight` Filter` Driver"'.format(
+                adaptor_name)
+            self.execute_cmd(cmd, ip, user, pwd, tool=tool)
 
     def disable_filter(self, ip, user, pwd, adaptor_name):
-        print("{0}\n # {2}-{1} Disable Filter #\n{0}".format(self.header, ip, self.ip_type[ip]))
-        tool = "Powershell.exe"
-        cmd = 'Disable-NetAdapterBinding -Name "{}" -DisplayName "Trend` Micro` LightWeight` Filter` Driver"'.format(
-            adaptor_name)
-        return self.execute_cmd(cmd, ip, user, pwd, tool=tool)
+        print("{0}\n # {2}-{1} Disable Filter #\n{0}".format("+" * 50, ip, self.ip_type[ip]))
+        for retry in range(2):
+            tool = "Powershell.exe"
+            cmd = 'Disable-NetAdapterBinding -Name "{}" -DisplayName "Trend` Micro` LightWeight` Filter` Driver"'.format(
+                adaptor_name)
+            self.execute_cmd(cmd, ip, user, pwd, tool=tool)
 
     def clean(self, ip, user, pwd, pid=False):
         print("# clean pid: {} #".format(pid))
@@ -263,20 +265,22 @@ class PerfCommon(object):
         print("# Run Apache Bench {}-{} #".format(self.ip_type[ip], ip))
         self.clean_ab(ip, user, pwd)
         tool = "Powershell.exe"
-        cmd = "{}ab.exe -n 100 -c 10 http://{}/test.htm".format(self.path, target_ip)
+        cmd = "{}ab.exe -k -n 100 -c 10 http://{}/test.htm".format(self.path, target_ip)
         return self.execute_cmd(cmd, ip, user, pwd, tool=tool, bandwidth=True, asynchronous=False)
 
     def disable_dsa(self, ip, user, pwd):
-        print("{0}\n # {2}-{1} Disable DSA #\n{0}".format(self.header, ip, self.ip_type[ip]))
-        tool = "Powershell.exe"
-        cmd = "Stop-Service -Name \"Trend` Micro` Deep` Security` Agent\""
-        return self.execute_cmd(cmd, ip, user, pwd, tool=tool)
+        print("{0}\n # {2}-{1} Disable DSA #\n{0}".format("+" * 50, ip, self.ip_type[ip]))
+        for retry in range(2):
+            tool = "Powershell.exe"
+            cmd = "Stop-Service -Name \"Trend` Micro` Deep` Security` Agent\""
+            self.execute_cmd(cmd, ip, user, pwd, tool=tool)
 
     def activate_dsa(self, ip, user, pwd):
-        print("{0}\n # {2}-{1} Activate DSA #\n{0}".format(self.header, ip, self.ip_type[ip]))
-        tool = "Powershell.exe"
-        cmd = "Start-Service -Name \"Trend` Micro` Deep` Security` Agent\""
-        return self.execute_cmd(cmd, ip, user, pwd, tool=tool)
+        print("{0}\n # {2}-{1} Activate DSA #\n{0}".format("+" * 50, ip, self.ip_type[ip]))
+        for retry in range(2):
+            tool = "Powershell.exe"
+            cmd = "Start-Service -Name \"Trend` Micro` Deep` Security` Agent\""
+            self.execute_cmd(cmd, ip, user, pwd, tool=tool)
 
     def reboot_instance(self, instance_id, access_key, secret_key, region):
         print("{0}\n # Reboot {1} Instance #\n{0}".format(self.header, instance_id))

@@ -16,7 +16,7 @@ from get_machine_info import MachineInfo
 class DsmPolicy(object):
     def __init__(self, dsm_ver, nexus_uname, nexus_pwd, machine, path, policy_name, port, server_rule, client_rule):
         dsm_ip = machine.get_dsm_public_ip()
-        # dsm_ip = "35.183.137.93"
+        print("+ DSM IP: {} +".format(dsm_ip))
         self.header = "-" * 50
         self.policy_name = policy_name
         self.port = port
@@ -214,11 +214,11 @@ class DsmPolicy(object):
         if rule_list:
             identifiers = rule_list
         elif scenario_name == "Server Upload" or scenario_name == "Server Download":
-            print("{0}\n# With All Server side rule #\n{0}\n".format(self.header))
+            print("{0}{0}\n# With All Server side rule #\n{0}{0}\n".format(self.header))
             with open(self.server_rule_file, "r") as f:
                 identifiers = f.read().split(",")
         elif scenario_name == "Client Download":
-            print("{0}\n# With All Client side rule #\n{0}\n".format(self.header))
+            print("{0}{0}\n# With All Client side rule #\n{0}{0}\n".format(self.header))
             with open(self.client_rule_file, "r") as f:
                 identifiers = f.read().split(",")
 
@@ -227,7 +227,6 @@ class DsmPolicy(object):
         # When using the API, the system only accepts the latter for commands
         print("Finding internal IDs for all rules", flush=True)
         dpi_rule_ids, integrity_rule_ids, log_inspection_rule_ids, internal_id_mappings = self.find_internal_ids(identifiers)
-
         policy_id = self.client.service.securityProfileRetrieveByName(name=self.policy_name, sID=self.sID)["ID"]
         if not policy_id:
             msg = "ERROR: Policy {} not found on the DSM, please check the policy".format(self.policy_name)
@@ -241,6 +240,7 @@ class DsmPolicy(object):
         print("Waiting 30 secs, for policies to apply", flush=True)
         time.sleep(30)
         self.update_ports(policy_id)
+
         response = self.client.service.hostRetrieveAll(sID=self.sID)
         ids = [r["ID"] for r in response]
         self.client.service.hostClearWarningsErrors(ids, sID=self.sID)

@@ -6,6 +6,7 @@ import pandas as pd
 from dsm_operation import DsmPolicy
 from get_machine_info import MachineInfo
 import requests
+import os
 
 
 class PerformanceScenario(PerfCommon):
@@ -27,10 +28,10 @@ class PerformanceScenario(PerfCommon):
         instance2 = machine.get_instance_two_id()
         region = machine.get_region()
         pem_file = machine.get_pem_file()
-        sip, s_priv_ip = "15.223.65.22", "172.31.20.129"
+        sip, s_priv_ip = "3.96.194.89", "172.31.26.77"
         # sip, s_priv_ip = self.reboot_instance(instance1, access_key, secret_key, region)
         print("Server Agent {} instance -> Public IP:{}, Private IP: {}".format(instance1, sip, s_priv_ip))
-        cip, c_priv_ip = "35.182.253.82", "172.31.29.73"
+        cip, c_priv_ip = "3.96.187.175", "172.31.29.32"
         # cip, c_priv_ip = self.reboot_instance(instance2, access_key, secret_key, region)
         print("Client Agent {} instance -> Public IP:{}, Private IP: {}".format(instance2, cip, c_priv_ip))
 
@@ -38,8 +39,8 @@ class PerformanceScenario(PerfCommon):
         # Get the password
         # spwd = PerformanceScenario.get_pwd(region, access_key, secret_key, instance1, pem_file)
         # cpwd = PerformanceScenario.get_pwd(region, access_key, secret_key, instance2, pem_file)
-        spwd = "gL6HTK?OLkeBbPp&94=8WsKQAUMwZ$3."
-        cpwd = "OiNGEzWh?gDueL)D3d--EQ8MAmRE!ipg"
+        spwd = "mG-o!qLYVrZy%Pr$9wuX$SL7(S-yv2P4"
+        cpwd = "qNQ3IIyJr;oBSxfJixt92YF&GDx.ifZ%"
         # Get the Server Rule and dependency with portlist
         self.grule_list, self.server_rule, self.client_rules = self.get_dependency_portlist(path_json, grule)
         self.dsm.upload_basic_policy(change_policy=True)
@@ -99,76 +100,105 @@ class PerformanceScenario(PerfCommon):
             print("Server Machine Public IP:{}, Private IP: {}".format(sip, s_priv_ip))
             print("Client Machine Public IP:{}, Private IP: {}".format(cip, c_priv_ip))
             self.perf_scenario_test(suser, sip, spwd, s_priv_ip, cuser, cip, cpwd, c_priv_ip, "Client Download")
-        """
-        # Clean Rules from DSM
-        self.dsm.clean_rules_from_dsm()
-        # Enable both agents and filter
-        self.enable_agent_filter(sip, suser, spwd, cip, cuser, cpwd)
-        # Client Download
-        self.test_scenario(sip, spwd, cip, cpwd, s_priv_ip, c_priv_ip, suser, cuser, "Client Download")
-        """
 
     def perf_scenario_test(self, suser, sip, spwd, s_priv_ip, cuser, cip, cpwd, c_priv_ip, scenario_name):
         print("{0}\n### {1} ###\n{0}".format("#" * 50, scenario_name))
         # Disable Server filter
         self.disable_filter(sip, suser, spwd, self.s_adap_name)
-        ################## Without Filter Driver ###########################
-        print("{0}{1}\n# Without Filter Driver #\n{1}{0}\n".format(self.header, "#"*50))
-        # Disable Server Agent
-        self.disable_dsa(sip, suser, spwd)
-        # Disable Client Agent
-        self.disable_dsa(cip, cuser, cpwd)
-        # Disable Client filter
-        self.disable_filter(cip, cuser, cpwd, self.c_adap_name)
-        print("{0}\nWaiting 2 min\n{3}-{1} and {4}-{2} Machines: Agent Disabled from DSM\n{3}-{1} Machine: Filter "
-              "Disabled from network driver\n{0}".format(self.header, cip, sip, self.ip_type[cip], self.ip_type[sip]))
-        time.sleep(120)
-        wo_filter_all_stats = self.run_band_test(suser, sip, spwd, s_priv_ip, cuser, cip, cpwd, c_priv_ip,scenario_name)
-        wo_filter_stats = wo_filter_all_stats[:self.best_iteration]
-        wof_avg = round(sum(map(float, wo_filter_stats)) / len(wo_filter_stats), 2)
-        print("{0}{0}\n- Without Filter Driver Bandwidth: {1}\n- Average Bandwidth: {2} MBps\n{0}{0}\n".format(
-            self.header, wo_filter_stats, wof_avg))
-        ################## With Filter Driver ###########################
-        print("{0}{1}\n# With Filter Driver #\n{1}{0}\n".format(self.header, "#"*50))
-        # Enable Client Filter
-        self.enable_filter(cip, cuser, cpwd, self.c_adap_name)
-        # Activate Cleint Agent
-        self.activate_dsa(cip, cuser, cpwd)
-        print("{0}\nWaiting 2 min\n{2}-{1} Machine: Agent Enabled from DSM\n{2}-{1} Machine: Filter Enabled "
-              "from Network Driver\n{0}".format(self.header, cip, self.ip_type[cip]))
-        time.sleep(120)
-        w_filter_all_stats = self.run_band_test(suser, sip, spwd, s_priv_ip, cuser, cip, cpwd, c_priv_ip,scenario_name)
-        w_filter_stats = w_filter_all_stats[:self.best_iteration]
-        wf_avg = round(sum(map(float, w_filter_stats)) / len(w_filter_stats), 2)
-        print("{0}{0}\n- With Filter Driver Bandwidth: {1}\n- Average Bandwidth: {2} MBps\n{0}{0}\n".format(self.header,
-                                                                                                            w_filter_stats,
-                                                                                                            wf_avg))
-        print("{0}{1}\n# Good Rule #\n{1}{0}\n".format(self.header, "#" * 50))
-        ################## With 1 Good Server Rule ###########################
+        # Without Filter Driver
+        print("{0}{0}\n# Without Filter Driver #\n{0}{0}".format(self.header))
+        wo_filter_all_stats, wo_filter_stats, wof_avg = self.apply_rule_get_stats(suser, sip, spwd, s_priv_ip, cuser,
+                                                        cip, cpwd, c_priv_ip, False, scenario_name, action="wo_filter")
+        print("- Without Filter Driver Average Stats: {}\n".format(wof_avg))
+
+        # With Filter Driver
+        print("{0}{0}\n# With Filter Driver #\n{0}{0}".format(self.header))
+        w_filter_all_stats, w_filter_stats, wf_avg = self.apply_rule_get_stats(suser, sip, spwd, s_priv_ip, cuser,
+                                                        cip, cpwd, c_priv_ip, False, scenario_name, action="filter")
+        print("- With Filter Driver Average Stats: {}\n".format(wf_avg))
+
+        count = 0
+        for retry in range(2):
+            if wf_avg > wof_avg:
+                count += 1
+                print("- Take Reading-{} Without Filter Rule-{}MBps and with Filter-{}MBps".format(count, wof_avg, wf_avg))
+                # With Filter Driver
+                print("{0}{0}\n# Without Filter Driver #\n{0}{0}".format(self.header))
+                wo_filter_all_stats, wo_filter_stats, wof_avg = self.apply_rule_get_stats(suser, sip, spwd, s_priv_ip,
+                                                                                          cuser,
+                                                                                          cip, cpwd, c_priv_ip, False,
+                                                                                          scenario_name,
+                                                                                          action="wo_filter")
+                print("- Without Filter Driver Average Stats: {}\n".format(wf_avg))
+                # Without Filter Driver
+                print("{0}{0}\n# With Filter Driver #\n{0}{0}".format(self.header))
+                w_filter_all_stats, w_filter_stats, wf_avg = self.apply_rule_get_stats(suser, sip, spwd, s_priv_ip,
+                                                                                       cuser,
+                                                                                       cip, cpwd, c_priv_ip, False,
+                                                                                       scenario_name, action="filter")
+                print("- With Filter Driver Average Stats: {}\n".format(wf_avg))
+
+        # With 1 Good Server Rule
+        print("{0}{0}\n# Threshold Rule with Dependency #\n{0}{0}".format(self.header))
         rulelist_stats, iter_rulelist, rulelist_avg = self.apply_rule_get_stats(suser, sip, spwd, s_priv_ip, cuser, cip,
-                                                                        cpwd, c_priv_ip, self.grule_list, scenario_name)
-        print("{0}{1}\n# With {2} Rules with Dependency #\n{1}{0}\n".format(self.header, "#" * 50,
-                                                                            scenario_name.split(" ")[0]))
-        ################## With All Server side rule ###########################
+                                                                                cpwd, c_priv_ip, self.grule_list,
+                                                                                scenario_name)
+        print("- Threshold Rule with Dependency: {}\n".format(rulelist_avg))
+        count = 0
+        for retry in range(2):
+            if rulelist_avg > wf_avg:
+                count += 1
+                self.dsm.connect()
+                print("- Take Reading-{} Threshold Rule-{}MBps and with Filter-{}MBps".format(count, rulelist_avg, wf_avg))
+                # With Filter Driver
+                print("{0}{0}\n# With Filter Driver #\n{0}{0}".format(self.header))
+                # Clean Rules from DSM
+                self.dsm.clean_rules_from_dsm()
+                w_filter_all_stats, w_filter_stats, wf_avg = self.apply_rule_get_stats(suser, sip, spwd, s_priv_ip,
+                                                                                       cuser,
+                                                                                       cip, cpwd, c_priv_ip, False,
+                                                                                       scenario_name, action="filter")
+                print("- With Filter Driver Average Stats: {}\n".format(wf_avg))
+
+                # With 1 Good Server Rule
+                print("{0}{0}\n# Threshold Rule with Dependency #\n{0}{0}".format(self.header))
+                rulelist_stats, iter_rulelist, rulelist_avg = self.apply_rule_get_stats(suser, sip, spwd, s_priv_ip,
+                                                                                        cuser, cip,
+                                                                                        cpwd, c_priv_ip,
+                                                                                        self.grule_list,
+                                                                                        scenario_name)
+                print("- Threshold Rule with Dependency Average stats: {}\n".format(rulelist_avg))
+
+        # With All Server/Client side rule
         rule_stats, iter_rule, rule_avg = self.apply_rule_get_stats(suser, sip, spwd, s_priv_ip, cuser, cip, cpwd,
                                                                     c_priv_ip, False, scenario_name)
+        print("- Rule with Dependency Average stats: {}\n".format(rule_avg))
+        count = 0
         for retry in range(2):
             if rule_avg > rulelist_avg:
-                print("# Attempt-{} to recheck {} MBps and {} MBps stats #".format(retry + 1, rule_avg, rulelist_avg))
-                ################## With 1 Good Server Rule ###########################
-                print("{0}{1}\n# Good Rule #\n{1}{0}\n".format(self.header, "#" * 50))
+                count += 1
+                self.dsm.connect()
+                print("- Take Reading-{} Rule-{}MBps and Threshold Rule-{}MBps".format(count, rulelist_avg, wf_avg))
+                # With 1 Good Server Rule
+                print("{0}{0}\n# Threshold Rule with Dependency #\n{0}{0}".format(self.header))
                 rulelist_stats, iter_rulelist, rulelist_avg = self.apply_rule_get_stats(suser, sip, spwd, s_priv_ip,
-                                                              cuser, cip, cpwd, c_priv_ip, self.grule_list, scenario_name)
-                ################## With All Server side rule ###########################
-                print("{0}{1}\n# With {2} Rules with Dependency #\n{1}{0}\n".format(self.header, "#" * 50,
-                                                                                    scenario_name.split(" ")[0]))
-                rule_stats, iter_rule, rule_avg = self.apply_rule_get_stats(suser, sip, spwd, s_priv_ip, cuser, cip, cpwd,
+                                                                                        cuser, cip,
+                                                                                        cpwd, c_priv_ip,
+                                                                                        self.grule_list,
+                                                                                        scenario_name)
+                print("- Threshold Rule with Dependency Average stats: {}\n".format(rulelist_avg))
+                # With All Server side rule
+                rule_stats, iter_rule, rule_avg = self.apply_rule_get_stats(suser, sip, spwd, s_priv_ip, cuser, cip,
+                                                                            cpwd,
                                                                             c_priv_ip, False, scenario_name)
+                print("- Rule with Dependency Average stats: {}\n".format(rule_avg))
+
         wo_filter_stats.append(wof_avg)
         w_filter_stats.append(wf_avg)
         iter_rulelist.append(rulelist_avg)
         iter_rule.append(rule_avg)
-        ############################### Scenrario complete ###################################
+
+        # Scenrario complete
         print("- Without filter: {}\n- With filter: {}\n- One-Good Rule: {}\n- All Server Rule: {}".format(
               wo_filter_stats, w_filter_stats, iter_rulelist, iter_rule))
         self.col = ['Without Filter Driver', 'With Filter Driver + No Rule', 'One Good Rule']
@@ -183,10 +213,28 @@ class PerformanceScenario(PerfCommon):
         # Create Bar Diagram
         self.create_bar_chart([wof_avg, wf_avg, rulelist_avg, rule_avg], scenario_name)
 
-    def apply_rule_get_stats(self, suser, sip, spwd, s_priv_ip, cuser, cip, cpwd, c_priv_ip, grule_list, scenario_name):
-        # 1006436
-        identifier = self.dsm.apply_rule(scenario_name, rule_list=grule_list)
-        print("{0}{0}\nWaiting 2 min After {1} Good Rule Applied \n{0}{0}".format(self.header, identifier))
+    def apply_rule_get_stats(self, suser, sip, spwd, s_priv_ip, cuser, cip, cpwd, c_priv_ip, grule_list, scenario_name,
+                             action="reading"):
+        if action == "wo_filter":
+            # Disable Server Agent
+            self.disable_dsa(sip, suser, spwd)
+            # Disable Client Agent
+            self.disable_dsa(cip, cuser, cpwd)
+            # Disable Client filter
+            self.disable_filter(cip, cuser, cpwd, self.c_adap_name)
+            print("{0}\n{3}-{1} and {4}-{2} Agent: Disabled from DSM\n{3}-{1} Filter: Disabled from network driver\n"
+                  "{0}".format(self.header, cip, sip, self.ip_type[cip], self.ip_type[sip]))
+        elif action == "rule":
+            identifier = self.dsm.apply_rule(scenario_name, rule_list=grule_list)
+            print("{0}{0}\n# {1} Rule Applied \n{0}{0}".format(self.header, identifier))
+        elif action == "filter":
+            # Activate Cleint Agent
+            self.activate_dsa(cip, cuser, cpwd)
+            # Enable Client Filter
+            self.enable_filter(cip, cuser, cpwd, self.c_adap_name)
+            print("{0}\n{2}-{1} Agent: Enabled from DSM\n{2}-{1} Filter: Enabled from Network Driver\n{0}".format(
+                                                                                self.header, cip, self.ip_type[cip]))
+        print("Waiting 2 min")
         time.sleep(120)
         all_stats = self.run_band_test(suser, sip, spwd, s_priv_ip, cuser, cip, cpwd, c_priv_ip, scenario_name)
         iter_stats = all_stats[:self.best_iteration]
@@ -194,14 +242,6 @@ class PerformanceScenario(PerfCommon):
         print("{0}{0}\n- {1} iteration stats {2} MBps\n- Average Bandwidth: {3} MBps\n{0}{0}\n".format(self.header,
                                                                             len(iter_stats), iter_stats, avg))
         return all_stats, iter_stats, avg
-
-    def enable_agent_filter(self, sip, suser, spwd, cip, cuser, cpwd):
-        self.enable_filter(sip, suser, spwd, self.s_adap_name)
-        self.enable_filter(cip, cuser, cpwd, self.c_adap_name)
-        self.activate_dsa(sip, suser, spwd)
-        self.activate_dsa(cip, cuser, cpwd)
-        print("Waiting 30 sec, Both machine Agent: Enabled, Filter Driver: Enable")
-        time.sleep(30)
 
 
 if __name__ == '__main__':
@@ -218,8 +258,12 @@ if __name__ == '__main__':
     parser.add_argument('--scenario', type=str, help="Scenario name to test")
     args = parser.parse_args()
 
-    url = "https://dsnexus.trendmicro.com:8443/nexus/repository/dslabs/performance-test/performance-test/21-002.dsru/17/manifest.json"
-    machine_info = requests.get(url, auth=(args.uname, args.pwd)).json()
+    if not os.path.exists(args.machine_info):
+        url = "https://dsnexus.trendmicro.com:8443/nexus/repository/dslabs/performance-test/performance-test/21-002.dsru/17/manifest.json"
+        machine_info = requests.get(url, auth=(args.uname, args.pwd)).json()
+    else:
+        with open(args.machine_info) as fout:
+            machine_info = json.load(fout)
 
     scenario = PerformanceScenario(machine_info,
                                    args.dsm_version,

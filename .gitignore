@@ -9,3 +9,4 @@ update-packages/
 *band.png
 pkg_path/
 templates/perf_policy_changed.xml
+manifest.json

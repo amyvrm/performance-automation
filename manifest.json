@@ -1,0 +1,107 @@
+{
+  "dsa-public-ip": {
+    "sensitive": false,
+    "type": "string",
+    "value": "35.183.44.166"
+  },
+  "dsa-public-ip-2": {
+    "sensitive": false,
+    "type": "string",
+    "value": "15.223.121.143"
+  },
+  "dsa-user": {
+    "sensitive": false,
+    "type": "string",
+    "value": "Administrator"
+  },
+  "dsa-user-2": {
+    "sensitive": false,
+    "type": "string",
+    "value": "Administrator"
+  },
+  "dsa-windows-id": {
+    "sensitive": false,
+    "type": "string",
+    "value": "i-0eba77b478491b19e"
+  },
+  "dsa-windows-id-2": {
+    "sensitive": false,
+    "type": "string",
+    "value": "i-05159e46d8c49d2d5"
+  },
+  "dsm-login-password": {
+    "sensitive": false,
+    "type": "string",
+    "value": "AppleTree#1975!"
+  },
+  "dsm-login-url": {
+    "sensitive": false,
+    "type": "string",
+    "value": "https://ec2-3-96-195-225.ca-central-1.compute.amazonaws.com:4119"
+  },
+  "dsm-login-user": {
+    "sensitive": false,
+    "type": "string",
+    "value": "masteradmin"
+  },
+  "dsm-primary-nic-id": {
+    "sensitive": false,
+    "type": "string",
+    "value": "eni-0fb615163fadfe2aa"
+  },
+  "dsm-private-dns": {
+    "sensitive": false,
+    "type": "string",
+    "value": "ip-172-31-24-165.ca-central-1.compute.internal"
+  },
+  "dsm-private-ip": {
+    "sensitive": false,
+    "type": "string",
+    "value": "172.31.24.165"
+  },
+  "dsm-public-dns": {
+    "sensitive": false,
+    "type": "string",
+    "value": "ec2-3-96-195-225.ca-central-1.compute.amazonaws.com"
+  },
+  "dsm-public-ip": {
+    "sensitive": false,
+    "type": "string",
+    "value": "3.96.146.14"
+  },
+  "dsm-rhel-id": {
+    "sensitive": false,
+    "type": "string",
+    "value": "i-028ca7b7c44d002ff"
+  },
+  "dsm-security-groups": {
+    "sensitive": false,
+    "type": [
+      "set",
+      "string"
+    ],
+    "value": [
+      "sg-0d40df757de610048"
+    ]
+  },
+  "pem-file": {
+    "sensitive": false,
+    "type": "string",
+    "value": "./terraformAuthenticate/TerraformDemo.pem"
+  },
+  "pkg-path": {
+    "sensitive": false,
+    "type": "string",
+    "value": "C:\\temp\\"
+  },
+  "region": {
+    "sensitive": false,
+    "type": "string",
+    "value": "ca-central-1"
+  },
+  "sg-id": {
+    "sensitive": false,
+    "type": "string",
+    "value": "sg-0d40df757de610048"
+  }
+}

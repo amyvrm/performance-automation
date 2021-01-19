@@ -109,7 +109,7 @@ class PerformanceScenario(PerfCommon):
         # Disable Server filter
         self.disable_filter(sip, suser, spwd, self.s_adap_name)
 
-        # Without Filter Driver 
+        # Without Filter Driver
         print("{0}{0}\n# Without Filter Driver #\n{0}{0}\n".format(self.header))
         # Disable Server Agent
         self.disable_dsa(sip, suser, spwd)
@@ -135,32 +135,34 @@ class PerformanceScenario(PerfCommon):
         # With 1 Good Server Rule
         rulelist_stats, iter_rulelist, rulelist_avg = self.apply_rule_get_stats(suser, sip, spwd, s_priv_ip, cuser, cip,
                                                                         cpwd, c_priv_ip, self.grule_list, scenario_name)
-        for retry in range(2):
-            if rulelist_avg > wf_avg:
-                print("* Attempt-{} Good Rule-{}MBps and WFilter-{}MBps stats".format(retry + 1, rulelist_avg, wf_avg))
-                print("{0}{0}\n# With Filter Driver #\n{0}{0}\n".format(self.header))
-                w_filter_all_stats, w_filter_stats, wf_avg = self.get_stats(suser, sip, spwd, s_priv_ip, cuser, cip,
-                                                                            cpwd, c_priv_ip, scenario_name)
-                print("{0}{0}\n# Good Rule #\n{0}{0}\n".format(self.header))
-                # With 1 Good Server Rule
-                rulelist_stats, iter_rulelist, rulelist_avg = self.apply_rule_get_stats(suser, sip, spwd, s_priv_ip,
-                                                             cuser, cip, cpwd, c_priv_ip, self.grule_list,scenario_name)
-                print("{0}{0}\n# With {1} Rules with Dependency #\n{0}{0}\n".format(self.header, scenario_name.split(" ")[0]))
+        # for retry in range(2):
+        #     if rulelist_avg > wf_avg:
+        #         print("* Attempt-{} Good Rule-{}MBps and WFilter-{}MBps stats".format(retry + 1, rulelist_avg, wf_avg))
+        #         print("{0}{0}\n# With Filter Driver #\n{0}{0}\n".format(self.header))
+        #         w_filter_all_stats, w_filter_stats, wf_avg = self.get_stats(suser, sip, spwd, s_priv_ip, cuser, cip,
+        #                                                                     cpwd, c_priv_ip, scenario_name)
+        #         print("{0}{0}\n# Good Rule #\n{0}{0}\n".format(self.header))
+        #         self.dsm.connect()
+        #         # With 1 Good Server Rule
+        #         rulelist_stats, iter_rulelist, rulelist_avg = self.apply_rule_get_stats(suser, sip, spwd, s_priv_ip,
+        #                                                      cuser, cip, cpwd, c_priv_ip, self.grule_list,scenario_name)
+        #         print("{0}{0}\n# With {1} Rules with Dependency #\n{0}{0}\n".format(self.header, scenario_name.split(" ")[0]))
 
         # With All Server/Client side rule
         rule_stats, iter_rule, rule_avg = self.apply_rule_get_stats(suser, sip, spwd, s_priv_ip, cuser, cip, cpwd,
                                                                     c_priv_ip, False, scenario_name)
-        for retry in range(2):
-            if rule_avg > rulelist_avg:
-                print("* Attempt-{} All Rule-{}MBps and Good Rule-{}MBps stats".format(retry + 1, rule_avg, rulelist_avg))
-                # With 1 Good Server Rule
-                print("{0}{0}\n# Good Rule #\n{0}{0}\n".format(self.header))
-                rulelist_stats, iter_rulelist, rulelist_avg = self.apply_rule_get_stats(suser, sip, spwd, s_priv_ip,
-                                                              cuser, cip, cpwd, c_priv_ip, self.grule_list, scenario_name)
-                # With All Server side rule
-                print("{0}{0}\n# With {1} Rules with Dependency #\n{0}{0}\n".format(self.header, scenario_name.split(" ")[0]))
-                rule_stats, iter_rule, rule_avg = self.apply_rule_get_stats(suser, sip, spwd, s_priv_ip, cuser, cip, cpwd,
-                                                                            c_priv_ip, False, scenario_name)
+        # for retry in range(2):
+        #     if rule_avg > rulelist_avg:
+        #         print("* Attempt-{} All Rule-{}MBps and Good Rule-{}MBps stats".format(retry + 1, rule_avg, rulelist_avg))
+        #         # With 1 Good Server Rule
+        #         self.dsm.connect()
+        #         print("{0}{0}\n# Good Rule #\n{0}{0}\n".format(self.header))
+        #         rulelist_stats, iter_rulelist, rulelist_avg = self.apply_rule_get_stats(suser, sip, spwd, s_priv_ip,
+        #                                                       cuser, cip, cpwd, c_priv_ip, self.grule_list, scenario_name)
+        #         # With All Server side rule
+        #         print("{0}{0}\n# With {1} Rules with Dependency #\n{0}{0}\n".format(self.header, scenario_name.split(" ")[0]))
+        #         rule_stats, iter_rule, rule_avg = self.apply_rule_get_stats(suser, sip, spwd, s_priv_ip, cuser, cip, cpwd,
+        #                                                                     c_priv_ip, False, scenario_name)
         wo_filter_stats.append(wof_avg)
         w_filter_stats.append(wf_avg)
         iter_rulelist.append(rulelist_avg)
