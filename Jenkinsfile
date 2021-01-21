@@ -122,7 +122,7 @@ node(nodeLabel)
 									sh "python applyAutomation.py"
 
 							        echo 'Grab login info in JSON'
-								    sh "terraform output -json > ${machine_info}"
+								    sh "terraform output -json > ${scenario}_${machine_info}"
 							    }
 
 							    stage('Perf Test') {
@@ -198,8 +198,11 @@ node(nodeLabel)
 					} 
 					finally
 					{
-						archiveArtifacts allowEmptyArchive: true,
-						artifacts: '**/manifest.json,**/tear_down_params.txt'
+					    stats_file =  "${scenario}_${stats}"
+                        graph_file =  "${scenario}_${graph}"
+                        machine_file =  "${scenario}_${machine_info}"
+					    archiveArtifacts allowEmptyArchive: true, artifacts: '**/${stats_file}, **/${graph_file},
+					                                                       **/${machine_file}, **/tear_down_params.txt'
 					}
 				}
 			}

@@ -210,24 +210,28 @@ class PerformanceScenario(PerfCommon):
 
     def apply_rule_get_stats(self, suser, sip, spwd, s_priv_ip, cuser, cip, cpwd, c_priv_ip, grule_list, scenario_name,
                              action="reading"):
+        if scenario_name == "Client Download":
+            ip, user, pwd, adaptor = cip, cuser, cpwd, self.c_adap_name
+        else:
+            ip, user, pwd, adaptor = sip, suser, spwd, self.s_adap_name
         if action == "wo_filter":
             # Disable Server Agent
-            self.disable_dsa(sip, suser, spwd)
+            self.disable_dsa(ip, user, pwd)
             # Disable Server filter
-            self.disable_filter(sip, suser, spwd, self.s_adap_name)
+            self.disable_filter(ip, user, pwd, adaptor)
             # Disable Client Agent
             # self.disable_dsa(cip, cuser, cpwd)
             # # Disable Client filter
             # self.disable_filter(cip, cuser, cpwd, self.c_adap_name)
             print("{0}\n{2}-{1} Agent: Disabled from DSM\n{2}-{1} Filter: Disabled from network driver\n{0}".format(
-                  self.header, sip, self.ip_type[sip]))
+                  self.header, ip, self.ip_type[ip]))
         elif action == "filter":
             # Activate Server Agent
-            self.activate_dsa(sip, suser, spwd)
+            self.activate_dsa(ip, user, pwd)
             # Enable Server Filter
-            self.enable_filter(sip, suser, spwd, self.s_adap_name)
+            self.enable_filter(ip, user, pwd, adaptor)
             print("{0}\n{2}-{1} Agent: Enabled from DSM\n{2}-{1} Filter: Enabled from Network Driver\n{0}".format(
-                                                                                self.header, cip, self.ip_type[cip]))
+                                                                                self.header, ip, self.ip_type[ip]))
         elif action == "rule":
             identifier = self.dsm.apply_rule(scenario_name, rule_list=grule_list)
             print("{0}{0}\n# {1} Rule Applied \n{0}{0}".format(self.header, identifier))

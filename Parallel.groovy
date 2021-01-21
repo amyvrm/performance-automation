@@ -57,12 +57,12 @@ node('aws&&docker')
                 sleep time: 2, unit: 'MINUTES'
                 dsru_name = server_download(perf_pipeline, dsru_file)
             },
-//            Client_Download: {
-//                echo "Waiting 2 min before running parallel scenario pipeline"
-//                sleep time: 2, unit: 'MINUTES'
-//                dsru_name = client_download(perf_pipeline, dsru_file)
-//            }
-            failFast: true
+            Client_Download: {
+                echo "Waiting 2 min before running parallel scenario pipeline"
+                sleep time: 2, unit: 'MINUTES'
+                dsru_name = client_download(perf_pipeline, dsru_file)
+            },
+            failFast: false
         }
 
         currentBuild.result = 'SUCCESS'

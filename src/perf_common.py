@@ -88,13 +88,7 @@ class PerfCommon(object):
         return html_header
 
     def run_band_test(self, suser, sip, spwd, s_priv_ip, cuser, cip, cpwd, c_priv_ip, scenario_name):
-        if scenario_name == "Server Download":
-            # Run Nginx
-            self.run_nginx(sip, suser, spwd)
-            # Run Apache Bench
-            through_put = self.run_ab(cip, cuser, cpwd, s_priv_ip)
-            print("Through put: {}".format(through_put))
-        elif scenario_name == "Client Download":
+        if scenario_name == "Server Download" or scenario_name == "Client Download":
             # Run Nginx
             self.run_nginx(sip, suser, spwd)
             # Run Apache Bench
@@ -159,10 +153,13 @@ class PerfCommon(object):
                 t_mbps = round(float(through_put) / 1024.0, 2)
                 print("{0}\n+ {1}: {2} KBps, {3} MBps +\n{0}".format("+"*50, index + 1, through_put, t_mbps))
                 all_through_put.append(t_mbps)
+                for line in out.split("\r\n"):
+                    print(line)
         elif "ab" in cmd:
             if stdout:
                 out = stdout.decode("utf-8")
                 for line in out.split("\r\n"):
+                    print(line)
                     if "Transfer rate" in line:
                         through_put = re.findall("\d+\.\d+", line)[0]
                         t_mbps = round(float(through_put) / 1024.0, 2)
@@ -265,7 +262,8 @@ class PerfCommon(object):
         print("{0}\n+ Run Apache Bench {1}-{2} +\n{0}".format("+" * 50, self.ip_type[ip], ip))
         self.clean_ab(ip, user, pwd)
         tool = "Powershell.exe"
-        cmd = "{}ab.exe -k -n 100 -c 10 http://{}/test.htm".format(self.path, target_ip)
+        # cmd = "{}ab.exe -k -n 100 -c 10 http://{}/test.htm".format(self.path, target_ip)
+        cmd = "{}ab.exe -n 100 -c 10 http://{}/test.htm".format(self.path, target_ip)
         return self.execute_cmd(cmd, ip, user, pwd, tool=tool, bandwidth=True, asynchronous=False)
 
     def disable_dsa(self, ip, user, pwd):
