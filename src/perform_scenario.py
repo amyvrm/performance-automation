@@ -101,13 +101,15 @@ class PerformanceScenario(PerfCommon):
         # Without Filter Driver
         print("{0}{0}\n# Without Filter Driver #\n{0}{0}".format(self.header))
         wo_filter_all_stats, wo_filter_stats, wof_avg = self.apply_rule_get_stats(suser, sip, spwd, s_priv_ip, cuser,
-                                                        cip, cpwd, c_priv_ip, False, scenario_name, action="wo_filter")
+                                                                                  cip, cpwd, c_priv_ip, False,
+                                                                                  scenario_name, action="wo_filter")
         print("- Without Filter Driver Average Stats: {}\n".format(wof_avg))
 
         # With Filter Driver
         print("{0}{0}\n# With Filter Driver #\n{0}{0}".format(self.header))
         w_filter_all_stats, w_filter_stats, wf_avg = self.apply_rule_get_stats(suser, sip, spwd, s_priv_ip, cuser,
-                                                        cip, cpwd, c_priv_ip, False, scenario_name, action="filter")
+                                                                               cip, cpwd, c_priv_ip, False,
+                                                                               scenario_name, action="filter")
         print("- With Filter Driver Average Stats: {}\n".format(wf_avg))
 
         # count = 0
@@ -135,7 +137,7 @@ class PerformanceScenario(PerfCommon):
         print("{0}{0}\n# Threshold Rule with Dependency #\n{0}{0}".format(self.header))
         rulelist_stats, iter_rulelist, rulelist_avg = self.apply_rule_get_stats(suser, sip, spwd, s_priv_ip, cuser, cip,
                                                                                 cpwd, c_priv_ip, self.grule_list,
-                                                                                scenario_name)
+                                                                                scenario_name, action="rule")
         print("- Threshold Rule with Dependency: {}\n".format(rulelist_avg))
         # count = 0
         # for retry in range(2):
@@ -164,7 +166,7 @@ class PerformanceScenario(PerfCommon):
 
         # With All Server/Client side rule
         rule_stats, iter_rule, rule_avg = self.apply_rule_get_stats(suser, sip, spwd, s_priv_ip, cuser, cip, cpwd,
-                                                                    c_priv_ip, False, scenario_name)
+                                                                    c_priv_ip, False, scenario_name, action="rule")
         print("- Rule with Dependency Average stats: {}\n".format(rule_avg))
         # count = 0
         # for retry in range(2):
@@ -217,8 +219,8 @@ class PerformanceScenario(PerfCommon):
             # self.disable_dsa(cip, cuser, cpwd)
             # # Disable Client filter
             # self.disable_filter(cip, cuser, cpwd, self.c_adap_name)
-            print("{0}\n{3}-{1} and {4}-{2} Agent: Disabled from DSM\n{3}-{1} Filter: Disabled from network driver\n"
-                  "{0}".format(self.header, cip, sip, self.ip_type[cip], self.ip_type[sip]))
+            print("{0}\n{2}-{1} Agent: Disabled from DSM\n{2}-{1} Filter: Disabled from network driver\n{0}".format(
+                  self.header, sip, self.ip_type[sip]))
         elif action == "filter":
             # Activate Server Agent
             self.activate_dsa(sip, suser, spwd)

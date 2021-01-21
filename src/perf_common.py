@@ -171,7 +171,7 @@ class PerfCommon(object):
 
     @staticmethod
     def get_pwd(region, access_key, secret_key, instance_id, pem_file_loc, mtype):
-        print("# get_pwd #")
+        print("- get_pwd")
         ec2_conn = boto.ec2.connect_to_region(region, aws_access_key_id=access_key, aws_secret_access_key=secret_key)
         # Get all instance
         reservations = ec2_conn.get_all_reservations()
@@ -198,7 +198,7 @@ class PerfCommon(object):
                     return key.decode("utf-8")
 
     def get_adaptor_name(self, ip, user, pwd):
-        print("# get_adaptor_name #")
+        print("- get_adaptor_name")
         tool = "Powershell.exe"
         cmd = "Get-NetAdapter -Name *|select Name|%{$_.Name}"
         name = self.execute_cmd(cmd, ip, user, pwd, tool=tool)
@@ -221,7 +221,7 @@ class PerfCommon(object):
             self.execute_cmd(cmd, ip, user, pwd, tool=tool)
 
     def clean(self, ip, user, pwd, pid=False):
-        print("# clean pid: {} #".format(pid))
+        print("- clean pid: {}".format(pid))
         tool = 'taskkill.exe'
         if not pid:
             cmd = '/IM PCATTCP.exe /F'
@@ -230,13 +230,13 @@ class PerfCommon(object):
         return self.execute_cmd(cmd, ip, user, pwd, tool=tool)
 
     def clean_ab(self, ip, user, pwd):
-        print("# Clean Apache Bench in {}-{} #".format(self.ip_type[ip], ip))
+        print("- Clean Apache Bench in {}-{}".format(self.ip_type[ip], ip))
         tool = 'taskkill.exe'
         cmd = '/IM ab.exe /F'
         return self.execute_cmd(cmd, ip, user, pwd, tool=tool)
 
     def clean_nginx(self, ip, user, pwd):
-        print("# Clean Nginx in {}-{} #".format(self.ip_type[ip], ip))
+        print("- Clean Nginx in {}-{}".format(self.ip_type[ip], ip))
         tool = 'taskkill.exe'
         cmd = '/IM nginx.exe /F'
         return self.execute_cmd(cmd, ip, user, pwd, tool=tool)
@@ -255,14 +255,14 @@ class PerfCommon(object):
         return self.execute_cmd(cmd, ip, user, pwd, tool=tool, bandwidth=bandwidth, asynchronous=asynchronous)
 
     def run_nginx(self, ip, user, pwd):
-        print("# Run nginx on {}-{} #".format(self.ip_type[ip], ip))
+        print("{0}\n+ Run nginx on {}-{} +\n{0}".format("+"*50, self.ip_type[ip], ip))
         self.clean_nginx(ip, user, pwd)
         tool = "Powershell.exe"
         cmd = "cd {0}nginx-1.19.2; start {0}nginx-1.19.2\\nginx.exe".format(self.path)
         self.execute_cmd(cmd, ip, user, pwd, tool=tool, bandwidth=False, asynchronous=True)
 
     def run_ab(self, ip, user, pwd, target_ip):
-        print("# Run Apache Bench {}-{} #".format(self.ip_type[ip], ip))
+        print("{0}\n+ Run Apache Bench {}-{} +\n{0}".format("+" * 50, self.ip_type[ip], ip))
         self.clean_ab(ip, user, pwd)
         tool = "Powershell.exe"
         cmd = "{}ab.exe -k -n 100 -c 10 http://{}/test.htm".format(self.path, target_ip)
