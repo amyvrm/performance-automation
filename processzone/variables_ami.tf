@@ -8,7 +8,8 @@ variable "dsm_windows_ami"{
 
 //ami-088ba3e5460a63e7a
 variable "dsa_windows_ami"{
-	default = "ami-00dd0737502449ce1"
+//	default = "ami-00dd0737502449ce1"
+	default = "ami-0cdfa905439f4b9ca"
 }
 
 variable "dsa_amazon1_ami"{

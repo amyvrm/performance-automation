@@ -9,6 +9,7 @@ import seaborn as sns
 import numpy as np
 import time
 import os
+import re
 
 
 class PerfCommon(object):
@@ -16,10 +17,16 @@ class PerfCommon(object):
         self.header = "-" * 50
         self.stats = stats
         self.graph = graph
+        self.rule_file = os.path.join("update-info", "rule-identifiers.txt")
+        self.server_rule_file = os.path.join("update-info", "server-rule-identifiers.txt")
+        self.client_rule_file = os.path.join("update-info", "client-rule-identifiers.txt")
+        self.portlist_file = os.path.join("update-info", "port_list.txt")
 
     def create_html_table(self, df, scenario_name):
         print(df)
         fname = "{}_{}".format(scenario_name.replace(" ", "_"), self.stats)
+        if os.path.exists(fname):
+            os.remove(fname)
         # create table
         with open(fname, "a") as fin:
             fin.write(self.create_html_header())
@@ -29,6 +36,11 @@ class PerfCommon(object):
             fin.write("</body>\n</html>\n")
 
     def create_bar_chart(self, avg, scenario_name):
+        # if scenario_name == "Server Upload" or scenario_name == "Server Download":
+        #     self.col.append('Server Rule (No. of Rules: {})'.format(len(self.server_rule)))
+        # elif scenario_name == "Client Download":
+        #     self.col.append('Client Rule (No. of Rules: {})'.format(len(self.client_rules)))
+
         ind = np.arange(0, len(avg))
         scenario_sort = ["WOFD", "WFD", "OGR", "SR_U"]
 
@@ -47,7 +59,7 @@ class PerfCommon(object):
 
         ax.set_xlabel("Scenario", fontsize=16, alpha=0.8)
         ax.set_ylabel("Throughput (MBps)", fontsize=16, alpha=0.8)
-        ax.set_title("Server (Upload)", fontsize=18)
+        ax.set_title(scenario_name, fontsize=18)
         ax.set_xticklabels(scenario_sort, fontsize=14)
 
         # map names to colors
@@ -62,6 +74,8 @@ class PerfCommon(object):
         sns.despine()
         # plt.show()
         fname = "{}_{}".format(scenario_name.replace(" ", "_"), self.graph)
+        if os.path.exists(fname):
+            os.remove(fname)
         plt.savefig(fname, bbox_extra_artists=(lgd, text), bbox_inches='tight')
 
     def create_html_header(self):
@@ -73,26 +87,34 @@ class PerfCommon(object):
                       "</head>\n<body>\n"
         return html_header
 
-    def run_band_test(self, sip, suser, spwd, cip, cuser, cpwd, s_priv_ip, c_priv_ip, scenario_name):
-        if scenario_name == "client_download":
+    def run_band_test(self, suser, sip, spwd, s_priv_ip, cuser, cip, cpwd, c_priv_ip, scenario_name):
+        if scenario_name == "Server Download":
             # Run Nginx
             self.run_nginx(sip, suser, spwd)
             # Run Apache Bench
-            self.run_ab(cip, cuser, cpwd, sip)
-        self.clean(cip, cuser, cpwd)
-        self.clean(sip, suser, spwd)
-        time.sleep(4)
-        # receiver
-        pid = self.run_pcattcp_rec(cip, cuser, cpwd, s_priv_ip, asynchronous=True)
-        time.sleep(2)
-        # transmitter
-        through_put = self.run_pcattcp_tran(sip, suser, spwd, c_priv_ip, bandwidth=True)
-        print("Through put: {}".format(through_put))
-        # print("sum: {}, len: {}, Average: {} MBps".format(sum(map(float, through_put)), len(through_put),
-        #                                                   round(sum(map(float, through_put)) / len(through_put), 2)))
-        time.sleep(2)
-        self.clean(cip, cuser, cpwd, pid=pid)
-        self.clean(sip, suser, spwd)
+            through_put = self.run_ab(cip, cuser, cpwd, s_priv_ip)
+            print("Through put: {}".format(through_put))
+        elif scenario_name == "Client Download":
+            # Run Nginx
+            self.run_nginx(sip, suser, spwd)
+            # Run Apache Bench
+            through_put = self.run_ab(cip, cuser, cpwd, s_priv_ip)
+            print("Through put: {}".format(through_put))
+        elif scenario_name == "Server Upload":
+            self.clean(cip, cuser, cpwd)
+            self.clean(sip, suser, spwd)
+            time.sleep(4)
+            # receiver
+            pid = self.run_pcattcp_rec(sip, suser, spwd, c_priv_ip, asynchronous=True)
+            time.sleep(2)
+            # transmitter
+            through_put = self.run_pcattcp_tran(cip, cuser, cpwd, s_priv_ip, bandwidth=True)
+            print("Through put: {}".format(through_put))
+            # print("sum: {}, len: {}, Average: {} MBps".format(sum(map(float, through_put)), len(through_put),
+            #                                                   round(sum(map(float, through_put)) / len(through_put), 2)))
+            time.sleep(2)
+            self.clean(cip, cuser, cpwd, pid=pid)
+            self.clean(sip, suser, spwd)
         return through_put
 
     def execute_cmd(self, cmd, ip, user, pwd, tool="Powershell.exe", iteration=10, bandwidth=False, asynchronous=False):
@@ -103,19 +125,17 @@ class PerfCommon(object):
             print("# IP: {}, Tool: {}, Command: {} #".format(ip, tool, cmd))
             if tool == "Powershell.exe":
                 if bandwidth:
+                    print("- Taking Bandwidth Reading...")
                     all_through_put = []
                     for i in range(iteration):
                         stdout, stderr, rc = machine.run_executable(tool, arguments=cmd, asynchronous=asynchronous)
                         print("Tool: {}, Output: [{}], Error: {}".format(tool, stdout, stderr))
-                        if stderr:
-                            out = stderr.decode("utf-8")
-                            through_put = out.split("=")[1].split(" ")[-8]
-                            t_mbps = round(float(through_put) / 1024.0, 2)
-                            print("{}: {} KBps, {} MBps".format(i + 1, through_put, t_mbps))
-                            all_through_put.append(t_mbps)
+                        PerfCommon.get_bandwidth(cmd, stdout, stderr, all_through_put, i)
+                        time.sleep(1)
                     all_through_put.sort(reverse=True)
                     return all_through_put
                 else:
+                    print("- Running Remote Command...")
                     stdout, stderr, rc = machine.run_executable(tool, arguments=cmd, asynchronous=asynchronous)
                     print("Tool: {}, Output: [{}], Error: {}".format(tool, stdout, stderr))
                 if stdout:
@@ -129,6 +149,25 @@ class PerfCommon(object):
         finally:
             machine.remove_service()
             machine.disconnect()
+
+    @staticmethod
+    def get_bandwidth(cmd, stdout, stderr, all_through_put, index):
+        if "PCATTCP" in cmd:
+            if stderr:
+                out = stderr.decode("utf-8")
+                through_put = out.split("=")[1].split(" ")[-8]
+                t_mbps = round(float(through_put) / 1024.0, 2)
+                print("{}: {} KBps, {} MBps".format(index + 1, through_put, t_mbps))
+                all_through_put.append(t_mbps)
+        elif "ab" in cmd:
+            if stdout:
+                out = stdout.decode("utf-8")
+                for line in out.split("\r\n"):
+                    if "Transfer rate" in line:
+                        through_put = re.findall("\d+\.\d+", line)[0]
+                        t_mbps = round(float(through_put) / 1024.0, 2)
+                        print("{}: {} KBps, {} MBps".format(index + 1, through_put, t_mbps))
+                        all_through_put.append(t_mbps)
 
     @staticmethod
     def get_pwd(region, access_key, secret_key, instance_id, pem_file_loc, mtype):
@@ -166,18 +205,20 @@ class PerfCommon(object):
         return name.replace(" ", "` ") if " " in name else name
 
     def enable_filter(self, ip, user, pwd, adaptor_name):
-        print("{0}\n # {2}-{1} Enable Filter #\n{0}".format(self.header, ip, self.ip_type[ip]))
-        tool = "Powershell.exe"
-        cmd = 'Enable-NetAdapterBinding -Name "{}" -DisplayName "Trend` Micro` LightWeight` Filter` Driver"'.format(
-            adaptor_name)
-        return self.execute_cmd(cmd, ip, user, pwd, tool=tool)
+        print("{0}\n # {2}-{1} Enable Filter #\n{0}".format("+" * 50, ip, self.ip_type[ip]))
+        for retry in range(2):
+            tool = "Powershell.exe"
+            cmd = 'Enable-NetAdapterBinding -Name "{}" -DisplayName "Trend` Micro` LightWeight` Filter` Driver"'.format(
+                adaptor_name)
+            self.execute_cmd(cmd, ip, user, pwd, tool=tool)
 
     def disable_filter(self, ip, user, pwd, adaptor_name):
-        print("{0}\n # {2}-{1} Disable Filter #\n{0}".format(self.header, ip, self.ip_type[ip]))
-        tool = "Powershell.exe"
-        cmd = 'Disable-NetAdapterBinding -Name "{}" -DisplayName "Trend` Micro` LightWeight` Filter` Driver"'.format(
-            adaptor_name)
-        return self.execute_cmd(cmd, ip, user, pwd, tool=tool)
+        print("{0}\n # {2}-{1} Disable Filter #\n{0}".format("+" * 50, ip, self.ip_type[ip]))
+        for retry in range(2):
+            tool = "Powershell.exe"
+            cmd = 'Disable-NetAdapterBinding -Name "{}" -DisplayName "Trend` Micro` LightWeight` Filter` Driver"'.format(
+                adaptor_name)
+            self.execute_cmd(cmd, ip, user, pwd, tool=tool)
 
     def clean(self, ip, user, pwd, pid=False):
         print("# clean pid: {} #".format(pid))
@@ -201,42 +242,45 @@ class PerfCommon(object):
         return self.execute_cmd(cmd, ip, user, pwd, tool=tool)
 
     def run_pcattcp_rec(self, ip, user, pwd, target_ip, asynchronous=False):
-        print("# run_pcattcp_rec #")
+        print("# Run PCATTCP on {}-{} #".format(self.ip_type[ip], ip))
         tool = "Powershell.exe"
         cmd = '{}PCATTCP\PCATTCP.exe -r -l 490000 {} -c'.format(self.path, target_ip)
         return self.execute_cmd(cmd, ip, user, pwd, tool=tool, bandwidth=False, asynchronous=asynchronous)
 
     def run_pcattcp_tran(self, ip, user, pwd, target_ip, bandwidth=False, asynchronous=False):
+        print("# Run PCATTCP on {}-{} and take Reading #".format(self.ip_type[ip], ip))
         print("# run_pcattcp_tran #")
         tool = "Powershell.exe"
         cmd = '{}PCATTCP\PCATTCP.exe -t -l 490000 {}'.format(self.path, target_ip)
         return self.execute_cmd(cmd, ip, user, pwd, tool=tool, bandwidth=bandwidth, asynchronous=asynchronous)
 
     def run_nginx(self, ip, user, pwd):
-        print("# run_nginx #")
+        print("# Run nginx on {}-{} #".format(self.ip_type[ip], ip))
         self.clean_nginx(ip, user, pwd)
         tool = "Powershell.exe"
-        cmd = "cd {0}nginx-1.19.2; {0}nginx-1.19.2\\nginx.exe".format(self.path)
+        cmd = "cd {0}nginx-1.19.2; start {0}nginx-1.19.2\\nginx.exe".format(self.path)
         self.execute_cmd(cmd, ip, user, pwd, tool=tool, bandwidth=False, asynchronous=True)
 
     def run_ab(self, ip, user, pwd, target_ip):
-        print("# Run Apache Bench #")
+        print("# Run Apache Bench {}-{} #".format(self.ip_type[ip], ip))
         self.clean_ab(ip, user, pwd)
         tool = "Powershell.exe"
-        cmd = "{}ab.exe -n 100 -c 10 http://{}/test.html".format(self.path, target_ip)
-        self.execute_cmd(cmd, ip, user, pwd, tool=tool, bandwidth=False, asynchronous=True)
+        cmd = "{}ab.exe -k -n 100 -c 10 http://{}/test.htm".format(self.path, target_ip)
+        return self.execute_cmd(cmd, ip, user, pwd, tool=tool, bandwidth=True, asynchronous=False)
 
     def disable_dsa(self, ip, user, pwd):
-        print("{0}\n # {2}-{1} Disable DSA #\n{0}".format(self.header, ip, self.ip_type[ip]))
-        tool = "Powershell.exe"
-        cmd = "Stop-Service -Name \"Trend` Micro` Deep` Security` Agent\""
-        return self.execute_cmd(cmd, ip, user, pwd, tool=tool)
+        print("{0}\n # {2}-{1} Disable DSA #\n{0}".format("+" * 50, ip, self.ip_type[ip]))
+        for retry in range(2):
+            tool = "Powershell.exe"
+            cmd = "Stop-Service -Name \"Trend` Micro` Deep` Security` Agent\""
+            self.execute_cmd(cmd, ip, user, pwd, tool=tool)
 
     def activate_dsa(self, ip, user, pwd):
-        print("{0}\n # {2}-{1} Activate DSA #\n{0}".format(self.header, ip, self.ip_type[ip]))
-        tool = "Powershell.exe"
-        cmd = "Start-Service -Name \"Trend` Micro` Deep` Security` Agent\""
-        return self.execute_cmd(cmd, ip, user, pwd, tool=tool)
+        print("{0}\n # {2}-{1} Activate DSA #\n{0}".format("+" * 50, ip, self.ip_type[ip]))
+        for retry in range(2):
+            tool = "Powershell.exe"
+            cmd = "Start-Service -Name \"Trend` Micro` Deep` Security` Agent\""
+            self.execute_cmd(cmd, ip, user, pwd, tool=tool)
 
     def reboot_instance(self, instance_id, access_key, secret_key, region):
         print("{0}\n # Reboot {1} Instance #\n{0}".format(self.header, instance_id))
@@ -268,14 +312,14 @@ class PerfCommon(object):
 
     def get_dependency_portlist(self, path, grule):
         server_rules = []
+        client_rules = []
         non_dpi_rules = []
         all_dep_rules = set()
+        client_dep_rules = set()
         portlist_set = set()
         grule_list = [grule]
-        rule_file = os.path.join("update-info", "rule-identifiers.txt")
-        portlist_file = os.path.join("update-info", "port_list.txt")
 
-        with open(os.path.join("update-info", "rule-identifiers.txt"), "r") as f:
+        with open(self.rule_file, "r") as f:
             all_identifier = f.read().split(",")
         print("Rules: {}".format(all_identifier))
 
@@ -288,13 +332,20 @@ class PerfCommon(object):
         for identifier in all_identifier:
             rule = self.check_dpi_server_rule(identifier)
             if rule:
-                if self.check_server_rule(rule):
+                rule_type = self.check_server_rule(rule)
+                if rule_type == "server":
                     server_rules.append(identifier)
                     if rule["RequiresTBUIDs"]:
                         dep_rule = self.get_depend_rule(rule)
                         all_dep_rules.add(dep_rule["Identifier"])
                         self.get_port_info(dep_rule, portlist_set)
-                    self.get_port_info(rule, portlist_set)
+                elif rule_type == "client":
+                    client_rules.append(identifier)
+                    if rule["RequiresTBUIDs"]:
+                        dep_rule = self.get_depend_rule(rule)
+                        client_dep_rules.add(dep_rule["Identifier"])
+                        self.get_port_info(dep_rule, portlist_set)
+                self.get_port_info(rule, portlist_set)
             else:
                 non_dpi_rules.append(identifier)
         # Get Good Rule dependency
@@ -311,20 +362,30 @@ class PerfCommon(object):
         identifiers = server_rules[:]
         print("{}\nAll Rules: {}\nServer Rules: {}\nDependency of Server Rules: {}".format("*"*100, all_identifier,
                                                                                        server_rules, all_dep_rules))
+        client_rules_iden = client_rules[:]
+        print("{}\nClient Rules: {}\nDependency of Client Rules: {}".format("*" * 100, client_rules, client_dep_rules))
         print("Good Rule with Dependency: {}\nNon DPI Rule: {}\n".format(grule_list, non_dpi_rules))
-        print("\nPortList: {}\n\n{}".format(port_list, "*"*100))
+        print("PortList: {}\n{}".format(port_list, "*"*100))
 
         if len(all_dep_rules) > 0:
             server_rules.extend(list(all_dep_rules))
 
-        server_rules.extend(non_dpi_rules)
-        os.remove(rule_file)
-        with open(rule_file, "w") as f:
-            f.write(",".join(server_rules))
-        with open(portlist_file, "w") as f:
-            json.dump(port_list, f)
+        if len(client_dep_rules) > 0:
+            client_rules.extend(list(client_dep_rules))
 
-        return grule_list, identifiers
+        server_rules.extend(non_dpi_rules)
+        if os.path.exists(self.server_rule_file):
+            os.remove(self.server_rule_file)
+        with open(self.server_rule_file, "w") as f:
+            f.write(",".join(server_rules))
+        with open(self.portlist_file, "w") as f:
+            json.dump(port_list, f)
+        client_rules.extend(non_dpi_rules)
+        if os.path.exists(self.client_rule_file):
+            os.remove(self.client_rule_file)
+        with open(self.client_rule_file, "w") as f:
+            f.write(",".join(client_rules))
+        return grule_list, identifiers, client_rules_iden
 
     def check_dpi_server_rule(self, identifier):
         iden1, iden2 = "PayloadFilter2s", "PayloadFilter2"
@@ -374,6 +435,16 @@ class PerfCommon(object):
             if rules[con_tbuid] in con["TBUID"].split(","):
                 print(rules["Identifier"], con["Name"], con["Direction"])
                 if con["Direction"] == "1":
-                    return True
+                    return "server"
+                elif con["Direction"] == "2":
+                    return "client"
                 else:
                     return False
+
+    def enable_agent_filter(self, sip, suser, spwd, cip, cuser, cpwd):
+        self.enable_filter(sip, suser, spwd, self.s_adap_name)
+        self.enable_filter(cip, cuser, cpwd, self.c_adap_name)
+        self.activate_dsa(sip, suser, spwd)
+        self.activate_dsa(cip, cuser, cpwd)
+        print("Waiting 30 sec, Both machine Agent: Enabled, Filter Driver: Enable")
+        time.sleep(30)

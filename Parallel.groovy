@@ -12,7 +12,8 @@ node('aws&&docker')
     def msg = ""
     def user_name = "None"
     def dsru_name = ""
-    def scenario = ["Server_Upload", "Server_Download", "Client_Download"]
+//    def scenario = ["Server_Upload", "Server_Download", "Client_Download"]
+    def scenario = ["Server_Upload", "Server_Download"]
 
     wrap([$class: 'BuildUser']) { user_name = "${env.BUILD_USER}" }
     deleteDir()
@@ -55,11 +56,12 @@ node('aws&&docker')
                 echo "Waiting 2 min before running parallel scenario pipeline"
                 sleep time: 2, unit: 'MINUTES'
                 dsru_name = server_download(perf_pipeline, dsru_file)
-            }, Client_Download: {
-                echo "Waiting 2 min before running parallel scenario pipeline"
-                sleep time: 2, unit: 'MINUTES'
-                dsru_name = client_download(perf_pipeline, dsru_file)
-            }
+            },
+//            Client_Download: {
+//                echo "Waiting 2 min before running parallel scenario pipeline"
+//                sleep time: 2, unit: 'MINUTES'
+//                dsru_name = client_download(perf_pipeline, dsru_file)
+//            }
             failFast: true
         }
 
@@ -96,6 +98,9 @@ node('aws&&docker')
                 stats_file =  "${scenario[i]}_${stats}"
                 graph_file =  "${scenario[i]}_${graph}"
                 machine_file =  "${scenario[i]}_${machine_info}"
+                echo "stats_file: ${stats_file}"
+                echo "graph_file: ${graph_file}"
+                echo "machine_file: ${machine_file}"
                 msg += "${scenario[i]} Iteration Stats: <${nexus_url}/${stats_file}|Table>\n"
                 msg += "${scenario[i]} Average Iteration: <${nexus_url}/${graph_file}|Bar Chart>\n"
                 msg += "${scenario[i]} Machine info: <${nexus_url}/${machine_file}|Json File>\n\n"
@@ -119,6 +124,9 @@ node('aws&&docker')
 
 def server_upload(perf_pipeline, dsru_file) {
     scenario = "Server_Upload"
+    stats = "stats.html"
+    graph = "band.png"
+    machine_info = "manifest.json"
     echo "Calling ${scenario} test"
     perf = build quietPeriod: 5, job: perf_pipeline,
                  parameters: [string(name: 'DSM_PACKAGE_URL', value: params.DSM_PACKAGE_URL),
@@ -136,6 +144,9 @@ def server_upload(perf_pipeline, dsru_file) {
 
 def server_download(perf_pipeline, dsru_file) {
     scenario = "Server_Download"
+    stats = "stats.html"
+    graph = "band.png"
+    machine_info = "manifest.json"
     echo "Calling ${scenario} test"
     perf = build quietPeriod: 5, job: perf_pipeline,
                  parameters: [string(name: 'DSM_PACKAGE_URL', value: params.DSM_PACKAGE_URL),
@@ -153,6 +164,9 @@ def server_download(perf_pipeline, dsru_file) {
 
 def client_download(perf_pipeline, dsru_file) {
     scenario = "Client_Download"
+    stats = "stats.html"
+    graph = "band.png"
+    machine_info = "manifest.json"
     echo "Calling ${scenario} test"
     perf = build quietPeriod: 5, job: perf_pipeline,
                  parameters: [string(name: 'DSM_PACKAGE_URL', value: params.DSM_PACKAGE_URL),

@@ -14,9 +14,12 @@ from get_machine_info import MachineInfo
 
 
 class DsmPolicy(object):
-    def __init__(self, dsm_ver, nexus_uname, nexus_pwd, machine, path, policy_name):
+    def __init__(self, dsm_ver, nexus_uname, nexus_pwd, machine, path, policy_name, port, server_rule, client_rule):
         dsm_ip = machine.get_dsm_public_ip()
+        print("+ DSM IP: {} +".format(dsm_ip))
+        self.header = "-" * 50
         self.policy_name = policy_name
+        self.port = port
         self.pkg_path = path
         urllib3.disable_warnings()
         self.wsdl_url = f"https://{dsm_ip}:4119/webservice/Manager?WSDL"
@@ -27,12 +30,22 @@ class DsmPolicy(object):
         self.pwd = machine.get_dsm_pwd()
         self.dsm_ver = dsm_ver
         self.cred = (nexus_uname, nexus_pwd)
+        self.server_rule_file = server_rule
+        self.client_rule_file = client_rule
         self.connect()
 
     def connect(self):
         transport = zeep.Transport()
         transport.session.verify = False  # Bypass self-signed certificate errors
-        self.client = zeep.Client(wsdl=self.wsdl_url, transport=transport)
+        for retry in range(3):
+            print("Attempt-{} to Create DSM Connection...".format(retry+1))
+            try:
+                self.client = zeep.Client(wsdl=self.wsdl_url, transport=transport)
+                break
+            except Exception as ex:
+                print("Exception!!! {}".format(ex))
+                time.sleep(10)
+
         self.session = requests.Session()
         self.session.verify = False
 
@@ -65,7 +78,7 @@ class DsmPolicy(object):
         fname = self.get_policy()
         if change_policy:
             dest_fname = os.path.join("templates", "perf_policy_changed.xml")
-            fname = DsmPolicy.override_portlist(fname, dest_fname)
+            fname = self.override_portlist(fname, dest_fname)
 
         xml_root = ET.parse(fname)
         xml_root = xml_root.getroot()
@@ -108,9 +121,8 @@ class DsmPolicy(object):
         self.session.post(self.import_policy_url, data=data)
         time.sleep(20)
 
-    @staticmethod
-    def override_portlist(source_fname, dest_fname):
-        print("{0}\n# Updating policy for perf test port list #\n{0}".format("#" * 50))
+    def override_portlist(self, source_fname, dest_fname):
+        print("{0}\n# Updating policy to override rule port list with port {1} #\n{0}".format("#" * 50, self.port))
         port1, port2 = "PortLists", "PortList"
         with open(os.path.join("update-info", "port_list.txt"), "r") as f:
             port_list = json.load(f)
@@ -122,7 +134,7 @@ class DsmPolicy(object):
         for port_info in port_list:
             if port_info:
                 count += 1
-                print("Updated {} to perf test_{}".format(port_info["TBUID"], count))
+                print("Updated port_list perf test_{} with port {}".format(count, self.port))
                 child = ET.SubElement(portlist, port2)
                 child.set("id", port_info["id"])
                 gchild = ET.SubElement(child, "TBUID")
@@ -132,7 +144,7 @@ class DsmPolicy(object):
                 gchild = ET.SubElement(child, "Description")
                 gchild.text = "Assigning 5001 port for perf test"
                 gchild = ET.SubElement(child, "Items")
-                gchild.text = "5001"
+                gchild.text = self.port
                 gchild = ET.SubElement(child, "Version")
                 gchild.text = port_info["Version"]
                 gchild = ET.SubElement(child, "UserEdited")
@@ -159,7 +171,7 @@ class DsmPolicy(object):
                 fz.extractall("update-packages")
             os.remove(package_path)
 
-    def apply_pkg_create_applied_rule_list(self):
+    def apply_pkg_create_applied_rule_list(self, rule_file):
         response = self.upload_package()
         update_id = response["ID"]
         print("Upload successful, update package ID is {}".format(update_id))
@@ -175,7 +187,7 @@ class DsmPolicy(object):
 
         identifiers = [x[0] for x in re.findall("^\s*(\d+) - (.*)$", response["contentSummary"], re.MULTILINE)]
         print(f"Rule identifiers are {identifiers}\n")
-        with open(os.path.join("update-info", "rule-identifiers.txt"), "w") as f:
+        with open(rule_file, "w") as f:
             f.write(",".join(identifiers))
 
         print("Attempting to apply update package", flush=True)
@@ -198,20 +210,23 @@ class DsmPolicy(object):
         print("Uploading {} to DSM".format(pkg_name), flush=True)
         return self.client.service.securityUpdateStore(securityUpdate=update_package, fileName=pkg_name, sID=self.sID)
 
-    def apply_rule(self, rule_list=False):
-        if not rule_list:
-            # Rule identifiers are passed from the previous step in the pipeline, apply_package.py
-            with open(os.path.join("update-info", "rule-identifiers.txt"), "r") as f:
-                identifiers = f.read().split(",")
-        else:
+    def apply_rule(self, scenario_name, rule_list=False):
+        if rule_list:
             identifiers = rule_list
+        elif scenario_name == "Server Upload" or scenario_name == "Server Download":
+            print("{0}{0}\n# With All Server side rule #\n{0}{0}\n".format(self.header))
+            with open(self.server_rule_file, "r") as f:
+                identifiers = f.read().split(",")
+        elif scenario_name == "Client Download":
+            print("{0}{0}\n# With All Client side rule #\n{0}{0}\n".format(self.header))
+            with open(self.client_rule_file, "r") as f:
+                identifiers = f.read().split(",")
 
         # The rule identifier is not the same as the internal rule ID - the former is guaranteed to be unique across
         #   the entire system, while the latter is only unique within its rule type
         # When using the API, the system only accepts the latter for commands
         print("Finding internal IDs for all rules", flush=True)
         dpi_rule_ids, integrity_rule_ids, log_inspection_rule_ids, internal_id_mappings = self.find_internal_ids(identifiers)
-
         policy_id = self.client.service.securityProfileRetrieveByName(name=self.policy_name, sID=self.sID)["ID"]
         if not policy_id:
             msg = "ERROR: Policy {} not found on the DSM, please check the policy".format(self.policy_name)
@@ -225,6 +240,7 @@ class DsmPolicy(object):
         print("Waiting 30 secs, for policies to apply", flush=True)
         time.sleep(30)
         self.update_ports(policy_id)
+
         response = self.client.service.hostRetrieveAll(sID=self.sID)
         ids = [r["ID"] for r in response]
         self.client.service.hostClearWarningsErrors(ids, sID=self.sID)
@@ -304,21 +320,22 @@ class DsmPolicy(object):
         return self.client.service.securityProfileSave(sp=sp, sID=self.sID)
 
     def update_ports(self, policy_id):
+        print("{0}\n# Updating policy to override rule port with {1} port #\n{0}".format("#" * 50, self.port))
         con1, con2 = "ConnectionTypes", "ConnectionType"
         policy_xml_str = self.export_policy_xml(policy_id)
         root = ET.fromstring(policy_xml_str)
 
         for con in root.iter(con2):
             if con.find('Ports').text:
-                DsmPolicy.override_port(policy_id, root, con.attrib['id'], con.find('PortType').text, "5001")
+                DsmPolicy.override_port(policy_id, root, con.attrib['id'], con.find('PortType').text, self.port)
                 break
         over1, over2 = "ConnectionTypeOverrides", "ConnectionTypeOverride"
         for over in root.iter(over2):
-            print("ID:{}, Ports:{}".format(over.find('ConnectionTypeID').text, over.find('Ports').text))
+            print("Overridden Port ID:{}, Ports:{}".format(over.find('ConnectionTypeID').text, over.find('Ports').text))
 
         policy_xml = ET.tostring(root, encoding='utf8', method='xml')
         self.upload_custom_policy(policy_xml)
-        print("Waiting 30 sec, after changing perf port 5001")
+        print("Waiting 30 sec, after changing perf port {}".format(self.port))
         time.sleep(30)
 
     def export_policy_xml(self, policy_id):
@@ -332,7 +349,7 @@ class DsmPolicy(object):
         over1, over2 = "ConnectionTypeOverrides", "ConnectionTypeOverride"
         override = tree.find(over1)
         id = len(override) + 1
-        print("id: {}".format(id))
+        print("Override Port id: {}, port: {}".format(id, port))
         child = ET.SubElement(override, over2)
         child.set("id", str(id))
         t = ET.SubElement(child, "SecurityProfileID")
