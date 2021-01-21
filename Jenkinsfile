@@ -130,7 +130,7 @@ node(nodeLabel)
 							                                      passwordVariable: 'NEX_PASS')]) {
                                         sh("python src/perform_scenario.py --access_key ${AWS_ACCESS_KEY_ID} \
                                                                        --secret_key ${AWS_SECRET_ACCESS_KEY} \
-                                                                       --machine_info ${machine_info} \
+                                                                       --machine_info ${scenario}_${machine_info} \
                                                                        --dsm_version ${dsmVersion} \
                                                                        --stats ${stats} \
                                                                        --graph ${graph} \
