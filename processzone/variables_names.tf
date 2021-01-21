@@ -35,7 +35,8 @@ variable "tag_dsa_solaris_name" {
 }
 
 variable "tag_securitygroup_name" {
-	default = "allow-winrm-ips_mttr"
+	//	default = "allow-winrm-ips_mttr"
+	default = "allow_perf_auto"
 }
 
 variable "tag_dsa_cloudlinux8_name" {
