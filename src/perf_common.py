@@ -157,7 +157,7 @@ class PerfCommon(object):
                 out = stderr.decode("utf-8")
                 through_put = out.split("=")[1].split(" ")[-8]
                 t_mbps = round(float(through_put) / 1024.0, 2)
-                print("{}: {} KBps, {} MBps".format(index + 1, through_put, t_mbps))
+                print("{0}\n+ {1}: {2} KBps, {3} MBps +\n{0}".format("+"*50, index + 1, through_put, t_mbps))
                 all_through_put.append(t_mbps)
         elif "ab" in cmd:
             if stdout:
@@ -166,7 +166,7 @@ class PerfCommon(object):
                     if "Transfer rate" in line:
                         through_put = re.findall("\d+\.\d+", line)[0]
                         t_mbps = round(float(through_put) / 1024.0, 2)
-                        print("{}: {} KBps, {} MBps".format(index + 1, through_put, t_mbps))
+                        print("{0}\n+ {1}: {2} KBps, {3} MBps +\n{0}".format("+" * 50, index + 1, through_put, t_mbps))
                         all_through_put.append(t_mbps)
 
     @staticmethod
@@ -242,27 +242,27 @@ class PerfCommon(object):
         return self.execute_cmd(cmd, ip, user, pwd, tool=tool)
 
     def run_pcattcp_rec(self, ip, user, pwd, target_ip, asynchronous=False):
-        print("# Run PCATTCP on {}-{} #".format(self.ip_type[ip], ip))
+        print("{0}\n+ Run PCATTCP on {1}-{2} +\n{0}".format(""*50, self.ip_type[ip], ip))
         tool = "Powershell.exe"
         cmd = '{}PCATTCP\PCATTCP.exe -r -l 490000 {} -c'.format(self.path, target_ip)
         return self.execute_cmd(cmd, ip, user, pwd, tool=tool, bandwidth=False, asynchronous=asynchronous)
 
     def run_pcattcp_tran(self, ip, user, pwd, target_ip, bandwidth=False, asynchronous=False):
-        print("# Run PCATTCP on {}-{} and take Reading #".format(self.ip_type[ip], ip))
+        print("{0}\n+ Run PCATTCP on {1}-{2} and take Reading +\n{0}".format("+"*50, self.ip_type[ip], ip))
         print("# run_pcattcp_tran #")
         tool = "Powershell.exe"
         cmd = '{}PCATTCP\PCATTCP.exe -t -l 490000 {}'.format(self.path, target_ip)
         return self.execute_cmd(cmd, ip, user, pwd, tool=tool, bandwidth=bandwidth, asynchronous=asynchronous)
 
     def run_nginx(self, ip, user, pwd):
-        print("{0}\n+ Run nginx on {}-{} +\n{0}".format("+"*50, self.ip_type[ip], ip))
+        print("{0}\n+ Run nginx on {1}-{2} +\n{0}".format("+"*50, self.ip_type[ip], ip))
         self.clean_nginx(ip, user, pwd)
         tool = "Powershell.exe"
         cmd = "cd {0}nginx-1.19.2; start {0}nginx-1.19.2\\nginx.exe".format(self.path)
         self.execute_cmd(cmd, ip, user, pwd, tool=tool, bandwidth=False, asynchronous=True)
 
     def run_ab(self, ip, user, pwd, target_ip):
-        print("{0}\n+ Run Apache Bench {}-{} +\n{0}".format("+" * 50, self.ip_type[ip], ip))
+        print("{0}\n+ Run Apache Bench {1}-{2} +\n{0}".format("+" * 50, self.ip_type[ip], ip))
         self.clean_ab(ip, user, pwd)
         tool = "Powershell.exe"
         cmd = "{}ab.exe -k -n 100 -c 10 http://{}/test.htm".format(self.path, target_ip)

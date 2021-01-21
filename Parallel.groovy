@@ -168,10 +168,16 @@ def client_download(perf_pipeline, dsru_file) {
     graph = "band.png"
     machine_info = "manifest.json"
     echo "Calling ${scenario} test"
+    echo "Agents: ${params.AGENTS}"
+    def value = params.AGENTS.split(",")
+    echo "value: ${value}"
+	def client_download = "${value[1]},${value[0]}"
+	echo "Client Download: ${client_download}"
+
     perf = build quietPeriod: 5, job: perf_pipeline,
                  parameters: [string(name: 'DSM_PACKAGE_URL', value: params.DSM_PACKAGE_URL),
                     credentials(description: 'DSM License Key for Automation', name: 'DSM_LICENSE_KEY', value: params.DSM_LICENSE_KEY),
-                    extendedChoice(name: 'AGENTS', value: params.AGENTS),
+                    extendedChoice(name: 'AGENTS', value: client_download),
                     text(name: 'AGENT_DOWNLOAD_URL', value: params.AGENT_DOWNLOAD_URL),
                     string(name: 'PACKAGE_URL', value: dsru_file),
                     string(name: 'SCENARIO', value: scenario),
