@@ -39,8 +39,8 @@ node(nodeLabel)
 				def graph = "band.png"
 				def machine_info = "manifest.json"
 
-				def stats_file =  "${scenario}_band.png"
-                def graph_file =  "${scenario}_${graph}"
+				def stats_file =  "${scenario}_stats.html"
+                def graph_file =  "${scenario}_band.png"
                 def machine_file =  "${scenario}_manifest.json"
 
 				def msg = ""
