@@ -34,9 +34,15 @@ node(nodeLabel)
                 def target_path = "Temp"
 				def bucket_name = "perf-auto-pkg"
 				def pkg = "update-packages"
+
 				def stats = "stats.html"
 				def graph = "band.png"
 				def machine_info = "manifest.json"
+
+				def stats_file =  "${scenario}_band.png"
+                def graph_file =  "${scenario}_${graph}"
+                def machine_file =  "${scenario}_manifest.json"
+
 				def msg = ""
 				def user_name = "None"
 				def pkg_name = ""
@@ -122,7 +128,7 @@ node(nodeLabel)
 									sh "python applyAutomation.py"
 
 							        echo 'Grab login info in JSON'
-								    sh "terraform output -json > ${scenario}_${machine_info}"
+								    sh "terraform output -json > ${machine_file}"
 							    }
 
 							    stage('Perf Test') {
@@ -130,7 +136,7 @@ node(nodeLabel)
 							                                      passwordVariable: 'NEX_PASS')]) {
                                         sh("python src/perform_scenario.py --access_key ${AWS_ACCESS_KEY_ID} \
                                                                        --secret_key ${AWS_SECRET_ACCESS_KEY} \
-                                                                       --machine_info ${scenario}_${machine_info} \
+                                                                       --machine_info ${machine_file} \
                                                                        --dsm_version ${dsmVersion} \
                                                                        --stats ${stats} \
                                                                        --graph ${graph} \
@@ -140,13 +146,10 @@ node(nodeLabel)
                                                                        --scenario ${scenario}")
                                     }
                                     sh "ls -1"
-//                                    stats_file =  "${scenario}_${stats}"
-//                                    graph_file =  "${scenario}_${graph}"
-//                                    machine_file =  "${scenario}_${machine_info}"
 //                                    archiveArtifacts allowEmptyArchive: true, artifacts: "${stats_file},${graph_file},${machine_file}"
 							    }
 							    stage('Get EC2 IDs') {
-								    jsonText = jsonParse(readFile("${machine_info}"))
+								    jsonText = jsonParse(readFile("${machine_file}"))
                                     def dsm_id = jsonText['dsm-rhel-id']['value']
                                     def sg_id = jsonText['sg-id']['value']
 
@@ -199,10 +202,6 @@ node(nodeLabel)
 					finally
 					{
 					    echo "archive Files"
-					    stats_file =  "${scenario}_${stats}"
-                        graph_file =  "${scenario}_${graph}"
-                        machine_file =  "${scenario}_${machine_info}"
-
 					    archiveArtifacts allowEmptyArchive: true,
 					       artifacts: "**/${stats_file}, **/${graph_file}, **/${machine_file}, **/tear_down_params.txt"
 					}
