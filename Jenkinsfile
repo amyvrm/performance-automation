@@ -198,6 +198,7 @@ node(nodeLabel)
 					} 
 					finally
 					{
+					    echo "archive Files"
 					    stats_file =  "${scenario}_${stats}"
                         graph_file =  "${scenario}_${graph}"
                         machine_file =  "${scenario}_${machine_info}"

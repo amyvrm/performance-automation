@@ -166,8 +166,8 @@ class PerfCommon(object):
                         t_mbps = round(float(through_put) / 1024.0, 2)
                         print("{0}\n+ {1}: {2} KBps, {3} MBps +\n{0}".format("+" * 50, index + 1, through_put, t_mbps))
                         all_through_put.append(t_mbps)
-                print("Waiting 10 sec")
-                time.sleep(10)
+                print("Waiting 20 sec")
+                time.sleep(20)
 
     @staticmethod
     def get_pwd(region, access_key, secret_key, instance_id, pem_file_loc, mtype):
