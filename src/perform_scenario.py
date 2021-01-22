@@ -103,14 +103,14 @@ class PerformanceScenario(PerfCommon):
         wo_filter_all_stats, wo_filter_stats, wof_avg = self.apply_rule_get_stats(suser, sip, spwd, s_priv_ip, cuser,
                                                                                   cip, cpwd, c_priv_ip, False,
                                                                                   scenario_name, action="wo_filter")
-        print("- Without Filter Driver Average Stats: {}\n".format(wof_avg))
+        print("- Without Filter Driver Average Stats: {} MBps\n".format(wof_avg))
 
         # With Filter Driver
         print("{0}{0}\n# With Filter Driver #\n{0}{0}".format(self.header))
         w_filter_all_stats, w_filter_stats, wf_avg = self.apply_rule_get_stats(suser, sip, spwd, s_priv_ip, cuser,
                                                                                cip, cpwd, c_priv_ip, False,
                                                                                scenario_name, action="filter")
-        print("- With Filter Driver Average Stats: {}\n".format(wf_avg))
+        print("- With Filter Driver Average Stats: {} MBps\n".format(wf_avg))
 
         # count = 0
         # for retry in range(2):
@@ -138,7 +138,7 @@ class PerformanceScenario(PerfCommon):
         rulelist_stats, iter_rulelist, rulelist_avg = self.apply_rule_get_stats(suser, sip, spwd, s_priv_ip, cuser, cip,
                                                                                 cpwd, c_priv_ip, self.grule_list,
                                                                                 scenario_name, action="rule")
-        print("- Threshold Rule with Dependency: {}\n".format(rulelist_avg))
+        print("- Threshold Rule with Dependency: {} MBps\n".format(rulelist_avg))
         # count = 0
         # for retry in range(2):
         #     if rulelist_avg > wf_avg:
@@ -167,7 +167,7 @@ class PerformanceScenario(PerfCommon):
         # With All Server/Client side rule
         rule_stats, iter_rule, rule_avg = self.apply_rule_get_stats(suser, sip, spwd, s_priv_ip, cuser, cip, cpwd,
                                                                     c_priv_ip, False, scenario_name, action="rule")
-        print("- Rule with Dependency Average stats: {}\n".format(rule_avg))
+        print("- Rule with Dependency Average stats: {} MBps\n".format(rule_avg))
         # count = 0
         # for retry in range(2):
         #     if rule_avg > rulelist_avg:

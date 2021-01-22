@@ -123,7 +123,7 @@ class PerfCommon(object):
                     all_through_put = []
                     for i in range(iteration):
                         stdout, stderr, rc = machine.run_executable(tool, arguments=cmd, asynchronous=asynchronous)
-                        print("Tool: {}, Output: [{}], Error: {}".format(tool, stdout, stderr))
+                        # print("Tool: {}, Output: [{}], Error: {}".format(tool, stdout, stderr))
                         PerfCommon.get_bandwidth(cmd, stdout, stderr, all_through_put, i)
                         time.sleep(1)
                     all_through_put.sort(reverse=True)
@@ -149,22 +149,25 @@ class PerfCommon(object):
         if "PCATTCP" in cmd:
             if stderr:
                 out = stderr.decode("utf-8")
+                for line in out.split("\r\n"):
+                    print(line)
                 through_put = out.split("=")[1].split(" ")[-8]
                 t_mbps = round(float(through_put) / 1024.0, 2)
                 print("{0}\n+ {1}: {2} KBps, {3} MBps +\n{0}".format("+"*50, index + 1, through_put, t_mbps))
                 all_through_put.append(t_mbps)
-                for line in out.split("\r\n"):
-                    print(line)
         elif "ab" in cmd:
             if stdout:
                 out = stdout.decode("utf-8")
                 for line in out.split("\r\n"):
                     print(line)
+                for line in out.split("\r\n"):
                     if "Transfer rate" in line:
                         through_put = re.findall("\d+\.\d+", line)[0]
                         t_mbps = round(float(through_put) / 1024.0, 2)
                         print("{0}\n+ {1}: {2} KBps, {3} MBps +\n{0}".format("+" * 50, index + 1, through_put, t_mbps))
                         all_through_put.append(t_mbps)
+                print("Waiting 10 sec")
+                time.sleep(10)
 
     @staticmethod
     def get_pwd(region, access_key, secret_key, instance_id, pem_file_loc, mtype):

@@ -140,10 +140,10 @@ node(nodeLabel)
                                                                        --scenario ${scenario}")
                                     }
                                     sh "ls -1"
-                                    stats_file =  "${scenario}_${stats}"
-                                    graph_file =  "${scenario}_${graph}"
-                                    machine_file =  "${scenario}_${machine_info}"
-                                    archiveArtifacts allowEmptyArchive: true, artifacts: '${stats_file}, ${graph_file}, ${machine_file}'
+//                                    stats_file =  "${scenario}_${stats}"
+//                                    graph_file =  "${scenario}_${graph}"
+//                                    machine_file =  "${scenario}_${machine_info}"
+//                                    archiveArtifacts allowEmptyArchive: true, artifacts: "${stats_file},${graph_file},${machine_file}"
 							    }
 							    stage('Get EC2 IDs') {
 								    jsonText = jsonParse(readFile("${machine_info}"))
@@ -201,7 +201,9 @@ node(nodeLabel)
 					    stats_file =  "${scenario}_${stats}"
                         graph_file =  "${scenario}_${graph}"
                         machine_file =  "${scenario}_${machine_info}"
-					    archiveArtifacts allowEmptyArchive: true, artifacts: '**/${stats_file}, **/${graph_file}, **/${machine_file}, **/tear_down_params.txt'
+
+					    archiveArtifacts allowEmptyArchive: true,
+					       artifacts: "**/${stats_file}, **/${graph_file}, **/${machine_file}, **/tear_down_params.txt"
 					}
 				}
 			}
