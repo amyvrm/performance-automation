@@ -12,6 +12,7 @@ node('aws&&docker')
     def msg = ""
     def user_name = "None"
     def dsru_name = ""
+    def main_dir ="terraformHC"
     def scenario = ["Server_Upload", "Server_Download", "Client_Download"]
 //    def scenario = ["Server_Upload", "Server_Download"]
 
@@ -76,13 +77,13 @@ node('aws&&docker')
                     graph_file =  "${scenario[i]}_${graph}"
                     machine_file =  "${scenario[i]}_${machine_info}"
                     // Get table name
-                    html_file = sh(script: "ls -1 ${WORKSPACE}/${MAIN_DIR}/${stats_file}", returnStdout: true).trim()
+                    html_file = sh(script: "ls -1 ${WORKSPACE}/${main_dir}/${stats_file}", returnStdout: true).trim()
                     fname = sh(script: "basename ${html_file}", returnStdout: true).trim()
                     // Get bar chart name
-                    png_file = sh(script: "ls -1 ${WORKSPACE}/${MAIN_DIR}/${graph_file}", returnStdout: true).trim()
+                    png_file = sh(script: "ls -1 ${WORKSPACE}/${main_dir}/${graph_file}", returnStdout: true).trim()
                     gfile = sh(script: "basename ${png_file}", returnStdout: true).trim()
                     // Get Machine info
-                    def manifest_file = sh(script: "ls -1 ${WORKSPACE}/${MAIN_DIR}/${machine_file}", returnStdout: true).trim()
+                    def manifest_file = sh(script: "ls -1 ${WORKSPACE}/${main_dir}/${machine_file}", returnStdout: true).trim()
                     def mfile = sh(script: "basename ${manifest_file}", returnStdout: true).trim()
                     // Upload file
                     sh "curl --user ${NEX_USER}:${NEX_PASS} --upload-file ${html_file} ${nexus_url}/${fname} --fail -v"
@@ -105,7 +106,6 @@ node('aws&&docker')
                 msg += "${scenario[i]} Average Iteration: <${nexus_url}/${graph_file}|Bar Chart>\n"
                 msg += "${scenario[i]} Machine info: <${nexus_url}/${machine_file}|Json File>\n\n"
             }
-            msg += "Manifest File: <${nexus_url}/${machine_info}|Machine Details>"
             //slackSend channel: 'dslabs_auto_monitoring', color: "good", message: "${msg}"
             slackSend channel: 'debug_amit', color: "good", message: "${msg}"
         }
@@ -124,9 +124,6 @@ node('aws&&docker')
 
 def server_upload(perf_pipeline, dsru_file) {
     scenario = "Server_Upload"
-    stats = "stats.html"
-    graph = "band.png"
-    machine_info = "manifest.json"
     echo "Calling ${scenario} test"
     perf = build quietPeriod: 5, job: perf_pipeline,
                  parameters: [string(name: 'DSM_PACKAGE_URL', value: params.DSM_PACKAGE_URL),
@@ -137,16 +134,12 @@ def server_upload(perf_pipeline, dsru_file) {
                     string(name: 'SCENARIO', value: scenario),
                     booleanParam(name: 'DEBUG', value: params.DEBUG)]
 
-    copyArtifacts filter: "${scenario}_${stats}, ${scenario}_${graph} ${scenario}_${machine_info}",
-                  projectName: perf_pipeline, selector: specific(perf.number)
+    copyArtifacts filter: "**/*.html, **/*.png **/*.json", projectName: perf_pipeline, selector: specific(perf.number)
     return perf.buildVariables.pkg_name
 }
 
 def server_download(perf_pipeline, dsru_file) {
     scenario = "Server_Download"
-    stats = "stats.html"
-    graph = "band.png"
-    machine_info = "manifest.json"
     echo "Calling ${scenario} test"
     perf = build quietPeriod: 5, job: perf_pipeline,
                  parameters: [string(name: 'DSM_PACKAGE_URL', value: params.DSM_PACKAGE_URL),
@@ -157,16 +150,12 @@ def server_download(perf_pipeline, dsru_file) {
                     string(name: 'SCENARIO', value: scenario),
                     booleanParam(name: 'DEBUG', value: params.DEBUG)]
 
-    copyArtifacts filter: "${scenario}_${stats}, ${scenario}_${graph}, ${scenario}_${machine_info}",
-                  projectName: perf_pipeline, selector: specific(perf.number)
+    copyArtifacts filter: "**/*.html, **/*.png, **/*.json", projectName: perf_pipeline, selector: specific(perf.number)
     return perf.buildVariables.pkg_name
 }
 
 def client_download(perf_pipeline, dsru_file) {
     scenario = "Client_Download"
-    stats = "stats.html"
-    graph = "band.png"
-    machine_info = "manifest.json"
     echo "Calling ${scenario} test"
     echo "Agents: ${params.AGENTS}"
     def value = params.AGENTS.split(",")
@@ -183,7 +172,6 @@ def client_download(perf_pipeline, dsru_file) {
                     string(name: 'SCENARIO', value: scenario),
                     booleanParam(name: 'DEBUG', value: params.DEBUG)]
 
-    copyArtifacts filter: "${scenario}_${stats}, ${scenario}_${graph}, ${scenario}_${machine_info}",
-                  projectName: perf_pipeline, selector: specific(perf.number)
+    copyArtifacts filter: "**/*.html, **/*.png, **/*.json", projectName: perf_pipeline, selector: specific(perf.number)
     return perf.buildVariables.pkg_name
 }
