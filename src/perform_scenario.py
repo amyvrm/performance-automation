@@ -233,6 +233,7 @@ class PerformanceScenario(PerfCommon):
             print("{0}\n{2}-{1} Agent: Enabled from DSM\n{2}-{1} Filter: Enabled from Network Driver\n{0}".format(
                                                                                 self.header, ip, self.ip_type[ip]))
         elif action == "rule":
+            self.dsm.connect()
             identifier = self.dsm.apply_rule(scenario_name, rule_list=grule_list)
             print("{0}{0}\n# {1} Rule Applied \n{0}{0}".format(self.header, identifier))
 
