@@ -134,7 +134,9 @@ def server_upload(perf_pipeline, dsru_file) {
                     string(name: 'SCENARIO', value: scenario),
                     booleanParam(name: 'DEBUG', value: params.DEBUG)]
 
-    copyArtifacts filter: "**/*.html, **/*.png **/*.json", projectName: perf_pipeline, selector: specific(perf.number)
+    echo "Build Number: ${perf.number}"
+    copyArtifacts filter: "**/*.html, **/*.png, **/*.json", projectName: perf_pipeline, selector: specific("${perf.number}")
+    echo "Copied ${scenario} Artifacts"
     return perf.buildVariables.pkg_name
 }
 
@@ -150,7 +152,9 @@ def server_download(perf_pipeline, dsru_file) {
                     string(name: 'SCENARIO', value: scenario),
                     booleanParam(name: 'DEBUG', value: params.DEBUG)]
 
-    copyArtifacts filter: "**/*.html, **/*.png, **/*.json", projectName: perf_pipeline, selector: specific(perf.number)
+    echo "Build Number: ${perf.number}"
+    copyArtifacts filter: "**/*.html, **/*.png, **/*.json", projectName: perf_pipeline, selector: specific("${perf.number}")
+    echo "Copied ${scenario} Artifacts"
     return perf.buildVariables.pkg_name
 }
 
@@ -172,6 +176,8 @@ def client_download(perf_pipeline, dsru_file) {
                     string(name: 'SCENARIO', value: scenario),
                     booleanParam(name: 'DEBUG', value: params.DEBUG)]
 
-    copyArtifacts filter: "**/*.html, **/*.png, **/*.json", projectName: perf_pipeline, selector: specific(perf.number)
+    echo "Build Number: ${perf.number}"
+    copyArtifacts filter: "**/*.html, **/*.png, **/*.json", projectName: perf_pipeline, selector: specific("${perf.number}")
+    echo "Copied ${scenario} Artifacts"
     return perf.buildVariables.pkg_name
 }
