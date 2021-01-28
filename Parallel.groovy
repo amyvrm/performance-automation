@@ -50,22 +50,6 @@ node('aws&&docker')
             }
         }
 
-        //stage("Parallel Perf Test") {
-        //    parallel Server_Upload: {
-        //        dsru_name = server_upload(perf_pipeline, dsru_file)
-        //    }, Server_Download: {
-        //        echo "Waiting 3 min before running parallel scenario pipeline"
-        //        sleep time: 3, unit: 'MINUTES'
-        //        dsru_name = server_download(perf_pipeline, dsru_file)
-        //    },
-        //    Client_Download: {
-        //        echo "Waiting 6 min before running parallel scenario pipeline"
-        //        sleep time: 6, unit: 'MINUTES'
-        //        dsru_name = client_download(perf_pipeline, dsru_file)
-        //    },
-        //    failFast: false
-        //}
-
         stage("Parallel Perf Test") {
             parallel Server_Upload: {
                 dsru_name = call_scenario_test("Server_Upload", perf_pipeline, dsru_file)
@@ -145,66 +129,6 @@ def call_scenario_test(scenario, perf_pipeline, dsru_file) {
                  parameters: [string(name: 'DSM_PACKAGE_URL', value: params.DSM_PACKAGE_URL),
                     credentials(description: 'DSM License Key for Automation', name: 'DSM_LICENSE_KEY', value: params.DSM_LICENSE_KEY),
                     extendedChoice(name: 'AGENTS', value: params.AGENTS),
-                    text(name: 'AGENT_DOWNLOAD_URL', value: params.AGENT_DOWNLOAD_URL),
-                    string(name: 'PACKAGE_URL', value: dsru_file),
-                    string(name: 'SCENARIO', value: scenario),
-                    booleanParam(name: 'DEBUG', value: params.DEBUG)]
-
-    echo "Build Number: ${perf.number}"
-    copyArtifacts filter: "**/*.html, **/*.png, **/*.json", projectName: perf_pipeline, selector: specific("${perf.number}")
-    echo "Copied ${scenario} Artifacts"
-    return perf.buildVariables.pkg_name
-}
-
-def server_upload(perf_pipeline, dsru_file) {
-    scenario = "Server_Upload"
-    echo "Calling ${scenario} test"
-    perf = build quietPeriod: 5, job: perf_pipeline,
-                 parameters: [string(name: 'DSM_PACKAGE_URL', value: params.DSM_PACKAGE_URL),
-                    credentials(description: 'DSM License Key for Automation', name: 'DSM_LICENSE_KEY', value: params.DSM_LICENSE_KEY),
-                    extendedChoice(name: 'AGENTS', value: params.AGENTS),
-                    text(name: 'AGENT_DOWNLOAD_URL', value: params.AGENT_DOWNLOAD_URL),
-                    string(name: 'PACKAGE_URL', value: dsru_file),
-                    string(name: 'SCENARIO', value: scenario),
-                    booleanParam(name: 'DEBUG', value: params.DEBUG)]
-
-    echo "Build Number: ${perf.number}"
-    copyArtifacts filter: "**/*.html, **/*.png, **/*.json", projectName: perf_pipeline, selector: specific("${perf.number}")
-    echo "Copied ${scenario} Artifacts"
-    return perf.buildVariables.pkg_name
-}
-
-def server_download(perf_pipeline, dsru_file) {
-    scenario = "Server_Download"
-    echo "Calling ${scenario} test"
-    perf = build quietPeriod: 5, job: perf_pipeline,
-                 parameters: [string(name: 'DSM_PACKAGE_URL', value: params.DSM_PACKAGE_URL),
-                    credentials(description: 'DSM License Key for Automation', name: 'DSM_LICENSE_KEY', value: params.DSM_LICENSE_KEY),
-                    extendedChoice(name: 'AGENTS', value: params.AGENTS),
-                    text(name: 'AGENT_DOWNLOAD_URL', value: params.AGENT_DOWNLOAD_URL),
-                    string(name: 'PACKAGE_URL', value: dsru_file),
-                    string(name: 'SCENARIO', value: scenario),
-                    booleanParam(name: 'DEBUG', value: params.DEBUG)]
-
-    echo "Build Number: ${perf.number}"
-    copyArtifacts filter: "**/*.html, **/*.png, **/*.json", projectName: perf_pipeline, selector: specific("${perf.number}")
-    echo "Copied ${scenario} Artifacts"
-    return perf.buildVariables.pkg_name
-}
-
-def client_download(perf_pipeline, dsru_file) {
-    scenario = "Client_Download"
-    echo "Calling ${scenario} test"
-    echo "Agents: ${params.AGENTS}"
-    def value = params.AGENTS.split(",")
-    echo "value: ${value}"
-	def client_download = "${value[1]},${value[0]}"
-	echo "Client Download: ${client_download}"
-
-    perf = build quietPeriod: 5, job: perf_pipeline,
-                 parameters: [string(name: 'DSM_PACKAGE_URL', value: params.DSM_PACKAGE_URL),
-                    credentials(description: 'DSM License Key for Automation', name: 'DSM_LICENSE_KEY', value: params.DSM_LICENSE_KEY),
-                    extendedChoice(name: 'AGENTS', value: client_download),
                     text(name: 'AGENT_DOWNLOAD_URL', value: params.AGENT_DOWNLOAD_URL),
                     string(name: 'PACKAGE_URL', value: dsru_file),
                     string(name: 'SCENARIO', value: scenario),
