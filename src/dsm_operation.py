@@ -325,7 +325,10 @@ class DsmPolicy(object):
         policy_xml_str = self.export_policy_xml(policy_id)
         root = ET.fromstring(policy_xml_str)
 
-        for con in root.iter(con2):
+        for index, con in enumerate(root.iter(con2), 1):
+            print("{}. ConnectionType ID: {}".format(index, con.attrib['id']))
+            for elem in con.iter():
+                print("{} {}".format(elem.tag, elem.text))
             if con.find('Ports').text:
                 DsmPolicy.override_port(policy_id, root, con.attrib['id'], con.find('PortType').text, self.port)
                 break
