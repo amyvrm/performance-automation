@@ -111,7 +111,7 @@ class PerfCommon(object):
             self.clean(sip, suser, spwd)
         return through_put
 
-    def execute_cmd(self, cmd, ip, user, pwd, tool="Powershell.exe", iteration=5, bandwidth=False, asynchronous=False):
+    def execute_cmd(self, cmd, ip, user, pwd, tool="Powershell.exe", iteration=10, bandwidth=False, asynchronous=False):
         machine = Client(ip, username=user, password=pwd, encrypt=False)
         machine.connect()
         try:
@@ -240,7 +240,7 @@ class PerfCommon(object):
         return self.execute_cmd(cmd, ip, user, pwd, tool=tool)
 
     def run_pcattcp_rec(self, ip, user, pwd, target_ip, asynchronous=False):
-        print("{0}\n+ Run PCATTCP on {1}-{2} +\n{0}".format(""*50, self.ip_type[ip], ip))
+        print("{0}\n+ Run PCATTCP on {1}-{2} +\n{0}".format("+"*50, self.ip_type[ip], ip))
         tool = "Powershell.exe"
         cmd = '{}PCATTCP\PCATTCP.exe -r -l 490000 {} -c'.format(self.path, target_ip)
         return self.execute_cmd(cmd, ip, user, pwd, tool=tool, bandwidth=False, asynchronous=asynchronous)
