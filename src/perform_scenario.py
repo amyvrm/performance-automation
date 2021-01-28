@@ -22,8 +22,17 @@ class PerformanceScenario(PerfCommon):
         self.dsm.upload_basic_policy()
         self.dsm.apply_pkg_create_applied_rule_list(self.rule_file)
 
-        instance1 = machine.get_instance_one_id()
-        instance2 = machine.get_instance_two_id()
+        if scenario == "Client_Download":
+            instance1 = machine.get_instance_two_id()
+            instance2 = machine.get_instance_one_id()
+            suser = machine.get_instance_two_user()
+            cuser = machine.get_instance_one_user()
+        else:
+            instance1 = machine.get_instance_one_id()
+            instance2 = machine.get_instance_two_id()
+            suser = machine.get_instance_one_user()
+            cuser = machine.get_instance_two_user()
+
         region = machine.get_region()
         pem_file = machine.get_pem_file()
         sip, s_priv_ip = self.reboot_instance(instance1, access_key, secret_key, region)
@@ -42,8 +51,7 @@ class PerformanceScenario(PerfCommon):
         self.title = ["iter-1 (MB/s)", "iter-2 (MB/s)", "iter-3 (MB/s)", "iter-4 (MB/s)", "iter-5 (MB/s)",
                       "Average (MB/s)"]
         self.path = machine.get_pkg_path()
-        suser = machine.get_instance_one_user()
-        cuser = machine.get_instance_two_user()
+
         # Get adaptor name
         self.s_adap_name = self.get_adaptor_name(sip, suser, spwd)
         self.c_adap_name = self.get_adaptor_name(cip, cuser, cpwd)
@@ -237,8 +245,8 @@ class PerformanceScenario(PerfCommon):
             identifier = self.dsm.apply_rule(scenario_name, rule_list=grule_list)
             print("{0}{0}\n# {1} Rule Applied \n{0}{0}".format(self.header, identifier))
 
-        print("Waiting 2 min")
-        time.sleep(120)
+        print("Waiting 3 min")
+        time.sleep(180)
         all_stats = self.run_band_test(suser, sip, spwd, s_priv_ip, cuser, cip, cpwd, c_priv_ip, scenario_name)
         iter_stats = all_stats[:self.best_iteration]
         avg = round(sum(map(float, iter_stats)) / len(iter_stats), 2)
@@ -256,8 +264,8 @@ if __name__ == '__main__':
     parser.add_argument('--stats', type=str, help="Html file name")
     parser.add_argument('--graph', type=str, help="Graph file name")
     parser.add_argument('--path', type=str, help="Graph file name")
-    parser.add_argument('--uname', type=str, help="Nexus username")
-    parser.add_argument('--pwd', type=str, help="Nexus password")
+    parser.add_argument('--nexus_uname', type=str, help="Nexus username")
+    parser.add_argument('--nexus_pwd', type=str, help="Nexus password")
     parser.add_argument('--scenario', type=str, help="Scenario name to test")
     args = parser.parse_args()
 
@@ -267,6 +275,6 @@ if __name__ == '__main__':
                                    args.dsm_version,
                                    args.access_key, args.secret_key,
                                    args.stats, args.graph, args.path,
-                                   args.uname, args.pwd,
+                                   args.nexus_uname, args.nexus_pwd,
                                    args.scenario
                                    )

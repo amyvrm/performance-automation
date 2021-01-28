@@ -237,8 +237,8 @@ class DsmPolicy(object):
         self.upload_policy(policy_id, dpi_rule_ids, integrity_rule_ids, log_inspection_rule_ids)
         response = self.client.service.securityProfileRetrieveByName(name=self.policy_name, sID=self.sID)
         print("Appled Rule info: {}".format(response))
-        print("Waiting 30 secs, for policies to apply", flush=True)
-        time.sleep(30)
+        print("Waiting 60 secs, for policies to apply", flush=True)
+        time.sleep(60)
         self.update_ports(policy_id)
 
         response = self.client.service.hostRetrieveAll(sID=self.sID)
@@ -325,13 +325,13 @@ class DsmPolicy(object):
         policy_xml_str = self.export_policy_xml(policy_id)
         root = ET.fromstring(policy_xml_str)
 
+        count = 0
         for index, con in enumerate(root.iter(con2), 1):
             print("{}. ConnectionType ID: {}".format(index, con.attrib['id']))
-            for elem in con.iter():
-                print("{} {}".format(elem.tag, elem.text))
             if con.find('Ports').text:
-                DsmPolicy.override_port(policy_id, root, con.attrib['id'], con.find('PortType').text, self.port)
-                break
+                count += 1
+                DsmPolicy.override_port(count, policy_id, root, con.attrib['id'], con.find('PortType').text, self.port)
+        print("-" * 50)
         over1, over2 = "ConnectionTypeOverrides", "ConnectionTypeOverride"
         for over in root.iter(over2):
             print("Overridden Port ID:{}, Ports:{}".format(over.find('ConnectionTypeID').text, over.find('Ports').text))
@@ -348,11 +348,11 @@ class DsmPolicy(object):
         return "\n".join([line.rstrip() for line in response.text.splitlines() if line])
 
     @staticmethod
-    def override_port(policy_id, tree, con_id, port_type, port):
+    def override_port(count, policy_id, tree, con_id, port_type, port):
         over1, over2 = "ConnectionTypeOverrides", "ConnectionTypeOverride"
         override = tree.find(over1)
         id = len(override) + 1
-        print("Override Port id: {}, port: {}".format(id, port))
+        print("{}. Override Port id: {}, port: {}".format(count, id, port))
         child = ET.SubElement(override, over2)
         child.set("id", str(id))
         t = ET.SubElement(child, "SecurityProfileID")

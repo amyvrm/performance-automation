@@ -141,8 +141,8 @@ node(nodeLabel)
                                                                        --stats ${stats} \
                                                                        --graph ${graph} \
                                                                        --path ${pkg} \
-                                                                       --uname ${NEX_USER} \
-                                                                       --pwd ${NEX_PASS} \
+                                                                       --nexus_uname ${NEX_USER} \
+                                                                       --nexus_pwd ${NEX_PASS} \
                                                                        --scenario ${scenario}")
                                     }
                                     sh "ls -1"
