@@ -4,7 +4,8 @@ node('aws&&docker')
 {
     def dsru_file
     def nexus_url = "https://dsnexus.trendmicro.com:8443/nexus/repository/dslabs/performance-test"
-    def perf_pipeline = "Perf-Automation/test_pipelines/test-perf-scenario"
+    //def perf_pipeline = "Perf-Automation/test_pipelines/test-perf-scenario"
+    def perf_pipeline = "Perf-Automation/Performance-Scenario-Test"
     def stats = "stats.html"
     def graph = "band.png"
     def machine_info = "manifest.json"
