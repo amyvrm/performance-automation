@@ -260,8 +260,8 @@ class PerfCommon(object):
         print("{0}\n+ Status of URL: {1} +\n{0}".format("+" * 50, self.check_test_page(ip, user, pwd, target_ip)))
         # cmd = "{}ab.exe -k -n 100 -c 10 http://{}/test.htm".format(self.path, target_ip)
         # cmd = "{}ab.exe -k -c 10 -t 60 -n 100 http://{}/test.htm".format(self.path, target_ip)
-        # cmd = "{}ab.exe -n 100 -c 10 http://{}/test.htm".format(self.path, target_ip)
-        cmd = "{}ab.exe -c 10 -t 60 -n 100 http://{}/test.htm".format(self.path, target_ip)
+        cmd = "{}ab.exe -c 10 -n 100 http://{}/test.htm".format(self.path, target_ip)
+        # cmd = "{}ab.exe -c 10 -t 60 -n 100 http://{}/test.htm".format(self.path, target_ip)
         return self.execute_cmd(cmd, ip, user, pwd, tool=tool, bandwidth=True, asynchronous=False)
 
     def check_test_page(self, ip, user, pwd, target_ip):

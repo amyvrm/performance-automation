@@ -169,9 +169,9 @@ node(nodeLabel)
 							currentBuild.result = 'SUCCESS'
 
 							stage("Slack message") {
-							    msg = "Pipeline: <${env.BUILD_URL}|Perform Automation> ${currentBuild.result} :green_circle:\n"
-							    //slackSend channel: 'dslabs_auto_monitoring', color: "good", message: "${msg}"
-							    slackSend channel: 'debug_amit', color: "good", message: "${msg}"
+							    msg = "Pipeline: <${env.BUILD_URL}|Perform Automation> ${scenario} ${currentBuild.result}: :green_circle:\n"
+							    slackSend channel: 'dslabs_auto_monitoring', color: "good", message: "${msg}"
+							    //slackSend channel: 'debug_amit', color: "good", message: "${msg}"
 							}
 						}
 						stage("Destroy Infra") {
@@ -192,10 +192,10 @@ node(nodeLabel)
 					catch (e)
 					{
 					    currentBuild.result = 'FAILURE'
-					    msg = "Pipeline: <${env.BUILD_URL}|Perform Automation> ${currentBuild.result}: :dot-red:\nError: ${e}\n"
+					    msg = "Pipeline: <${env.BUILD_URL}|Perform Automation> ${scenario} ${currentBuild.result}: :dot-red:\nError: ${e}\n"
 					    msg += "Infrastructure may be kept for Debug Purpose."
-						//slackSend channel: 'dslabs_auto_monitoring', color: "danger", message: "${msg}"
-						slackSend channel: 'debug_amit', color: "danger", message: "${msg}"
+						slackSend channel: 'dslabs_auto_monitoring', color: "danger", message: "${msg}"
+						//slackSend channel: 'debug_amit', color: "danger", message: "${msg}"
 						println(e)
 						throw e
 					} 
