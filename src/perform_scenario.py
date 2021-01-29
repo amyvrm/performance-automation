@@ -113,13 +113,13 @@ class PerformanceScenario(PerfCommon):
         iter_rule.append(rule_avg)
 
         # Scenrario complete
-        print("- Without filter: {}\n- With filter: {}\n- One-Good Rule: {}\n- All Server Rule: {}".format(
+        print("- Without filter: {}\n- With filter: {}\n- Best Case Rule: {}\n- All Server Rule: {}".format(
               wo_filter_stats, w_filter_stats, iter_rulelist, iter_rule))
-        self.col = ['Without Filter Driver', 'With Filter Driver + No Rule', 'One Good Rule']
+        self.col = ['Without Filter Driver', 'With Filter Driver + No Rule', 'Best Case Rule']
         if scenario_name == "Server Upload" or scenario_name == "Server Download":
-            self.col.append('Server Rule (No. of Rules: {})'.format(len(self.server_rule)))
+            self.col.append('Server Rules (No. of Rules: {})'.format(len(self.server_rule)))
         elif scenario_name == "Client Download":
-            self.col.append('Client Rule (No. of Rules: {})'.format(len(self.client_rules)))
+            self.col.append('Client Rules (No. of Rules: {})'.format(len(self.client_rules)))
         df = pd.DataFrame([wo_filter_stats, w_filter_stats, iter_rulelist, iter_rule], index=self.col,
                           columns=self.title)
         # Create Html

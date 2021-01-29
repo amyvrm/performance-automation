@@ -36,14 +36,10 @@ class PerfCommon(object):
             fin.write("</body>\n</html>\n")
 
     def create_bar_chart(self, avg, scenario_name):
-        # if scenario_name == "Server Upload" or scenario_name == "Server Download":
-        #     self.col.append('Server Rule (No. of Rules: {})'.format(len(self.server_rule)))
-        # elif scenario_name == "Client Download":
-        #     self.col.append('Client Rule (No. of Rules: {})'.format(len(self.client_rules)))
+        rule_msg = "Client Rules" if scenario_name == "Client Download" else "Server Rules"
+        scenario_sort = ["Without FD", "With FD", "Best Case Rule", rule_msg]
 
         ind = np.arange(0, len(avg))
-        scenario_sort = ["WOFD", "WFD", "OGR", "SR_U"]
-
         df = pd.DataFrame()
         df["ind"] = ind
         df["avg"] = avg
@@ -69,7 +65,7 @@ class PerfCommon(object):
         patches = [Patch(color=v, label=k) for k, v in cmap.items()]
         # add the legend
         lgd = plt.legend(title='Scenario Stats', handles=patches, bbox_to_anchor=(0.5, -0.1))
-        text = ax.text(-0.2, 1.05, "Scenario: {}".format(scenario_name), transform=ax.transAxes)
+        text = ax.text(-0.2, 1.05, "Scenario Name: {}".format(scenario_name), transform=ax.transAxes)
         ax.grid('on')
         sns.despine()
         # plt.show()
@@ -111,7 +107,7 @@ class PerfCommon(object):
             self.clean(sip, suser, spwd)
         return through_put
 
-    def execute_cmd(self, cmd, ip, user, pwd, tool="Powershell.exe", iteration=15, bandwidth=False, asynchronous=False):
+    def execute_cmd(self, cmd, ip, user, pwd, tool="Powershell.exe", iteration=10, bandwidth=False, asynchronous=False):
         machine = Client(ip, username=user, password=pwd, encrypt=False)
         machine.connect()
         try:
@@ -166,8 +162,6 @@ class PerfCommon(object):
                         t_mbps = round(float(through_put) / 1024.0, 2)
                         print("{0}\n+ {1}: {2} KBps, {3} MBps +\n{0}".format("+" * 50, index + 1, through_put, t_mbps))
                         all_through_put.append(t_mbps)
-                print("Waiting 2 sec")
-                time.sleep(2)
 
     @staticmethod
     def get_pwd(region, access_key, secret_key, instance_id, pem_file_loc, mtype):
@@ -263,9 +257,18 @@ class PerfCommon(object):
         print("{0}\n+ Run Apache Bench {1}-{2} +\n{0}".format("+" * 50, self.ip_type[ip], ip))
         self.clean_ab(ip, user, pwd)
         tool = "Powershell.exe"
+        print("{0}\n+ Status of URL: {1} +\n{0}".format("+" * 50, self.check_test_page(ip, user, pwd, target_ip)))
         # cmd = "{}ab.exe -k -n 100 -c 10 http://{}/test.htm".format(self.path, target_ip)
-        cmd = "{}ab.exe -n 100 -c 10 http://{}/test.htm".format(self.path, target_ip)
+        # cmd = "{}ab.exe -k -c 10 -t 60 -n 100 http://{}/test.htm".format(self.path, target_ip)
+        # cmd = "{}ab.exe -n 100 -c 10 http://{}/test.htm".format(self.path, target_ip)
+        cmd = "{}ab.exe -c 10 -t 60 -n 100 http://{}/test.htm".format(self.path, target_ip)
         return self.execute_cmd(cmd, ip, user, pwd, tool=tool, bandwidth=True, asynchronous=False)
+
+    def check_test_page(self, ip, user, pwd, target_ip):
+        print("{0}\n+ Run Wget {1}-{2} +\n{0}".format("+" * 50, self.ip_type[ip], ip))
+        tool = "Powershell.exe"
+        cmd = "wget http://{}/test.htm | ".format(target_ip) + "% {$_.StatusCode}"
+        return self.execute_cmd(cmd, ip, user, pwd, tool=tool)
 
     def disable_dsa(self, ip, user, pwd):
         print("{0}\n # {2}-{1} Disable DSA #\n{0}".format("+" * 50, ip, self.ip_type[ip]))
@@ -438,10 +441,12 @@ class PerfCommon(object):
                 else:
                     return False
 
-    def enable_agent_filter(self, sip, suser, spwd, cip, cuser, cpwd):
-        self.enable_filter(sip, suser, spwd, self.s_adap_name)
-        self.enable_filter(cip, cuser, cpwd, self.c_adap_name)
-        self.activate_dsa(sip, suser, spwd)
-        self.activate_dsa(cip, cuser, cpwd)
+    def enable_agent_filter(self, sip, suser, spwd, cip, cuser, cpwd, scenario):
+        if scenario == "Server_Download" or scenario == "Server_Upload":
+            self.activate_dsa(sip, suser, spwd)
+            self.enable_filter(sip, suser, spwd, self.s_adap_name)
+        if scenario == "Client_Download":
+            self.activate_dsa(cip, cuser, cpwd)
+            self.enable_filter(cip, cuser, cpwd, self.c_adap_name)
         print("Waiting 30 sec, Both machine Agent: Enabled, Filter Driver: Enable")
         time.sleep(30)
