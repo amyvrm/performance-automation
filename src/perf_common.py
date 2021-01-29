@@ -111,7 +111,7 @@ class PerfCommon(object):
             self.clean(sip, suser, spwd)
         return through_put
 
-    def execute_cmd(self, cmd, ip, user, pwd, tool="Powershell.exe", iteration=10, bandwidth=False, asynchronous=False):
+    def execute_cmd(self, cmd, ip, user, pwd, tool="Powershell.exe", iteration=15, bandwidth=False, asynchronous=False):
         machine = Client(ip, username=user, password=pwd, encrypt=False)
         machine.connect()
         try:
@@ -125,7 +125,7 @@ class PerfCommon(object):
                         stdout, stderr, rc = machine.run_executable(tool, arguments=cmd, asynchronous=asynchronous)
                         # print("Tool: {}, Output: [{}], Error: {}".format(tool, stdout, stderr))
                         PerfCommon.get_bandwidth(cmd, stdout, stderr, all_through_put, i)
-                        time.sleep(1)
+                        time.sleep(2)
                     all_through_put.sort(reverse=True)
                     return all_through_put
                 else:
