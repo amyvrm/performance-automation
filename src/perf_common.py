@@ -252,6 +252,8 @@ class PerfCommon(object):
         tool = "Powershell.exe"
         cmd = "cd {0}nginx-1.19.2; start {0}nginx-1.19.2\\nginx.exe".format(self.path)
         self.execute_cmd(cmd, ip, user, pwd, tool=tool, bandwidth=False, asynchronous=True)
+        print("Waiting 3 min")
+        time.sleep(180)
 
     def run_ab(self, ip, user, pwd, target_ip):
         print("{0}\n+ Run Apache Bench {1}-{2} +\n{0}".format("+" * 50, self.ip_type[ip], ip))
