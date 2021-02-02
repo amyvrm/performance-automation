@@ -55,13 +55,13 @@ node('aws&&docker')
             parallel Server_Upload: {
                 dsru_name = call_scenario_test("Server_Upload", perf_pipeline, dsru_file)
             }, Server_Download: {
-                echo "Waiting 4 min before running parallel scenario pipeline"
-                sleep time: 4, unit: 'MINUTES'
+                echo "Waiting 30 sec before running parallel scenario pipeline"
+                sleep time: 30, unit: 'SECONDS'
                 dsru_name = call_scenario_test("Server_Download", perf_pipeline, dsru_file)
             },
             Client_Download: {
-                echo "Waiting 8 min before running parallel scenario pipeline"
-                sleep time: 8, unit: 'MINUTES'
+                echo "Waiting 60 before running parallel scenario pipeline"
+                sleep time: 60, unit: 'SECONDS'
                 dsru_name = call_scenario_test("Client_Download", perf_pipeline, dsru_file)
             },
             failFast: false

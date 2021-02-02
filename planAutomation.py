@@ -3,6 +3,8 @@ import argparse
 import subprocess
 import os
 import shutil
+from random import randrange
+
 
 class InfraAutomation:
 
@@ -12,6 +14,8 @@ class InfraAutomation:
         self.agent_urls = agent_urls
         self.dsm_url = dsm_url
         self.dsm_license = dsm_license
+        self.ran_num = "{}".format(randrange(10000))
+        print("{0}\n+ Random Number: {1} +\n{0}".format("+"*50, self.ran_num))
         
     def form_agent_urls(self):
         self.agent_urls = self.agent_urls.replace("|", "~~")
@@ -35,6 +39,8 @@ class InfraAutomation:
             'dsm_redhat_url='+self.dsm_url,
             '-var',
             'dsm_license='+self.dsm_license,
+            '-var',
+            'random_num=' + self.ran_num,
             'processzone'])
             
         if cmd_ret != 0:

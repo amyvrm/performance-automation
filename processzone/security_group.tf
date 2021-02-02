@@ -5,7 +5,7 @@ data "http" "myip" {
 resource "aws_security_group" "allow-winrm-ips" {
 	
 	vpc_id = "${var.vpc_id}"
-    name = "${local.security_group_name}"
+    name = "${local.security_group_name}-${var.random_num}"
     description = "security group that allows specific DSLabs IPs and winrm and all egress traffic"
 	
 	tags = {

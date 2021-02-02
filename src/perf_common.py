@@ -87,6 +87,8 @@ class PerfCommon(object):
         if scenario_name == "Server Download" or scenario_name == "Client Download":
             # Run Nginx
             self.run_nginx(sip, suser, spwd)
+            print("Waiting 2 min, to flow the traffic")
+            time.sleep(120)
             # Run Apache Bench
             through_put = self.run_ab(cip, cuser, cpwd, s_priv_ip)
             print("Through put: {}".format(through_put))
@@ -96,7 +98,8 @@ class PerfCommon(object):
             time.sleep(4)
             # receiver
             pid = self.run_pcattcp_rec(sip, suser, spwd, c_priv_ip, asynchronous=True)
-            time.sleep(2)
+            print("Waiting 2 min, to flow the traffic")
+            time.sleep(120)
             # transmitter
             through_put = self.run_pcattcp_tran(cip, cuser, cpwd, s_priv_ip, bandwidth=True)
             print("Through put: {}".format(through_put))
@@ -252,8 +255,6 @@ class PerfCommon(object):
         tool = "Powershell.exe"
         cmd = "cd {0}nginx-1.19.2; start {0}nginx-1.19.2\\nginx.exe".format(self.path)
         self.execute_cmd(cmd, ip, user, pwd, tool=tool, bandwidth=False, asynchronous=True)
-        print("Waiting 3 min")
-        time.sleep(180)
 
     def run_ab(self, ip, user, pwd, target_ip):
         print("{0}\n+ Run Apache Bench {1}-{2} +\n{0}".format("+" * 50, self.ip_type[ip], ip))

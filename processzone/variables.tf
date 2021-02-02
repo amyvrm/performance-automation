@@ -46,6 +46,10 @@ variable "all_agent_urls" {
 	default = "https://files.trendmicro.com/products/deepsecurity/en/12.0/Agent-Windows-12.0.0-1090.x86_64.zip~~https://files.trendmicro.com/products/deepsecurity/en/12.0/Agent-amzn1-12.0.0-1090.x86_64.zip~~https://files.trendmicro.com/products/deepsecurity/en/12.0/Agent-amzn2-12.0.0-1090.x86_64.zip"
 }
 
+variable "random_num" {
+	default = "123"
+}
+
 
 
 
