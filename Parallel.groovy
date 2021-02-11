@@ -33,15 +33,21 @@ node('aws&&docker')
                         echo "Signing JOB Build : ${s_build}"
                         echo "Build Value  : ${dsru_file}"
 
-                        //slackSend channel: "debug_amit", color: "good",
+                        // dslabs_auto_monitoring
                         slackSend channel: "dslabs_auto_monitoring", color: "good",
+                                  message: "${currentBuild.currentResult} in 'Sign and Upload' Stage\n${msg}"
+                        // dsruhandover
+                        slackSend channel: "dsruhandover", color: 'good',
                                   message: "${currentBuild.currentResult} in 'Sign and Upload' Stage\n${msg}"
                     }
                     catch(e) {
                         currentBuild.result = "FAILURE"
-                        //slackSend channel: 'debug_amit', color: 'danger',
+                        // dslabs_auto_monitoring
                         slackSend channel: 'dslabs_auto_monitoring', color: 'danger',
                                    message: "${currentBuild.currentResult} in 'Sign and Upload' Stage\n${msg}"
+                        // dsruhandover
+                        slackSend channel: "dsruhandover", color: 'danger',
+                                  message: "${currentBuild.currentResult} in 'Sign and Upload' Stage\n${msg}"
                         error("${e}")
                     }
                 }
@@ -107,8 +113,10 @@ node('aws&&docker')
                 msg += "${scenario[i]} Average Iteration: <${nexus_url}/${graph_file}|Bar Chart>\n"
                 msg += "${scenario[i]} Machine info: <${nexus_url}/${machine_file}|Json File>\n\n"
             }
+            // dslabs_auto_monitoring
             slackSend channel: 'dslabs_auto_monitoring', color: "good", message: "${msg}"
-            //slackSend channel: 'debug_amit', color: "good", message: "${msg}"
+            // dsruhandover
+            slackSend channel: "dsruhandover", color: 'good', message: "${msg}"
         }
     }
     catch (e) {
@@ -116,8 +124,11 @@ node('aws&&docker')
         msg = "Pipeline: <${env.BUILD_URL}|Perform Automation> User: ${user_name}\n"
         msg += "${currentBuild.result}: :dot-red:\nError: ${e}\n"
         msg += "Infrastructure may be kept for Debug Purpose."
+
+        // dslabs_auto_monitoring
         slackSend channel: 'dslabs_auto_monitoring', color: "good", message: "${msg}"
-        //slackSend channel: 'debug_amit', color: "danger", message: "${msg}"
+        // dsruhandover
+        slackSend channel: "dsruhandover", color: 'good', message: "${msg}"
         println(e)
         throw e
     }
