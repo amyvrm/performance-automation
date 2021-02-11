@@ -70,7 +70,7 @@ class PerformanceScenario(PerfCommon):
                 self.dsm.clean_rules_from_dsm()
                 # Enable both agents and filter
                 self.enable_agent_filter(sip, suser, spwd, cip, cuser, cpwd)
-            self.perf_scenario_test(suser, sip, spwd, s_priv_ip, cuser, cip, cpwd, c_priv_ip, "Server Download")
+            self.perf_scenario_test_reverse(suser, sip, spwd, s_priv_ip, cuser, cip, cpwd, c_priv_ip, "Server Download")
         if scenario == "Client_Download" or scenario == "All":
             if scenario == "All":
                 # Clean Rules from DSM
@@ -127,6 +127,54 @@ class PerformanceScenario(PerfCommon):
         # Create Bar Diagram
         self.create_bar_chart([wof_avg, wf_avg, rulelist_avg, rule_avg], scenario_name)
 
+    def perf_scenario_test_reverse(self, suser, sip, spwd, s_priv_ip, cuser, cip, cpwd, c_priv_ip, scenario_name):
+        print("{0}\n### {1} ###\n{0}".format("#" * 50, scenario_name))
+        # With All Server/Client side rule
+        rule_stats, iter_rule, rule_avg = self.apply_rule_get_stats(suser, sip, spwd, s_priv_ip, cuser, cip, cpwd,
+                                                                    c_priv_ip, False, scenario_name, action="rule")
+        print("- Rule with Dependency Average stats: {} MBps\n".format(rule_avg))
+
+        # With 1 Good Server Rule
+        print("{0}{0}\n# Threshold Rule with Dependency #\n{0}{0}".format(self.header))
+        rulelist_stats, iter_rulelist, rulelist_avg = self.apply_rule_get_stats(suser, sip, spwd, s_priv_ip, cuser, cip,
+                                                                                cpwd, c_priv_ip, self.grule_list,
+                                                                                scenario_name, action="rule")
+        print("- Threshold Rule with Dependency: {} MBps\n".format(rulelist_avg))
+
+        # With Filter Driver
+        print("{0}{0}\n# With Filter Driver #\n{0}{0}".format(self.header))
+        w_filter_all_stats, w_filter_stats, wf_avg = self.apply_rule_get_stats(suser, sip, spwd, s_priv_ip, cuser,
+                                                                               cip, cpwd, c_priv_ip, False,
+                                                                               scenario_name, action="filter")
+        print("- With Filter Driver Average Stats: {} MBps\n".format(wf_avg))
+
+        # Without Filter Driver
+        print("{0}{0}\n# Without Filter Driver #\n{0}{0}".format(self.header))
+        wo_filter_all_stats, wo_filter_stats, wof_avg = self.apply_rule_get_stats(suser, sip, spwd, s_priv_ip, cuser,
+                                                                                  cip, cpwd, c_priv_ip, False,
+                                                                                  scenario_name, action="wo_filter")
+        print("- Without Filter Driver Average Stats: {} MBps\n".format(wof_avg))
+
+        wo_filter_stats.append(wof_avg)
+        w_filter_stats.append(wf_avg)
+        iter_rulelist.append(rulelist_avg)
+        iter_rule.append(rule_avg)
+
+        # Scenrario complete
+        print("- Without filter: {}\n- With filter: {}\n- Best Case Rule: {}\n- All Server Rule: {}".format(
+            wo_filter_stats, w_filter_stats, iter_rulelist, iter_rule))
+        self.col = ['Without Filter Driver', 'With Filter Driver + No Rule', 'Best Case Rule']
+        if scenario_name == "Server Upload" or scenario_name == "Server Download":
+            self.col.append('Server Rules (No. of Rules: {})'.format(len(self.server_rule)))
+        elif scenario_name == "Client Download":
+            self.col.append('Client Rules (No. of Rules: {})'.format(len(self.client_rules)))
+        df = pd.DataFrame([wo_filter_stats, w_filter_stats, iter_rulelist, iter_rule], index=self.col,
+                          columns=self.title)
+        # Create Html
+        self.create_html_table(df, scenario_name)
+        # Create Bar Diagram
+        self.create_bar_chart([wof_avg, wf_avg, rulelist_avg, rule_avg], scenario_name)
+
     def apply_rule_get_stats(self, suser, sip, spwd, s_priv_ip, cuser, cip, cpwd, c_priv_ip, grule_list, scenario_name,
                              action="reading"):
         if scenario_name == "Client Download":
@@ -134,6 +182,7 @@ class PerformanceScenario(PerfCommon):
         else:
             ip, user, pwd, adaptor = sip, suser, spwd, self.s_adap_name
         if action == "wo_filter":
+            self.dsm.clean_rules_from_dsm()
             # Disable Server Agent
             self.disable_dsa(ip, user, pwd)
             # Disable Server filter
@@ -141,6 +190,7 @@ class PerformanceScenario(PerfCommon):
             print("{0}\n{2}-{1} Agent: Disabled from DSM\n{2}-{1} Filter: Disabled from network driver\n{0}".format(
                   self.header, ip, self.ip_type[ip]))
         elif action == "filter":
+            self.dsm.clean_rules_from_dsm()
             # Activate Server Agent
             self.activate_dsa(ip, user, pwd)
             # Enable Server Filter

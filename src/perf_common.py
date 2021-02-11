@@ -87,28 +87,55 @@ class PerfCommon(object):
         if scenario_name == "Server Download" or scenario_name == "Client Download":
             # Run Nginx
             self.run_nginx(sip, suser, spwd)
-            print("Waiting 2 min, to flow the traffic")
-            time.sleep(120)
+            print("Waiting 3 min, to flow the traffic")
+            time.sleep(180)
             # Run Apache Bench
             through_put = self.run_ab(cip, cuser, cpwd, s_priv_ip)
             print("Through put: {}".format(through_put))
+            self.clean_nginx(sip, suser, spwd)
+            self.clean_ab(cip, cuser, cpwd)
+
+            for retry in range(2):
+                if len(through_put) == 10:
+                    return through_put
+                else:
+                    print("Exception: Attempt-{} to get the stats...Found stats=[{}]".format(retry, through_put))
+                    # Run Nginx
+                    self.run_nginx(sip, suser, spwd)
+                    print("Waiting 3 min, to flow the traffic")
+                    time.sleep(180)
+                    # Run Apache Bench
+                    through_put = self.run_ab(cip, cuser, cpwd, s_priv_ip)
+                    print("Through put: {}".format(through_put))
+                    self.clean_nginx(sip, suser, spwd)
+                    self.clean_ab(cip, cuser, cpwd)
         elif scenario_name == "Server Upload":
-            self.clean(cip, cuser, cpwd)
-            self.clean(sip, suser, spwd)
-            time.sleep(4)
             # receiver
             pid = self.run_pcattcp_rec(sip, suser, spwd, c_priv_ip, asynchronous=True)
-            print("Waiting 2 min, to flow the traffic")
-            time.sleep(120)
+            print("Waiting 3 min, to flow the traffic")
+            time.sleep(180)
             # transmitter
             through_put = self.run_pcattcp_tran(cip, cuser, cpwd, s_priv_ip, bandwidth=True)
             print("Through put: {}".format(through_put))
-            # print("sum: {}, len: {}, Average: {} MBps".format(sum(map(float, through_put)), len(through_put),
-            #                                                   round(sum(map(float, through_put)) / len(through_put), 2)))
-            time.sleep(2)
             self.clean(cip, cuser, cpwd, pid=pid)
             self.clean(sip, suser, spwd)
-        return through_put
+
+            for retry in range(2):
+                if len(through_put) == 10:
+                    return through_put
+                else:
+                    print("Exception: Attempt-{} to get the stats...Found stats=[{}]".format(retry, through_put))
+                    # receiver
+                    pid = self.run_pcattcp_rec(sip, suser, spwd, c_priv_ip, asynchronous=True)
+                    print("Waiting 3 min, to flow the traffic")
+                    time.sleep(180)
+                    # transmitter
+                    through_put = self.run_pcattcp_tran(cip, cuser, cpwd, s_priv_ip, bandwidth=True)
+                    print("Through put: {}".format(through_put))
+                    self.clean(cip, cuser, cpwd, pid=pid)
+                    self.clean(sip, suser, spwd)
+
+        raise Exception("Exception!!! Nginx access might be blocked, please check and try again")
 
     def execute_cmd(self, cmd, ip, user, pwd, tool="Powershell.exe", iteration=10, bandwidth=False, asynchronous=False):
         machine = Client(ip, username=user, password=pwd, encrypt=False)
@@ -145,26 +172,33 @@ class PerfCommon(object):
 
     @staticmethod
     def get_bandwidth(cmd, stdout, stderr, all_through_put, index):
-        if "PCATTCP" in cmd:
-            if stderr:
-                out = stderr.decode("utf-8")
-                for line in out.split("\r\n"):
-                    print(line)
-                through_put = out.split("=")[1].split(" ")[-8]
-                t_mbps = round(float(through_put) / 1024.0, 2)
-                print("{0}\n+ {1}: {2} KBps, {3} MBps +\n{0}".format("+"*50, index + 1, through_put, t_mbps))
-                all_through_put.append(t_mbps)
-        elif "ab" in cmd:
-            if stdout:
-                out = stdout.decode("utf-8")
-                for line in out.split("\r\n"):
-                    print(line)
-                for line in out.split("\r\n"):
-                    if "Transfer rate" in line:
-                        through_put = re.findall("\d+\.\d+", line)[0]
-                        t_mbps = round(float(through_put) / 1024.0, 2)
-                        print("{0}\n+ {1}: {2} KBps, {3} MBps +\n{0}".format("+" * 50, index + 1, through_put, t_mbps))
-                        all_through_put.append(t_mbps)
+        try:
+            if "PCATTCP" in cmd:
+                if stderr:
+                    out = stderr.decode("utf-8")
+                    for line in out.split("\r\n"):
+                        print(line)
+                    through_put = out.split("=")[1].split(" ")[-8]
+                    t_mbps = round(float(through_put) / 1024.0, 2)
+                    print("{0}\n+ {1}: {2} KBps, {3} MBps +\n{0}".format("+"*50, index + 1, through_put, t_mbps))
+                    all_through_put.append(t_mbps)
+                    return True
+            elif "ab" in cmd:
+                if stdout:
+                    out = stdout.decode("utf-8")
+                    for line in out.split("\r\n"):
+                        print(line)
+                    for line in out.split("\r\n"):
+                        if "Transfer rate" in line:
+                            through_put = re.findall("\d+\.\d+", line)[0]
+                            t_mbps = round(float(through_put) / 1024.0, 2)
+                            print("{0}\n+ {1}: {2} KBps, {3} MBps +\n{0}".format("+" * 50, index + 1, through_put, t_mbps))
+                            all_through_put.append(t_mbps)
+                            return True
+        except Exception as ex:
+            print("Exception: {}".format(ex))
+            return False
+        return False
 
     @staticmethod
     def get_pwd(region, access_key, secret_key, instance_id, pem_file_loc, mtype):
@@ -238,13 +272,14 @@ class PerfCommon(object):
 
     def run_pcattcp_rec(self, ip, user, pwd, target_ip, asynchronous=False):
         print("{0}\n+ Run PCATTCP on {1}-{2} +\n{0}".format("+"*50, self.ip_type[ip], ip))
+        self.clean(ip, user, pwd)
         tool = "Powershell.exe"
         cmd = '{}PCATTCP\PCATTCP.exe -r -l 490000 {} -c'.format(self.path, target_ip)
         return self.execute_cmd(cmd, ip, user, pwd, tool=tool, bandwidth=False, asynchronous=asynchronous)
 
     def run_pcattcp_tran(self, ip, user, pwd, target_ip, bandwidth=False, asynchronous=False):
         print("{0}\n+ Run PCATTCP on {1}-{2} and take Reading +\n{0}".format("+"*50, self.ip_type[ip], ip))
-        print("# run_pcattcp_tran #")
+        self.clean(ip, user, pwd)
         tool = "Powershell.exe"
         cmd = '{}PCATTCP\PCATTCP.exe -t -l 490000 {}'.format(self.path, target_ip)
         return self.execute_cmd(cmd, ip, user, pwd, tool=tool, bandwidth=bandwidth, asynchronous=asynchronous)
@@ -260,7 +295,7 @@ class PerfCommon(object):
         print("{0}\n+ Run Apache Bench {1}-{2} +\n{0}".format("+" * 50, self.ip_type[ip], ip))
         self.clean_ab(ip, user, pwd)
         tool = "Powershell.exe"
-        print("{0}\n+ Status of URL: {1} +\n{0}".format("+" * 50, self.check_test_page(ip, user, pwd, target_ip)))
+        # print("{0}\n+ Status of URL: {1} +\n{0}".format("+" * 50, self.check_test_page(ip, user, pwd, target_ip)))
         # cmd = "{}ab.exe -k -n 100 -c 10 http://{}/test.htm".format(self.path, target_ip)
         # cmd = "{}ab.exe -k -c 10 -t 60 -n 100 http://{}/test.htm".format(self.path, target_ip)
         cmd = "{}ab.exe -c 10 -n 100 http://{}/test.htm".format(self.path, target_ip)

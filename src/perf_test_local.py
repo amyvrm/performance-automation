@@ -36,17 +36,17 @@ class PerformanceScenario(PerfCommon):
             suser = machine.get_instance_one_user()
             cuser = machine.get_instance_two_user()
 
-        sip, s_priv_ip = "15.222.236.19", "172.31.21.177"
+        sip, s_priv_ip = "99.79.60.55", "172.31.28.164"
         print("Server Agent {} instance -> Public IP:{}, Private IP: {}".format(instance1, sip, s_priv_ip))
-        cip, c_priv_ip = "15.222.255.27", "172.31.31.4"
+        cip, c_priv_ip = "3.97.12.60", "172.31.23.156"
         print("Client Agent {} instance -> Public IP:{}, Private IP: {}".format(instance2, cip, c_priv_ip))
 
         self.ip_type = {sip: "Server", cip: "Client"}
         # Get the password
         # spwd = PerformanceScenario.get_pwd(region, access_key, secret_key, instance1, pem_file)
         # cpwd = PerformanceScenario.get_pwd(region, access_key, secret_key, instance2, pem_file)
-        spwd = "(k4xKxy*.luzYTB)OC=LtAE82IIZRl39"
-        cpwd = "B7xOI(.Ao$v7kVEqsh)4ZNS@8E2zB9w%"
+        spwd = "ZTKLKAz9CZXYs=r5XRqqSslKQ;DkhGs="
+        cpwd = "ulug5$TLnVFuSdS6QByShApu-85QITGf"
         # Get the Server Rule and dependency with portlist
         self.grule_list, self.server_rule, self.client_rules = self.get_dependency_portlist(path_json, grule)
         self.dsm.upload_basic_policy(change_policy=True)
@@ -66,18 +66,18 @@ class PerformanceScenario(PerfCommon):
             self.perf_scenario_test(suser, sip, spwd, s_priv_ip, cuser, cip, cpwd, c_priv_ip, "Server Upload")
         # Testing Server Upload Scenario based on discussion with Arun and Sunil on 7-Jan-2021
         if scenario == "Server_Download" or scenario == "All":
-            # if scenario == "All":
-            # Clean Rules from DSM
-            self.dsm.clean_rules_from_dsm()
-            # Enable both agents and filter
-            self.enable_agent_filter(sip, suser, spwd, cip, cuser, cpwd, scenario)
-            self.perf_scenario_test(suser, sip, spwd, s_priv_ip, cuser, cip, cpwd, c_priv_ip, "Server Download")
+            if scenario == "All":
+                # Clean Rules from DSM
+                self.dsm.clean_rules_from_dsm()
+                # Enable both agents and filter
+                self.enable_agent_filter(sip, suser, spwd, cip, cuser, cpwd)
+            self.perf_scenario_test_reverse(suser, sip, spwd, s_priv_ip, cuser, cip, cpwd, c_priv_ip, "Server Download")
         if scenario == "Client_Download" or scenario == "All":
             if scenario == "All":
                 # Clean Rules from DSM
                 self.dsm.clean_rules_from_dsm()
                 # Enable both agents and filter
-                self.enable_agent_filter(sip, suser, spwd, cip, cuser, cpwd, scenario)
+                self.enable_agent_filter(sip, suser, spwd, cip, cuser, cpwd)
             self.perf_scenario_test(suser, sip, spwd, s_priv_ip, cuser, cip, cpwd, c_priv_ip, "Client Download")
 
     def perf_scenario_test(self, suser, sip, spwd, s_priv_ip, cuser, cip, cpwd, c_priv_ip, scenario_name):
@@ -128,6 +128,55 @@ class PerformanceScenario(PerfCommon):
         # Create Bar Diagram
         self.create_bar_chart([wof_avg, wf_avg, rulelist_avg, rule_avg], scenario_name)
 
+    def perf_scenario_test_reverse(self, suser, sip, spwd, s_priv_ip, cuser, cip, cpwd, c_priv_ip, scenario_name):
+        print("{0}\n### {1} ###\n{0}".format("#" * 50, scenario_name))
+        # With Filter Driver
+        print("{0}{0}\n# With Filter Driver #\n{0}{0}".format(self.header))
+        w_filter_all_stats, w_filter_stats, wf_avg = self.apply_rule_get_stats(suser, sip, spwd, s_priv_ip, cuser,
+                                                                               cip, cpwd, c_priv_ip, False,
+                                                                               scenario_name, action="filter")
+        print("- With Filter Driver Average Stats: {} MBps\n".format(wf_avg))
+        # print("Waiting 5 min")
+        # time.sleep(300)
+        # Without Filter Driver
+        print("{0}{0}\n# Without Filter Driver #\n{0}{0}".format(self.header))
+        wo_filter_all_stats, wo_filter_stats, wof_avg = self.apply_rule_get_stats(suser, sip, spwd, s_priv_ip, cuser,
+                                                                                  cip, cpwd, c_priv_ip, False,
+                                                                                  scenario_name, action="wo_filter")
+        print("- Without Filter Driver Average Stats: {} MBps\n".format(wof_avg))
+        # With All Server/Client side rule
+        rule_stats, iter_rule, rule_avg = self.apply_rule_get_stats(suser, sip, spwd, s_priv_ip, cuser, cip, cpwd,
+                                                                    c_priv_ip, False, scenario_name, action="rule")
+        print("- Rule with Dependency Average stats: {} MBps\n".format(rule_avg))
+        # print("Waiting 5 min")
+        # time.sleep(300)
+        # With 1 Good Server Rule
+        print("{0}{0}\n# Threshold Rule with Dependency #\n{0}{0}".format(self.header))
+        rulelist_stats, iter_rulelist, rulelist_avg = self.apply_rule_get_stats(suser, sip, spwd, s_priv_ip, cuser, cip,
+                                                                                cpwd, c_priv_ip, self.grule_list,
+                                                                                scenario_name, action="rule")
+        print("- Threshold Rule with Dependency: {} MBps\n".format(rulelist_avg))
+
+        wo_filter_stats.append(wof_avg)
+        w_filter_stats.append(wf_avg)
+        iter_rulelist.append(rulelist_avg)
+        iter_rule.append(rule_avg)
+
+        # Scenrario complete
+        print("- Without filter: {}\n- With filter: {}\n- Best Case Rule: {}\n- All Server Rule: {}".format(
+            wo_filter_stats, w_filter_stats, iter_rulelist, iter_rule))
+        self.col = ['Without Filter Driver', 'With Filter Driver + No Rule', 'Best Case Rule']
+        if scenario_name == "Server Upload" or scenario_name == "Server Download":
+            self.col.append('Server Rules (No. of Rules: {})'.format(len(self.server_rule)))
+        elif scenario_name == "Client Download":
+            self.col.append('Client Rules (No. of Rules: {})'.format(len(self.client_rules)))
+        df = pd.DataFrame([wo_filter_stats, w_filter_stats, iter_rulelist, iter_rule], index=self.col,
+                          columns=self.title)
+        # Create Html
+        self.create_html_table(df, scenario_name)
+        # Create Bar Diagram
+        self.create_bar_chart([wof_avg, wf_avg, rulelist_avg, rule_avg], scenario_name)
+
     def apply_rule_get_stats(self, suser, sip, spwd, s_priv_ip, cuser, cip, cpwd, c_priv_ip, grule_list, scenario_name,
                              action="reading"):
         if scenario_name == "Client Download":
@@ -135,6 +184,7 @@ class PerformanceScenario(PerfCommon):
         else:
             ip, user, pwd, adaptor = sip, suser, spwd, self.s_adap_name
         if action == "wo_filter":
+            self.dsm.clean_rules_from_dsm()
             # Disable Server Agent
             self.disable_dsa(ip, user, pwd)
             # Disable Server filter
@@ -142,6 +192,7 @@ class PerformanceScenario(PerfCommon):
             print("{0}\n{2}-{1} Agent: Disabled from DSM\n{2}-{1} Filter: Disabled from network driver\n{0}".format(
                   self.header, ip, self.ip_type[ip]))
         elif action == "filter":
+            self.dsm.clean_rules_from_dsm()
             # Activate Server Agent
             self.activate_dsa(ip, user, pwd)
             # Enable Server Filter
@@ -153,8 +204,8 @@ class PerformanceScenario(PerfCommon):
             identifier = self.dsm.apply_rule(scenario_name, rule_list=grule_list)
             print("{0}{0}\n# {1} Rule Applied \n{0}{0}".format(self.header, identifier))
 
-        print("Waiting 3 min")
-        time.sleep(180)
+        # print("Waiting 3 min")
+        # time.sleep(180)
         all_stats = self.run_band_test(suser, sip, spwd, s_priv_ip, cuser, cip, cpwd, c_priv_ip, scenario_name)
         iter_stats = all_stats[:self.best_iteration]
         avg = round(sum(map(float, iter_stats)) / len(iter_stats), 2)

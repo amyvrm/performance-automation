@@ -6,7 +6,7 @@ variable "dsm_windows_ami"{
 	default = "ami-02c4947e847caf22c"
 }
 
-//ami-088ba3e5460a63e7a
+// working ami id: ami-042ac4e08bdc42efe
 variable "dsa_windows_ami"{
 //	default = "ami-00dd0737502449ce1"
 	default = "ami-0cdfa905439f4b9ca"
