@@ -7,17 +7,21 @@ variable "dsm_windows_ami"{
 }
 
 // working ami id: ami-042ac4e08bdc42efe
+// ami-014b44224c1c8ca4d
 variable "dsa_windows_ami"{
 //	default = "ami-00dd0737502449ce1"
-	default = "ami-0cdfa905439f4b9ca"
+//	default = "ami-0cdfa905439f4b9ca"
+	default = "ami-014b44224c1c8ca4d"
 }
 
 variable "dsa_amazon1_ami"{
-	default = "ami-00b243003d0e9e258"
+//	default = "ami-00b243003d0e9e258"
+	default = "ami-014b44224c1c8ca4d"
 }
 
 variable "dsa_amazon2_ami"{
-	default = "ami-0f75c2980c6a5851d"
+//	default = "ami-0f75c2980c6a5851d"
+	default = "ami-014b44224c1c8ca4d"
 }
 
 variable "dsa_rhel_ami"{
