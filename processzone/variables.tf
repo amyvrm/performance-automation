@@ -11,11 +11,11 @@ variable "auth_file_path" {
 }
 
 variable "dsm-user" {
-	default = "masteradmin"
+	default = "supermasteradmin"
 }
 
 variable "dsm-password" {
-	default = "AppleTree#1975!"
+	default = "OrangePlant#1980"
 }
 
 variable "dsm_license" {
