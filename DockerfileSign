@@ -19,7 +19,8 @@ RUN apt-get install zip -y
 RUN apt-get install software-properties-common -y
 RUN add-apt-repository ppa:deadsnakes/ppa
 RUN apt-get update
-RUN apt-get install python3.6 -y
+#RUN apt-get install python3.6 -y
+sudo add-apt-repository ppa:deadsnakes/ppa && sudo apt update && sudo apt install python3.6
 RUN apt-get install python3-pip -y
 
 RUN ln -s /usr/bin/python3.6 /usr/bin/python && \
