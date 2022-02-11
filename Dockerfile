@@ -5,6 +5,7 @@ RUN curl https://releases.hashicorp.com/terraform/0.12.26/terraform_0.12.26_linu
 unzip terraform.zip -d /usr/local/bin
 
 RUN apt-get install -y python3-pip python3-dev
+RUN /usr/local/bin/python -m pip install --upgrade pip
 RUN pip3 install boto3
 RUN pip3 install boto
 RUN pip3 install rsa
