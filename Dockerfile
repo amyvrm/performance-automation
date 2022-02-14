@@ -9,7 +9,7 @@ RUN /usr/local/bin/python -m pip install --upgrade pip
 RUN pip3 install boto3
 RUN pip3 install boto
 RUN pip3 install rsa
-RUN pip3 install pypsexec
+RUN pip3 install -no-cache-dir pypsexec
 RUN pip3 install simplejson
 RUN apt-get install -y git
 RUN apt-get install -y gcc
