@@ -6,11 +6,16 @@ unzip terraform.zip -d /usr/local/bin
 
 RUN apt-get install -y python3-pip python3-dev
 RUN /usr/local/bin/python -m pip install --upgrade pip
-RUN pip3 install boto3
-RUN pip3 install boto
-RUN pip3 install rsa
-RUN pip3 install -no-cache-dir pypsexec
-RUN pip3 install simplejson
+# RUN pip3 install boto3
+# RUN pip3 install boto
+# RUN pip3 install rsa
+# RUN pip3 install pypsexec
+# RUN pip3 install simplejson
+RUN pip install boto3
+RUN pip install boto
+RUN pip install rsa
+RUN pip install pypsexec
+RUN pip install simplejson
 RUN apt-get install -y git
 RUN apt-get install -y gcc
 RUN pip install requests
