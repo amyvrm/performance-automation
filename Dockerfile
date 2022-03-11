@@ -14,7 +14,7 @@ RUN /usr/local/bin/python -m pip install --upgrade pip
 RUN pip install boto3
 RUN pip install boto
 RUN pip install rsa
-RUN pip install pypsexec
+RUN pip install pypsexec==0.3.0
 RUN pip install simplejson
 RUN apt-get install -y git
 RUN apt-get install -y gcc
