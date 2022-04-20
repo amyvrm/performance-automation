@@ -1,3 +1,7 @@
+FROM python:3
+RUN python -m pip install pypsexec
+
+
 #FROM python
 #RUN apt-get update && apt-get install -y unzip wget && \
 #useradd -s /bin/bash -u 501 -U -d /build -m build && groupmod -g 501 build
@@ -5,14 +9,6 @@
 #unzip terraform.zip -d /usr/local/bin
 
 # added 20-04-2022
-FROM python:3
-#RUN apt-get update
-#RUN apt-get install -y python3-pip python3-dev
-#RUN /usr/local/bin/python -m pip install --upgrade pip
-#RUN apt-get install -y pipenv
-#RUN pipenv clean
-#RUN pipenv install
-RUN pip install --no-cache-dir pypsexec
 #RUN pip install pypsexec --no-cache-dir
 # comment earlier
 # RUN pip3 install boto3
