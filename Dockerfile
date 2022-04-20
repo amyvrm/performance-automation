@@ -4,7 +4,8 @@ FROM python:3
 #RUN pip install pypsexec-0.3.0.tar.gz
 #RUN python -m pip install pypsexec
 RUN python -m pip cache purge
-RUN python -m pip install pypsexec
+RUN python -m pip install -upgrade pip
+RUN pip install pypsexec
 
 #FROM python
 #RUN apt-get update && apt-get install -y unzip wget && \
