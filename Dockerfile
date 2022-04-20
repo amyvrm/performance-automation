@@ -1,9 +1,10 @@
 FROM python:3
 #COPY pypsexec-0.3.0.tar.gz .
-RUN wget https://files.pythonhosted.org/packages/d4/cd/da60adc8d022ec3c38248f36d444568143f18de3f588c1b155a82ccd62c5/pypsexec-0.3.0.tar.gz
-RUN pip install pypsexec-0.3.0.tar.gz
+#RUN wget https://files.pythonhosted.org/packages/d4/cd/da60adc8d022ec3c38248f36d444568143f18de3f588c1b155a82ccd62c5/pypsexec-0.3.0.tar.gz
+#RUN pip install pypsexec-0.3.0.tar.gz
 #RUN python -m pip install pypsexec
-
+RUN python -m pip cache purge
+RUN python -m pip install pypsexec
 
 #FROM python
 #RUN apt-get update && apt-get install -y unzip wget && \
