@@ -12,7 +12,7 @@ FROM python:3
 #RUN apt-get install -y pipenv
 #RUN pipenv clean
 #RUN pipenv install
-RUN pip install pypsexec
+RUN pip install --no-cache-dir pypsexec
 #RUN pip install pypsexec --no-cache-dir
 # comment earlier
 # RUN pip3 install boto3
