@@ -1,12 +1,15 @@
 FROM python
-RUN apt-get update && apt-get install -y unzip wget && \
-useradd -s /bin/bash -u 501 -U -d /build -m build && groupmod -g 501 build
+#RUN apt-get update && apt-get install -y unzip wget && \
+#useradd -s /bin/bash -u 501 -U -d /build -m build && groupmod -g 501 build
 #RUN curl https://releases.hashicorp.com/terraform/0.12.26/terraform_0.12.26_linux_amd64.zip -o terraform.zip && \
 #unzip terraform.zip -d /usr/local/bin
 
+# added 20-04-2022
+RUN apt-get update
 RUN apt-get install -y python3-pip python3-dev
-#commented on 20-04-2022 #RUN /usr/local/bin/python -m pip install --upgrade pip
-RUN pip install pip==20.0.2
+RUN /usr/local/bin/python -m pip install --upgrade pip
+RUN pipenv clean
+RUN pipenv install
 RUN pip install pypsexec --no-cache-dir
 # comment earlier
 # RUN pip3 install boto3
@@ -15,6 +18,7 @@ RUN pip install pypsexec --no-cache-dir
 # RUN pip3 install pypsexec
 # RUN pip3 install simplejson
 ####################
+# commendted 20-04-2022
 #RUN pip install boto3
 #RUN pip install boto
 #RUN pip install rsa
@@ -30,3 +34,4 @@ RUN pip install pypsexec --no-cache-dir
 #RUN pip install pandas
 #RUN pip install matplotlib
 #RUN pip install seaborn
+##############################
