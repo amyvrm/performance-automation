@@ -11,6 +11,7 @@ def jsonParse(def json) { new groovy.json.JsonSlurper().parseText(json) }
 
 node(nodeLabel)
 {
+    deleteDir()
     def infra_branch = "fix-docker"
     stage('Git Code')
     {
@@ -24,7 +25,7 @@ node(nodeLabel)
     dir("${TERRAFORM_DIR}")
     {
         sh "wget https://files.pythonhosted.org/packages/d4/cd/da60adc8d022ec3c38248f36d444568143f18de3f588c1b155a82ccd62c5/pypsexec-0.3.0.tar.gz"
-        sh "ls -1"
+        sh "ls pypsexec-0.3.0.tar.gz"
     }
     def infraImage = docker.build("infra-image", "./${TERRAFORM_DIR}")
     infraImage.inside
