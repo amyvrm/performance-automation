@@ -11,7 +11,6 @@ def jsonParse(def json) { new groovy.json.JsonSlurper().parseText(json) }
 
 node(nodeLabel)
 {
-    deleteDir()
     def infra_branch = "fix-docker"
     stage('Git Code')
     {
