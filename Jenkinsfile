@@ -15,9 +15,10 @@ node(nodeLabel)
 	{
 		timeout(time: 24, unit: 'HOURS')
 		{
-			withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', accessKeyVariable: 'AWS_ACCESS_KEY_ID',credentialsId: 'STAGING_AWS', secretKeyVariable: 'AWS_SECRET_ACCESS_KEY']])
+			withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', accessKeyVariable: 'AWS_ACCESS_KEY_ID',
+			                   credentialsId: 'STAGING_AWS', secretKeyVariable: 'AWS_SECRET_ACCESS_KEY']])
 		    {
-				def infra_branch = "parallel"
+				def infra_branch = "fix-docker"
 				def dsm_package_url = params.DSM_PACKAGE_URL
 				def dsm_license_key = params.DSM_LICENSE_KEY
 				def agents = params.AGENTS
