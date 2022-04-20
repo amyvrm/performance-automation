@@ -1,5 +1,5 @@
 FROM python:3
-RUN pip install --upgrade pypsexec
+RUN pip install pypsexec --compile --no-cache-dir
 #RUN python -m pip install pypsexec
 
 
