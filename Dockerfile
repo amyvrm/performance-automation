@@ -1,15 +1,13 @@
-FROM python
+#FROM python
 #RUN apt-get update && apt-get install -y unzip wget && \
 #useradd -s /bin/bash -u 501 -U -d /build -m build && groupmod -g 501 build
 #RUN curl https://releases.hashicorp.com/terraform/0.12.26/terraform_0.12.26_linux_amd64.zip -o terraform.zip && \
 #unzip terraform.zip -d /usr/local/bin
 
 # added 20-04-2022
-RUN apt-get update
-RUN apt-get install -y python3-pip python3-dev
-RUN apt-get install -y python3-virtualenv
-RUN virtualenv fix-docker
-RUN source fix-docker/bin/activate
+FROM python:3
+#RUN apt-get update
+#RUN apt-get install -y python3-pip python3-dev
 #RUN /usr/local/bin/python -m pip install --upgrade pip
 #RUN apt-get install -y pipenv
 #RUN pipenv clean
