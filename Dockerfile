@@ -7,11 +7,15 @@ FROM python
 # added 20-04-2022
 RUN apt-get update
 RUN apt-get install -y python3-pip python3-dev
-RUN /usr/local/bin/python -m pip install --upgrade pip
-RUN apt install -y pipenv
-RUN pipenv clean
-RUN pipenv install
-RUN pip install pypsexec --no-cache-dir
+RUN apt-get install -y python3-virtualenv
+RUN virtualenv fix-docker
+RUN source fix-docker/bin/activate
+#RUN /usr/local/bin/python -m pip install --upgrade pip
+#RUN apt-get install -y pipenv
+#RUN pipenv clean
+#RUN pipenv install
+RUN pip install pypsexec
+#RUN pip install pypsexec --no-cache-dir
 # comment earlier
 # RUN pip3 install boto3
 # RUN pip3 install boto
