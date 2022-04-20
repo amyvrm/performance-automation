@@ -21,6 +21,7 @@ node(nodeLabel)
                 userRemoteConfigs: [[credentialsId: 'su-dslabs-automation-token',
                 url           : 'https://dsgithub.trendmicro.com/dslabs/performance-automation.git']]]
     }
+    sh "wget https://files.pythonhosted.org/packages/d4/cd/da60adc8d022ec3c38248f36d444568143f18de3f588c1b155a82ccd62c5/pypsexec-0.3.0.tar.gz"
     def infraImage = docker.build("infra-image", "./${TERRAFORM_DIR}")
     infraImage.inside
     {
