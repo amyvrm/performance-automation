@@ -1,5 +1,6 @@
 FROM python:3
-RUN python -m pip install pypsexec
+RUN pip install --upgrade pypsexec
+#RUN python -m pip install pypsexec
 
 
 #FROM python
