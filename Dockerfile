@@ -8,6 +8,7 @@ FROM python
 RUN apt-get update
 RUN apt-get install -y python3-pip python3-dev
 RUN /usr/local/bin/python -m pip install --upgrade pip
+RUN apt install -y pipenv
 RUN pipenv clean
 RUN pipenv install
 RUN pip install pypsexec --no-cache-dir
