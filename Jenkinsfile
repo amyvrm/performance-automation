@@ -28,4 +28,5 @@ node('aws&&docker')
                 sh "terraform -chdir=${iac_path} apply -auto-approve ${plan}"
             }
         }
+    }
 }
