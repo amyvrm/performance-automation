@@ -1,27 +1,28 @@
 FROM python:3
-RUN wget https://files.pythonhosted.org/packages/d4/cd/da60adc8d022ec3c38248f36d444568143f18de3f588c1b155a82ccd62c5/pypsexec-0.3.0.tar.gz
-RUN pip install pypsexec-0.3.0.tar.gz
+RUN apt-get update
+RUN useradd -s /bin/bash -u 501 -U -d /build -m build && groupmod -g 501 build
+
+# terraform https://learn.hashicorp.com/tutorials/terraform/install-cli
+RUN apt-get install -y gnupg software-properties-common curl
+RUN curl -fsSL https://apt.releases.hashicorp.com/gpg | apt-key add -
+RUN apt-add-repository "deb [arch=amd64] https://apt.releases.hashicorp.com $(lsb_release -cs) main"
+RUN apt-get update
+RUN apt-get install terraform=1.1.7
+
+
 
 #RUN apt-get update && apt-get install -y unzip wget && \
 #useradd -s /bin/bash -u 501 -U -d /build -m build && groupmod -g 501 build
+# RUN apt-get install curl -y
 #RUN curl https://releases.hashicorp.com/terraform/0.12.26/terraform_0.12.26_linux_amd64.zip -o terraform.zip && \
 #unzip terraform.zip -d /usr/local/bin
 
-# added 20-04-2022
-#RUN pip install pypsexec --no-cache-dir
-# comment earlier
-# RUN pip3 install boto3
-# RUN pip3 install boto
-# RUN pip3 install rsa
-# RUN pip3 install pypsexec
-# RUN pip3 install simplejson
-####################
-# commendted 20-04-2022
-#RUN pip install boto3
-#RUN pip install boto
-#RUN pip install rsa
-#RUN pip install pypsexec==0.3.0
-#RUN pip install simplejson
+#RUN apt-get install python3-pip -y
+#RUN pip3 install boto3
+#RUN pip3 install boto
+#RUN pip3 install rsa
+#RUN pip3 install pypsexec
+#RUN pip3 install simplejson
 #RUN apt-get install -y git
 #RUN apt-get install -y gcc
 #RUN pip install requests
