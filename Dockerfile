@@ -1,13 +1,7 @@
 FROM python:3
-#COPY pypsexec-0.3.0.tar.gz .
-#RUN wget https://files.pythonhosted.org/packages/d4/cd/da60adc8d022ec3c38248f36d444568143f18de3f588c1b155a82ccd62c5/pypsexec-0.3.0.tar.gz
-#RUN pip install pypsexec-0.3.0.tar.gz
-#RUN python -m pip install pypsexec
-RUN python -m pip cache purge
-RUN python -m pip install -upgrade pypsexec
-#RUN pip install pypsexec
+RUN wget https://files.pythonhosted.org/packages/d4/cd/da60adc8d022ec3c38248f36d444568143f18de3f588c1b155a82ccd62c5/pypsexec-0.3.0.tar.gz
+RUN pip install pypsexec-0.3.0.tar.gz
 
-#FROM python
 #RUN apt-get update && apt-get install -y unzip wget && \
 #useradd -s /bin/bash -u 501 -U -d /build -m build && groupmod -g 501 build
 #RUN curl https://releases.hashicorp.com/terraform/0.12.26/terraform_0.12.26_linux_amd64.zip -o terraform.zip && \
