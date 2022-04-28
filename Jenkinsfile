@@ -80,7 +80,7 @@ node('aws&&docker')
             {
                 sh("python ${iac_working_dir}/parse_update.py ${dsru_path}")
             }
-
+        }
         def infraImage = docker.build("infra-image")
         infraImage.inside
         {
