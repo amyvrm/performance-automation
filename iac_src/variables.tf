@@ -35,7 +35,7 @@ variable "key_name" {
 }
 
 variable "private_key" {
-  default = "./terraformAuthenticate/dslabs_automation.pem"
+  default = "terraformAuthenticate/dslabs_automation.pem"
 }
 
 variable "instance_profile" {

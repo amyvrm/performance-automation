@@ -1,5 +1,5 @@
 resource "aws_instance" "performance_auto_machine" {
-    ami = "ami-0aeeebd8d2ab47354"
+    ami = "ami-04505e74c0741db8d"
     instance_type     = var.instance_type
     key_name          = var.key_name
     associate_public_ip_address = "true"
@@ -19,7 +19,7 @@ resource "aws_instance" "performance_auto_machine" {
 			type = "ssh"
 			host     = aws_instance.performance_auto_machine.private_ip
 			timeout  = var.conn_timeout
-			user     = "ec2-user"
+			user     = "ubuntu"
 			private_key = file(var.private_key)
 	}
 
@@ -32,7 +32,7 @@ resource "aws_instance" "performance_auto_machine" {
 	provisioner "remote-exec" {
 		inline = [
 			"chmod +x /tmp/environment.sh",
-			"sudo sh /tmp/environment.sh"
+			"sudo /bin/bash /tmp/environment.sh"
 		]
 	}
 }
