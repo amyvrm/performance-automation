@@ -1,6 +1,6 @@
 resource "aws_instance" "windows_server2019_agent" {
 	
-	ami = var.dsa_amazon1_ami
+	ami = var.dsa_windows_ami
 	instance_type = var.dsa_instance_type
 	key_name = var.ssh_key_name
 	associate_public_ip_address = "true"
