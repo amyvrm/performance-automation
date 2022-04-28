@@ -1,4 +1,4 @@
-resource "aws_instance" "dsm_machine" {
+resource "aws_instance" "rhel_dsm" {
 	
 	ami = var.red_hat_ami
 	instance_type = var.dsm_instance_type
@@ -9,7 +9,7 @@ resource "aws_instance" "dsm_machine" {
 	iam_instance_profile = var.instance_profile
 	
 	tags = {
-			Name           = "performance_RHEL_DSM"
+			Name           = "performance_rhel7_DSM"
 			"Trender"      = var.tag_trender
 			"Automation"   = var.tag_automation
 			"ValidUntil"   = formatdate("YYYY-MM-DD", timeadd(timestamp(), "24h"))
@@ -45,12 +45,12 @@ resource "aws_instance" "dsm_machine" {
 	}
   
   root_block_device {
-    volume_size = "${var.volume_size}"
+    volume_size = var.volume_size
   }
   
   
 }
 
 output "dsm-rhel-id" {
-  value = aws_instance.dsm_machine.id
+  value = aws_instance.rhel_dsm.id
 }

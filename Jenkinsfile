@@ -29,7 +29,7 @@ node('aws&&docker')
         def agents = params.AGENTS
         def agents_download_urls = params.AGENT_DOWNLOAD_URL
         def dsru_url = params.PACKAGE_URL
-        def dsru_path = "${iac_working_dir}/update-packages"
+        def dsru_path = "${iac_path}/update-packages"
         def dsru_file = ""
         def pkg_name = ""
         def dsmVersion =  dsm_package_url.substring(dsm_package_url.lastIndexOf('-') + 1, dsm_package_url.length())
@@ -68,7 +68,7 @@ node('aws&&docker')
         {
             stage('Download DSRU Package')
             {
-                sh "python ${iac_working_dir}/download_nexus.py --url ${dsru_url} --path ${dsru_path} --uname ${NEX_USER} --pwd ${NEX_PASS}"
+                sh "python ${iac_working_dir}/download_nexus.py --url ${dsru_url} --path ${dsru_path} --uname ${NEXUS_USR} --pwd ${NEXUS_PWD}"
             }
             stage('Decrypt DSRU Package')
             {
@@ -79,6 +79,7 @@ node('aws&&docker')
             stage('Parse DSRU Package')
             {
                 sh("python ${iac_working_dir}/parse_update.py ${dsru_path}")
+                sh "ls -1 ${dsru_path}"
             }
         }
         def infraImage = docker.build("infra-image")
