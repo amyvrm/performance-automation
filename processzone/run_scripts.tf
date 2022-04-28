@@ -9,12 +9,12 @@ resource "null_resource" "edit_user_data_script" {
 	}
 	
 	provisioner "local-exec" {
-		command = "/bin/bash AgentDeploymentScript/generateAllAgentDeploymentScript.sh ${aws_instance.dsm_machine.private_ip}"
+		command = "/bin/bash AgentDeploymentScript/generateAllAgentDeploymentScript.sh ${aws_instance.rhel_dsm.private_ip}"
 	}
 	
 
 	depends_on = [
-		aws_instance.dsm_machine
+		aws_instance.rhel_dsm
 	]
 }
 
