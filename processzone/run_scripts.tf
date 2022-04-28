@@ -5,11 +5,11 @@ resource "null_resource" "edit_user_data_script" {
 	}*/
 	
 	provisioner "local-exec" {
-		command = "chmod +x ${var.script_file_path}/AgentDeploymentScript/generateAllAgentDeploymentScript.sh"
+		command = "chmod +x AgentDeploymentScript/generateAllAgentDeploymentScript.sh"
 	}
 	
 	provisioner "local-exec" {
-		command = "/bin/bash ${var.script_file_path}/AgentDeploymentScript/generateAllAgentDeploymentScript.sh ${aws_instance.dsm_machine.private_ip}"
+		command = "/bin/bash AgentDeploymentScript/generateAllAgentDeploymentScript.sh ${aws_instance.dsm_machine.private_ip}"
 	}
 	
 

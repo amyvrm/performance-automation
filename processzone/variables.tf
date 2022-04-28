@@ -1,5 +1,13 @@
-variable "script_file_path" {
+variable  "script_file_path" {
   default = "./scripts"
+}
+
+variable "ssh_key_name" {
+	default = "TerraformDemo"
+}
+
+variable "ssh_key" {
+	default = "TerraformDemo.pem"
 }
 
 variable "pkg_path" {

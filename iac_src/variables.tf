@@ -3,7 +3,7 @@ variable "access_key" {}
 variable "secret_key" {}
 
 variable "region" {
-  default = "us-east-1"
+  default = "ca-central-1"
 }
 
 variable "agent_user" {
@@ -31,11 +31,11 @@ variable "instance_type" {
 }
 
 variable "key_name" {
-  default = "dslabs_automation"
+  default = "TerraformDemo"
 }
 
 variable "private_key" {
-  default = "terraformAuthenticate/dslabs_automation.pem"
+  default = "TerraformDemo.pem"
 }
 
 variable "instance_profile" {
@@ -45,3 +45,19 @@ variable "instance_profile" {
 variable "conn_timeout" {
 	default = "5m"
 }
+
+variable "machine_file" {}
+
+variable "dsmVersion" {}
+
+variable "stats" {}
+
+variable "graph" {}
+
+variable "dsru_path" {}
+
+variable "nexus_user" {}
+
+variable "nexus_pass" {}
+
+variable "scenario" {}

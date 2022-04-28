@@ -26,13 +26,15 @@ resource "aws_instance" "performance_auto_machine" {
 	# Copies all files and folders in apps/app1 to D:/IIS/webapp1
 	provisioner "file" {
     	source      = "src"
-    	destination = "/tmp/iac_wd"
+    	destination = "/tmp/src"
   	}
 
 	provisioner "remote-exec" {
 		inline = [
-			"chmod +x /tmp/environment.sh",
-			"sudo /bin/bash /tmp/environment.sh"
+			"chmod +x /tmp/src/environment.sh",
+			"sudo /bin/bash /tmp/src/environment.sh",
+			"cd /tmp/",
+			"python src/perform_scenario.py --access_key ${var.access_key} --secret_key ${var.secret_key} --machine_info ${var.machine_file} --dsm_version ${var.dsmVersion} --stats ${var.stats} --graph ${var.graph} --path ${var.dsru_path} --nexus_uname ${var.nexus_user} --nexus_pwd ${var.nexus_pass} --scenario ${var.scenario}"
 		]
 	}
 }
