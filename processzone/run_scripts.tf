@@ -5,14 +5,13 @@ resource "null_resource" "edit_user_data_script" {
 	}*/
 	
 	provisioner "local-exec" {
-		command = "chmod +x AgentDeploymentScript/generateAllAgentDeploymentScript.sh"
+		command = "chmod +x scripts/AgentDeploymentScript/generateAllAgentDeploymentScript.sh"
 	}
 	
 	provisioner "local-exec" {
-		command = "/bin/bash AgentDeploymentScript/generateAllAgentDeploymentScript.sh ${aws_instance.rhel_dsm.private_ip}"
+		command = "/bin/bash scripts/AgentDeploymentScript/generateAllAgentDeploymentScript.sh ${aws_instance.rhel_dsm.private_ip}"
 	}
 	
-
 	depends_on = [
 		aws_instance.rhel_dsm
 	]

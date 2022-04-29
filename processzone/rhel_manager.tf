@@ -25,7 +25,7 @@ resource "aws_instance" "rhel_dsm" {
 	}
 	
 	provisioner "file" {
-		source      = "RedHat/"
+		source      = "scripts/RedHat/"
 		destination = "/tmp"
 	}
 	

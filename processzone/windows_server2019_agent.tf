@@ -1,28 +1,25 @@
 resource "aws_instance" "windows_server2019_agent" {
-	
-	ami = var.dsa_windows_ami
-	instance_type = var.dsa_instance_type
-	key_name = var.ssh_key_name
+
+	ami                         = var.dsa_windows_ami
+	instance_type               = var.dsa_instance_type
+	key_name                    = var.ssh_key_name
 	associate_public_ip_address = "true"
-	subnet_id = var.subnet_id
-	security_groups = [aws_security_group.allow-winrm-ips.id]
-	iam_instance_profile = var.instance_profile
-	get_password_data = "true"
-	user_data = file("SetUp-WinRM.txt")
+	subnet_id                   = var.subnet_id
+	security_groups             = [aws_security_group.allow-winrm-ips.id]
+	iam_instance_profile        = var.instance_profile
+	get_password_data           = "true"
+	user_data                   = file("SetUp-WinRM.txt")
 
 	tags = {
-				Name = "performance_windows_server2019_DSA"
-				"Trender" = var.tag_trender
-				"Automation" = var.tag_automation
-				"ValidUntil" = formatdate("YYYY-MM-DD", timeadd(timestamp(), "24h"))
-				"workingHours" = "IGNORE"
-		   }
-	
-	depends_on = [
-		null_resource.edit_user_data_script
-		
-	]
-	
+		Name           = "performance_windows_server2019_DSA"
+		"Trender"      = var.tag_trender
+		"Automation"   = var.tag_automation
+		"ValidUntil"   = formatdate("YYYY-MM-DD", timeadd(timestamp(), "24h"))
+		"workingHours" = "IGNORE"
+	}
+}
+
+resource "null_resource" "provision-agent" {
 	connection {
 			type     = "winrm"
 			host     = aws_instance.windows_server2019_agent.public_ip
@@ -43,7 +40,7 @@ resource "aws_instance" "windows_server2019_agent" {
 	}
 
 	provisioner "file" {
-		source      = "AgentDeploymentScript/WindowsAgentDeploymentScript.ps1"
+		source      = "scripts/AgentDeploymentScript/WindowsAgentDeploymentScript.ps1"
 		destination = "C:/temp/WindowsAgentDeploymentScript.ps1"
 	}
 
@@ -56,6 +53,9 @@ resource "aws_instance" "windows_server2019_agent" {
 					"powershell.exe -File C:\\temp\\install_ab.ps1",
 				]
 	}
+	depends_on = [
+		null_resource.edit_user_data_script
+	]
 }
 
 output "dsa-windows-id" {
