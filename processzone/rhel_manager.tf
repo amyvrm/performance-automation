@@ -9,7 +9,7 @@ resource "aws_instance" "rhel_dsm" {
 	iam_instance_profile = var.instance_profile
 	
 	tags = {
-			Name           = "performance_rhel7_DSM"
+			Name           = "performance_rhel8_DSM"
 			"Trender"      = var.tag_trender
 			"Automation"   = var.tag_automation
 			"ValidUntil"   = formatdate("YYYY-MM-DD", timeadd(timestamp(), "24h"))
@@ -23,34 +23,29 @@ resource "aws_instance" "rhel_dsm" {
 		user        = "ec2-user"
 		private_key = file(var.ssh_key)
 	}
-	
 	provisioner "file" {
 		source      = "scripts/RedHat/"
 		destination = "/tmp"
 	}
-	
-	
 	provisioner "remote-exec"  {
 		inline = [
 					"chmod +x /tmp/setupDSMInstall.sh",
 					"chmod +x /tmp/generatePropertiesDSM.sh",
 					"chmod +x /tmp/restartDSM.sh",
-					"chmod +x /tmp/setupPython3.7.sh",
+					"chmod +x /tmp/setupPython3.6.sh",
 					"chmod +x /tmp/downloadAgents.sh",
 					"chmod +x /tmp/uploadDSAToDSM.py",
 					"sudo sh /tmp/setupDSMInstall.sh ${var.dsm_redhat_url} ${var.dsm_license}",
-					"sudo sh /tmp/setupPython3.7.sh",
+					"sudo sh /tmp/setupPython3.6.sh",
 					"sh /tmp/downloadAgents.sh ${var.all_agent_urls}"
 				]
 	}
   
-  root_block_device {
-    volume_size = var.volume_size
-  }
-  
-  
+	root_block_device {
+		volume_size = var.volume_size
+	}
 }
 
 output "dsm-rhel-id" {
-  value = aws_instance.rhel_dsm.id
+	value = aws_instance.rhel_dsm.id
 }
