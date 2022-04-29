@@ -8,14 +8,14 @@ sudo yum -y install wget
 sleep 2
 sudo yum -y install unzip
 sleep 2
-sudo yum -y install docker
-sleep 2
-sudo systemctl stop docker
-sleep 2
-sudo systemctl enable docker
-sleep 2
-sudo systemctl start docker
-sleep 2
+#sudo yum -y install docker
+#sleep 2
+#sudo systemctl stop docker
+#sleep 2
+#sudo systemctl enable docker
+#sleep 2
+#sudo systemctl start docker
+#sleep 2
 sudo docker pull postgres:10
 sleep 4
 sudo mkdir -p /data/postgresql_data
