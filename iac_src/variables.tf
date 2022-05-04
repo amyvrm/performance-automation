@@ -46,6 +46,10 @@ variable "conn_timeout" {
 	default = "5m"
 }
 
+variable "local_manifest_file" {
+  default = "/tmp/manifest.json"
+}
+
 variable "machine_file" {}
 
 variable "dsmVersion" {}
