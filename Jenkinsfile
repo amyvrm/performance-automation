@@ -84,8 +84,9 @@ node('aws&&docker')
             }
         }
         */
-        echo "manifest file : ${WORKSPACE}/${iac_path_dsm_dsa}/${machine_file}"
-        if fileExists("${WORKSPACE}/${iac_path_dsm_dsa}/${machine_file}")
+        mfile = "${WORKSPACE}/${iac_path_dsm_dsa}/${machine_file}"
+        echo "manifest file : ${mfile}"
+        if (fileExists("${mfile}"))
         {
             def infraImage = docker.build("infra-image")
             infraImage.inside
