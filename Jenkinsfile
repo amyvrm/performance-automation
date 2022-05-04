@@ -52,6 +52,7 @@ node('aws&&docker')
 
         currentBuild.displayName = "${env.BUILD_NUMBER}"
         currentBuild.result = 'SUCCESS'
+        /*
         stage('Git checkout')
         {
             checkout scm
@@ -82,32 +83,37 @@ node('aws&&docker')
                 sh "ls -1 ${dsru_path}"
             }
         }
-        def infraImage = docker.build("infra-image")
-        infraImage.inside
+        */
+        echo "manifest file : ${WORKSPACE}/${iac_path_dsm_dsa}/${machine_file}"
+        if fileExists("${WORKSPACE}/${iac_path_dsm_dsa}/${machine_file}")
         {
-            stage('Get Tools')
+            def infraImage = docker.build("infra-image")
+            infraImage.inside
             {
-                sh ("python ${iac_working_dir}/get_pkg_frm_s3.py --access_key ${S3_ACCESS_KEY}    \
-                                                                 --secret_key ${S3_SECRET_KEY}    \
-                                                                 --bucket ${bucket_name}          \
-                                                                 --path ${target_path}")
+    //             stage('Get Tools')
+    //             {
+    //                 sh ("python ${iac_working_dir}/get_pkg_frm_s3.py --access_key ${S3_ACCESS_KEY}    \
+    //                                                                  --secret_key ${S3_SECRET_KEY}    \
+    //                                                                  --bucket ${bucket_name}          \
+    //                                                                  --path ${target_path}")
+    //             }
+    //             stage('Infra Creation - DSM, DSA and Test')
+    //             {
+    //                 sh "terraform -chdir=${iac_path_dsm_dsa} init"
+    //                 sh "terraform -chdir=${iac_path_dsm_dsa} validate"
+    //                 sh "terraform -chdir=${iac_path_dsm_dsa} plan -var=\'access_key=${AWS_ACCESS_KEY}\' -var=\'secret_key=${AWS_SECRET_KEY}\' -var=\'all_agent_urls=${agents_download_urls}\' -var=\'dsm_redhat_url=${dsm_package_url}\' -var=\'dsm_license=${dsm_key}\' -var=\'random_num=${env.BUILD_NUMBER}\' -out ${plan_dsm_dsa}"
+    //                 sh "terraform -chdir=${iac_path_dsm_dsa} apply -auto-approve ${plan_dsm_dsa}"
+    //                 sh "terraform output -json > ${iac_path}/${machine_file}"
+    //                 archiveArtifacts allowEmptyArchive: true, artifacts: "${iac_path_dsm_dsa}/${machine_file}"
+    //             }
+                stage('Automation machine')
+                {
+                    sh "terraform -chdir=${iac_path} init"
+                    sh "terraform -chdir=${iac_path} validate"
+                    sh "terraform -chdir=${iac_path} plan -var=\'access_key=${AWS_ACCESS_KEY}\' -var=\'secret_key=${AWS_SECRET_KEY}\' -var=\'machine_file=${WORKSPACE}/${iac_path_dsm_dsa}/${machine_file}\' -var=\'dsmVersion=${dsmVersion}\' -var=\'stats=${stats}\' -var=\'graph=${graph}\' -var=\'dsru_path=${dsru_path}\' -var=\'nexus_user=${NEXUS_USR}\' -var=\'nexus_pass=${NEXUS_PWD}\' -var=\'scenario=${scenario}\' -out ${plan}"
+                    sh "terraform -chdir=${iac_path} apply -auto-approve ${plan}"
+                }
             }
-            stage('Infra Creation - DSM, DSA and Test')
-            {
-                sh "terraform -chdir=${iac_path_dsm_dsa} init"
-                sh "terraform -chdir=${iac_path_dsm_dsa} validate"
-                sh "terraform -chdir=${iac_path_dsm_dsa} plan -var=\'access_key=${AWS_ACCESS_KEY}\' -var=\'secret_key=${AWS_SECRET_KEY}\' -var=\'all_agent_urls=${agents_download_urls}\' -var=\'dsm_redhat_url=${dsm_package_url}\' -var=\'dsm_license=${dsm_key}\' -var=\'random_num=${env.BUILD_NUMBER}\' -out ${plan_dsm_dsa}"
-                sh "terraform -chdir=${iac_path_dsm_dsa} apply -auto-approve ${plan_dsm_dsa}"
-                sh "terraform output -json > ${iac_path}/${machine_file}"
-                archiveArtifacts allowEmptyArchive: true, artifacts: "${iac_path}/${machine_file}"
-            }
-//             stage('Automation machine')
-//             {
-//                 sh "terraform -chdir=${iac_path} init"
-//                 sh "terraform -chdir=${iac_path} validate"
-//                 sh "terraform -chdir=${iac_path} plan -var=\'access_key=${AWS_ACCESS_KEY}\' -var=\'secret_key=${AWS_SECRET_KEY}\' -var=\'machine_file=${machine_file}\' -var=\'dsmVersion=${dsmVersion}\' -var=\'stats=${stats}\' -var=\'graph=${graph}\' -var=\'dsru_path=${dsru_path}\' -var=\'nexus_user=${NEXUS_USR}\' -var=\'nexus_pass=${NEXUS_PWD}\' -var=\'scenario=${scenario}\' -out ${plan}"
-//                 sh "terraform -chdir=${iac_path} apply -auto-approve ${plan}"
-//             }
         }
     }
 }

@@ -18,6 +18,5 @@ RUN pip install urllib3==1.25.8
 RUN pip3 install boto3
 RUN pip3 install boto
 RUN pip3 install rsa
-#RUN pip3 install simplejson
 RUN apt-get install -y git
 RUN apt-get install -y gcc
