@@ -13,7 +13,7 @@
     "dsm-private-ip" : "10.107.244.79",
     "dsm-public-dns" : "",
     "dsm-public-ip" : "54.147.25.238",
-    "dsm-rhel-id" : "i-076407df038802f19",,
+    "dsm-rhel-id" : "i-076407df038802f19",
     "pem-file" : "./terraformAuthenticate/dslabs_automation.pem",
     "pkg-path" : "C:\\temp\\",
     "region" : "us-east-1"

@@ -52,18 +52,19 @@ node('aws&&docker')
 
         currentBuild.displayName = "${env.BUILD_NUMBER}"
         currentBuild.result = 'SUCCESS'
-        /*
+
         stage('Git checkout')
         {
             checkout scm
-            dir('dsrusigning')
-            {
-                git branch: 'master', credentialsId: 'su-dslabs-automation-token',
-                url: 'https://git@dsgithub.trendmicro.com/dslabs/dsrusigning.git'
-            }
+//             dir('dsrusigning')
+//             {
+//                 git branch: 'master', credentialsId: 'su-dslabs-automation-token',
+//                 url: 'https://git@dsgithub.trendmicro.com/dslabs/dsrusigning.git'
+//             }
         }
 
         wrap([$class: 'BuildUser']) { user_name = "${env.BUILD_USER}" }
+        /*
         sign_image = docker.build("${image_name}", "-f ${dockerfile} .")
         sign_image.inside
         {
@@ -115,6 +116,10 @@ node('aws&&docker')
                     sh "terraform -chdir=${iac_path} apply -auto-approve ${plan}"
                 }
             }
+        }
+        else
+        {
+            echo "File not found: ${mfile}"
         }
     }
 }
