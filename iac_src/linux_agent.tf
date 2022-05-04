@@ -1,5 +1,5 @@
 resource "aws_instance" "performance_auto_machine" {
-    ami = "ami-04505e74c0741db8d"
+    ami = "ami-09d56f8956ab235b3"
     instance_type     = var.instance_type
     key_name          = var.key_name
     associate_public_ip_address = "true"

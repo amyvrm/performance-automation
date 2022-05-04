@@ -22,7 +22,7 @@ resource "aws_instance" "windows_server2019_agent" {
 resource "null_resource" "provision-agent" {
 	connection {
 			type     = "winrm"
-			host     = aws_instance.windows_server2019_agent.public_ip
+			host     = aws_instance.windows_server2019_agent.private_ip
 			timeout  = var.conn_timeout
 			user     = "Administrator"
 			password = rsadecrypt(aws_instance.windows_server2019_agent.password_data, file(var.ssh_key))

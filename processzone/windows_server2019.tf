@@ -27,7 +27,7 @@ resource "aws_instance" "windows_server2019" {
 	
 	connection {
 			type     = "winrm"
-			host     = aws_instance.windows_server2019.public_ip
+			host     = aws_instance.windows_server2019.private_ip
 			timeout  = var.conn_timeout
 			user     = "Administrator"
 			password = rsadecrypt(aws_instance.windows_server2019.password_data, file(var.ssh_key))

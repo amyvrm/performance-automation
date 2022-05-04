@@ -18,7 +18,7 @@ resource "aws_instance" "rhel_dsm" {
 	
 	connection {
 		type        = "ssh"
-		host        = aws_instance.rhel_dsm.public_ip
+		host        = aws_instance.rhel_dsm.private_ip
 		timeout     = var.conn_timeout
 		user        = "ec2-user"
 		private_key = file(var.ssh_key)

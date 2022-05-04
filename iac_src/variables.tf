@@ -3,7 +3,7 @@ variable "access_key" {}
 variable "secret_key" {}
 
 variable "region" {
-  default = "ca-central-1"
+  default = "us-east-1"
 }
 
 variable "agent_user" {
@@ -11,15 +11,15 @@ variable "agent_user" {
 }
 
 variable "vpc_id" {
-  default = "vpc-0472282ae61921e7b"
+  default = "vpc-00cf1001c6535f749"
 }
 
 variable "subnet_id" {
-  default = "subnet-00036005c63136c0f"
+  default = "subnet-0e56fc43911a8e78d"
 }
 
 variable "security_grp_id" {
-  default = "sg-032ea4e43f5ecf1a4"
+  default = "sg-002386483ee32b11f"
 }
 
 variable "trender" {
@@ -31,11 +31,11 @@ variable "instance_type" {
 }
 
 variable "key_name" {
-  default = "TerraformDemo"
+  default = "dslabs_automation"
 }
 
 variable "private_key" {
-  default = "TerraformDemo.pem"
+  default = "dslabs_automation.pem"
 }
 
 variable "instance_profile" {
