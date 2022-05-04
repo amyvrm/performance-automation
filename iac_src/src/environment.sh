@@ -1,15 +1,18 @@
-sudo apt-get update & apt-get upgrade
-python --version
+#!/bin/bash
+
+sudo apt-get update -y
+sudo apt-get upgrade -y
+python3 --version
 sudo apt-get install python3-pip -y
-sudo pip install requests
-sudo pip install pypsexec
-sudo pip install rsa
-sudo pip install boto3
-sudo pip install boto
-sudo pip install lxml
-sudo pip install pylzma
-sudo pip install zeep
-sudo pip install urllib3==1.25.8
-sudo pip install pandas
-sudo pip install matplotlib
-sudo pip install seaborn
+pip install requests
+pip install pypsexec
+pip install rsa
+pip install boto3
+pip install boto
+pip install lxml
+pip install pylzma
+pip install zeep
+pip install urllib3==1.25.8
+pip install pandas
+pip install matplotlib
+pip install seaborn
