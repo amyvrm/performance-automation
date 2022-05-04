@@ -2,8 +2,6 @@
 
 sudo apt-get update -y
 python3 --version
-sudo apt-get install python3-wheel -y
-sudo apt-get install python3-dev -y
 sudo apt-get install python3-pip -y
 pip install requests
 pip install pypsexec

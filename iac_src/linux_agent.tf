@@ -1,8 +1,8 @@
 resource "aws_instance" "performance_auto_machine" {
-	# ubuntu 22.04
-	# ami = "ami-09d56f8956ab235b3"
-	# ubuntu 20.04
-	ami                         = "ami-0c4f7023847b90238"
+	#ubuntu 22.04
+	ami = "ami-09d56f8956ab235b3"
+	#ubuntu 20.04
+	#ami                         = "ami-0c4f7023847b90238"
 	instance_type               = var.instance_type
 	key_name                    = var.key_name
 	associate_public_ip_address = "true"
