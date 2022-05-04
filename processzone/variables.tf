@@ -3,11 +3,11 @@ variable  "script_file_path" {
 }
 
 variable "ssh_key_name" {
-	default = "TerraformDemo"
+	default = "dslabs_automation"
 }
 
 variable "ssh_key" {
-	default = "TerraformDemo.pem"
+	default = "dslabs_automation.pem"
 }
 
 variable "pkg_path" {
@@ -19,20 +19,16 @@ variable "auth_file_path" {
 }
 
 variable "dsm-user" {
-	default = "masteradmin"
+	default = "supermasteradmin"
 }
 
 variable "dsm-password" {
-	default = "AppleTree#1975!"
+	default = "OrangePlant#1980"
 }
 
-variable "dsm_license" {
-	default = ""
-}
+variable "dsm_license" {}
 
-variable "dsm_redhat_url" {
-	default = "https://files.trendmicro.com/products/deepsecurity/en/12.0/Manager-Linux-12.0.446.x64.sh"
-}
+variable "dsm_redhat_url" {}
 
 variable "dsm_windows_url" {
 	default = "https://files.trendmicro.com/products/deepsecurity/en/12.0/Manager-Windows-12.0.458.x64.exe"

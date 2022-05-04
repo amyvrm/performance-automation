@@ -3,22 +3,32 @@ variable "access_key" {}
 variable "secret_key" {}
 
 variable "common_region" {
-  default = "ca-central-1"
+  default = "us-east-1"
 }
-
 
 variable "terraform_user" {
   description = "Pem file to authenticate into system"
-  default = "TerraformDemo"
+  default = "dslabs_automation"
 }
 
+variable "terraform-vpc" {
+  default = "terraform-vpc"
+}
+
+#variable "subnet_id" {
+#	default = "subnet-3a7a9653"
+#}
+#
+#variable "vpc_id" {
+#	default = "vpc-10de3179"
+#}
 
 variable "subnet_id" {
-	default = "subnet-3a7a9653"
+	default = "subnet-0e56fc43911a8e78d"
 }
 
 variable "vpc_id" {
-	default = "vpc-10de3179"
+	default = "vpc-00cf1001c6535f749"
 }
 
 variable "dsm_instance_type" {
@@ -47,7 +57,7 @@ variable "tag_automation" {
 }
 
 variable "conn_timeout" {
-	default = "2m"
+	default = "5m"
 }
 
 variable "conn_user" {
@@ -58,15 +68,6 @@ variable "volume_size" {
 	default = "20"
 }
 
-variable "s3_bucket" {
-	default = "regression-testing-jenkins"
+variable "wfh_sg" {
+	default = "sg-002386483ee32b11f"
 }
-
-variable "object_key" {
-	default = "staging_mttr_artifacts"
-}
-
-
-
-
-

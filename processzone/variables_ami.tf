@@ -1,5 +1,5 @@
 variable "red_hat_ami"{
-	default = "ami-0277fbe7afa8a33a6"
+	default = "ami-096fda3c22c1c990a"
 }
 
 variable "dsm_windows_ami"{
@@ -11,6 +11,6 @@ variable "dsm_windows_ami"{
 variable "dsa_windows_ami"{
 //	default = "ami-00dd0737502449ce1"
 //	default = "ami-0cdfa905439f4b9ca"
-	default = "ami-07c309756d02e9fb8"
+	default = "ami-08ed5c5dd62794ec0"
 }
 

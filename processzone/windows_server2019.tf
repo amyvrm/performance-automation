@@ -4,15 +4,16 @@ resource "aws_instance" "windows_server2019" {
 	instance_type = var.dsa_instance_type
 	key_name = var.ssh_key_name
 	associate_public_ip_address = "true"
+#	subnet_id = var.subnet_id
+#	security_groups = [aws_security_group.allow-winrm-ips.id]
 	subnet_id = var.subnet_id
-	security_groups = [aws_security_group.allow-winrm-ips.id]
+	security_groups = [var.wfh_sg]
 	iam_instance_profile = var.instance_profile
 	get_password_data = "true"
 	user_data = file("SetUp-WinRM.txt")
 
-	
 	tags = {
-			Name         = "performance_windows_server2019"
+			Name         = var.tag_windows_name
 			"Trender"    = var.tag_trender
 			"Automation" = var.tag_automation
 			"ValidUntil" = formatdate("YYYY-MM-DD", timeadd(timestamp(), "24h"))

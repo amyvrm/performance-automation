@@ -5,11 +5,11 @@ resource "aws_instance" "rhel_dsm" {
 	key_name = var.ssh_key_name
 	associate_public_ip_address = "true"
 	subnet_id = var.subnet_id
-	security_groups = [aws_security_group.allow-winrm-ips.id]
+	security_groups = [var.wfh_sg]
 	iam_instance_profile = var.instance_profile
 	
 	tags = {
-			Name           = "performance_rhel8_DSM"
+			Name           = var.tag_dsm_name
 			"Trender"      = var.tag_trender
 			"Automation"   = var.tag_automation
 			"ValidUntil"   = formatdate("YYYY-MM-DD", timeadd(timestamp(), "24h"))
@@ -18,11 +18,12 @@ resource "aws_instance" "rhel_dsm" {
 	
 	connection {
 		type        = "ssh"
-		host        = self.public_ip
+		host        = aws_instance.rhel_dsm.public_ip
 		timeout     = var.conn_timeout
 		user        = "ec2-user"
 		private_key = file(var.ssh_key)
 	}
+
 	provisioner "file" {
 		source      = "scripts/RedHat/"
 		destination = "/tmp"
