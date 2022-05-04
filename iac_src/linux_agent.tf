@@ -37,9 +37,10 @@ resource "null_resource" "run_automation" {
 	provisioner "remote-exec" {
 		inline = [
 			"chmod +x /tmp/src/environment.sh",
-#			"sudo /bin/bash /tmp/src/environment.sh",
-#			"cd /tmp/",
-#			"python src/perform_scenario.py --access_key ${var.access_key} --secret_key ${var.secret_key} --machine_info ${var.machine_file} --dsm_version ${var.dsmVersion} --stats ${var.stats} --graph ${var.graph} --path ${var.dsru_path} --nexus_uname ${var.nexus_user} --nexus_pwd ${var.nexus_pass} --scenario ${var.scenario}"
+			"sleep 60",
+			"sudo /bin/bash /tmp/src/environment.sh",
+			"cd /tmp/",
+			"python src/perform_scenario.py --access_key ${var.access_key} --secret_key ${var.secret_key} --machine_info ${var.machine_file} --dsm_version ${var.dsmVersion} --stats ${var.stats} --graph ${var.graph} --path ${var.dsru_path} --nexus_uname ${var.nexus_user} --nexus_pwd ${var.nexus_pass} --scenario ${var.scenario}"
 		]
 	}
 	depends_on = [aws_instance.performance_auto_machine]
