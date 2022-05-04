@@ -1,0 +1,21 @@
+{
+    "dsa-public-ip": "52.23.238.234",
+    "dsa-public-ip-2": "34.234.79.22",
+    "dsa-user" : "Administrator",
+    "dsa-user-2" : "Administrator",
+    "dsa-windows-id" : "i-0fefc5882b901b109",
+    "dsa-windows-id-2" : "i-0347b86cd4a55522a",
+    "dsm-login-password" : "OrangePlant#1980",
+    "dsm-login-url" : "https://:4119",
+    "dsm-login-user" : "supermasteradmin",
+    "dsm-primary-nic-id" : "eni-0446491f0f6958fcd",
+    "dsm-private-dns" : "ip-10-107-244-79.us.trendnet.org",
+    "dsm-private-ip" : "10.107.244.79",
+    "dsm-public-dns" : "",
+    "dsm-public-ip" : "54.147.25.238",
+    "dsm-rhel-id" : "i-076407df038802f19",,
+    "pem-file" : "./terraformAuthenticate/dslabs_automation.pem",
+    "pkg-path" : "C:\\temp\\",
+    "region" : "us-east-1"
+}
+
