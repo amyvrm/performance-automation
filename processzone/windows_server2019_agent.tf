@@ -46,7 +46,7 @@ resource "null_resource" "provision-agent" {
 
 	provisioner "remote-exec"  {
 		inline = [
-					"powershell.exe -File C:\\temp\\WindowsAgentDeploymentScript.ps1",
+					"powershell.exe -File C:\\temp\\WindowsAgentDeploymentScript.ps1 ${aws_instance.windows_server2019_agent.private_ip}",
 					"powershell.exe -File C:\\temp\\install_pcattcp.ps1",
 					"powershell.exe -File C:\\temp\\install_nginx.ps1",
 					"powershell.exe -File C:\\temp\\install_openssh.ps1",

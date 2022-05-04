@@ -35,7 +35,7 @@ variable "key_name" {
 }
 
 variable "private_key" {
-  default = "key/dslabs_automation.pem"
+  default = "dslabs_automation.pem"
 }
 
 variable "instance_profile" {
