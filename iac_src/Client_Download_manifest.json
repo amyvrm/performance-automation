@@ -1,6 +1,6 @@
 {
-    "dsa-public-ip": {"value":  "3.80.34.168"},
-    "dsa-public-ip-2": {"value":  "72.44.51.200"},
+    "dsa-public-ip": {"value":  "10.107.244.56"},
+    "dsa-public-ip-2": {"value":  "10.107.244.47"},
     "dsa-user" : {"value" :  "Administrator"},
     "dsa-user-2" : {"value" :  "Administrator"},
     "dsa-windows-id" : {"value" :  "i-020a4cd9bb783c9fe"},
@@ -12,7 +12,7 @@
     "dsm-private-dns" : {"value" :  "ip-10-107-244-34.us.trendnet.org"},
     "dsm-private-ip" : {"value" :  "ip-10-107-244-34"},
     "dsm-public-dns" : {"value" :  ""},
-    "dsm-public-ip" : {"value" :  "54.144.203.143"},
+    "dsm-public-ip" : {"value" :  "10.107.244.34"},
     "dsm-rhel-id" : {"value" :  "i-076407df038802f19"},
     "pem-file" : {"value" :  "dslabs_automation.pem"},
     "pkg-path" : {"value" :  "C:\\temp\\"},
