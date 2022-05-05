@@ -53,7 +53,7 @@ class PerformanceScenario(PerfCommon):
         self.title = ["iter-1 (MB/s)", "iter-2 (MB/s)", "iter-3 (MB/s)", "iter-4 (MB/s)", "iter-5 (MB/s)",
                       "Average (MB/s)"]
         self.path = machine.get_pkg_path()
-
+        sip, cip = s_priv_ip, c_priv_ip
         # Get adaptor name
         self.s_adap_name = self.get_adaptor_name(sip, suser, spwd)
         self.c_adap_name = self.get_adaptor_name(cip, cuser, cpwd)
@@ -63,27 +63,22 @@ class PerformanceScenario(PerfCommon):
         print("Client Machine Public IP:{}, Private IP: {}".format(cip, c_priv_ip))
 
         if scenario == "Server_Upload" or scenario == "All":
-            # self.perf_scenario_test(suser, sip, spwd, s_priv_ip, cuser, cip, cpwd, c_priv_ip, "Server Upload")
-            self.perf_scenario_test(suser, s_priv_ip, spwd, s_priv_ip, cuser, c_priv_ip, cpwd, c_priv_ip, "Server Upload")
+            self.perf_scenario_test(suser, sip, spwd, s_priv_ip, cuser, cip, cpwd, c_priv_ip, "Server Upload")
         # Testing Server Upload Scenario based on discussion with Arun and Sunil on 7-Jan-2021
         if scenario == "Server_Download" or scenario == "All":
             if scenario == "All":
                 # Clean Rules from DSM
                 self.dsm.clean_rules_from_dsm()
                 # Enable both agents and filter
-                # self.enable_agent_filter(sip, suser, spwd, cip, cuser, cpwd)
-                self.enable_agent_filter(s_priv_ip, suser, spwd, c_priv_ip, cuser, cpwd)
-            # self.perf_scenario_test_reverse(suser, sip, spwd, s_priv_ip, cuser, cip, cpwd, c_priv_ip, "Server Download")
-            self.perf_scenario_test_reverse(suser, s_priv_ip, spwd, s_priv_ip, cuser, c_priv_ip, cpwd, c_priv_ip, "Server Download")
+                self.enable_agent_filter(sip, suser, spwd, cip, cuser, cpwd)
+            self.perf_scenario_test_reverse(suser, sip, spwd, s_priv_ip, cuser, cip, cpwd, c_priv_ip, "Server Download")
         if scenario == "Client_Download" or scenario == "All":
             if scenario == "All":
                 # Clean Rules from DSM
                 self.dsm.clean_rules_from_dsm()
                 # Enable both agents and filter
-                # self.enable_agent_filter(sip, suser, spwd, cip, cuser, cpwd)
-                self.enable_agent_filter(s_priv_ip, suser, spwd, c_priv_ip, cuser, cpwd)
-            # self.perf_scenario_test(suser, sip, spwd, s_priv_ip, cuser, cip, cpwd, c_priv_ip, "Client Download")
-            self.perf_scenario_test(suser, s_priv_ip, spwd, s_priv_ip, cuser, c_priv_ip, cpwd, c_priv_ip, "Client Download")
+                self.enable_agent_filter(sip, suser, spwd, cip, cuser, cpwd)
+            self.perf_scenario_test(suser, sip, spwd, s_priv_ip, cuser, cip, cpwd, c_priv_ip, "Client Download")
 
     def perf_scenario_test(self, suser, sip, spwd, s_priv_ip, cuser, cip, cpwd, c_priv_ip, scenario_name):
         print("{0}\n### {1} ###\n{0}".format("#" * 50, scenario_name))
