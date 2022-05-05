@@ -200,6 +200,9 @@ class DsmPolicy(object):
 
     def upload_package(self):
         # pkg_name = [filename for filename in os.listdir("update-packages")
+        print("Current wowrking directory: {}".format(os.getcwd()))
+        print("self.pkg_path: {}".format(self.pkg_path))
+        self.pkg_path = os.path.join("/tmp", self.pkg_path)
         pkg_name = [filename for filename in os.listdir(self.pkg_path)
                         if os.path.splitext(filename)[-1] == ".3bsu" or
                         os.path.splitext(filename)[-1] == ".encrypted" or
