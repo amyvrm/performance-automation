@@ -30,6 +30,7 @@ node('aws&&docker')
         def agents_download_urls = params.AGENT_DOWNLOAD_URL
         def dsru_url = params.PACKAGE_URL
         def dsru_path = "${iac_path}/update-packages"
+        def dsru_folder = "update-packages"
         def dsru_file = ""
         def pkg_name = ""
         def dsmVersion =  dsm_package_url.substring(dsm_package_url.lastIndexOf('-') + 1, dsm_package_url.length())
@@ -111,7 +112,7 @@ node('aws&&docker')
             {
                 sh "terraform -chdir=${iac_path} init"
                 sh "terraform -chdir=${iac_path} validate"
-                sh "terraform -chdir=${iac_path} plan -var=\'access_key=${AWS_ACCESS_KEY}\' -var=\'secret_key=${AWS_SECRET_KEY}\' -var=\'machine_file=${manifest_file_path}\' -var=\'dsmVersion=${dsmVersion}\' -var=\'stats=${stats}\' -var=\'graph=${graph}\' -var=\'dsru_path=${dsru_path}\' -var=\'nexus_user=${NEXUS_USR}\' -var=\'nexus_pass=${NEXUS_PWD}\' -var=\'scenario=${scenario}\' -out ${plan}"
+                sh "terraform -chdir=${iac_path} plan -var=\'access_key=${AWS_ACCESS_KEY}\' -var=\'secret_key=${AWS_SECRET_KEY}\' -var=\'machine_file=${manifest_file_path}\' -var=\'dsmVersion=${dsmVersion}\' -var=\'stats=${stats}\' -var=\'graph=${graph}\' -var=\'dsru_folder=${dsru_path}\' -var=\'nexus_user=${NEXUS_USR}\' -var=\'nexus_pass=${NEXUS_PWD}\' -var=\'scenario=${scenario}\' -out ${plan}"
                 sh "terraform -chdir=${iac_path} apply -auto-approve ${plan}"
             }
         }
