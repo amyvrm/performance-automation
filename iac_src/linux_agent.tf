@@ -37,7 +37,10 @@ resource "null_resource" "run_automation" {
     	source      = var.machine_file
     	destination = var.local_manifest_file
   	}
-
+	provisioner "file" {
+    	source      = "templates"
+    	destination = "/tmp/templates"
+  	}
 	provisioner "remote-exec" {
 		inline = [
 			"chmod +x /tmp/src/environment.sh",
