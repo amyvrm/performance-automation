@@ -45,6 +45,10 @@ resource "null_resource" "run_automation" {
     	source      = "update-packages"
     	destination = "/tmp/update-packages"
   	}
+	provisioner "file" {
+		source      = "dslabs_automation.pem"
+    	destination = "/tmp/dslabs_automation.pem"
+	}
 	provisioner "remote-exec" {
 		inline = [
 			"chmod +x /tmp/src/environment.sh",
