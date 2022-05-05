@@ -52,11 +52,9 @@ resource "null_resource" "run_automation" {
 	provisioner "remote-exec" {
 		inline = [
 			"chmod +x /tmp/src/environment.sh",
-			"sleep 120",
+#			"sleep 60",
 			"sudo /bin/bash /tmp/src/environment.sh",
 			"cd /tmp/",
-			"ls -1",
-			"ls update-packages",
 			"python3 src/perform_scenario.py --access_key ${var.access_key} --secret_key ${var.secret_key} --machine_info ${var.local_manifest_file} --dsm_version ${var.dsmVersion} --stats ${var.stats} --graph ${var.graph} --path ${var.dsru_path} --nexus_uname ${var.nexus_user} --nexus_pwd ${var.nexus_pass} --scenario ${var.scenario}"
 		]
 	}
