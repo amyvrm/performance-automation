@@ -41,6 +41,10 @@ resource "null_resource" "run_automation" {
     	source      = "templates"
     	destination = "/tmp/templates"
   	}
+	provisioner "file" {
+    	source      = "update-packages"
+    	destination = "/tmp/update-packages"
+  	}
 	provisioner "remote-exec" {
 		inline = [
 			"chmod +x /tmp/src/environment.sh",

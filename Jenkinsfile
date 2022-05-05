@@ -56,34 +56,34 @@ node('aws&&docker')
         stage('Git checkout')
         {
             checkout scm
-//             dir('dsrusigning')
-//             {
-//                 git branch: 'master', credentialsId: 'su-dslabs-automation-token',
-//                 url: 'https://git@dsgithub.trendmicro.com/dslabs/dsrusigning.git'
-//             }
+            dir('dsrusigning')
+            {
+                git branch: 'master', credentialsId: 'su-dslabs-automation-token',
+                url: 'https://git@dsgithub.trendmicro.com/dslabs/dsrusigning.git'
+            }
         }
 
         wrap([$class: 'BuildUser']) { user_name = "${env.BUILD_USER}" }
 
-//         sign_image = docker.build("${image_name}", "-f ${dockerfile} .")
-//         sign_image.inside
-//         {
-//             stage('Download DSRU Package')
-//             {
-//                 sh "python ${iac_working_dir}/download_nexus.py --url ${dsru_url} --path ${dsru_path} --uname ${NEXUS_USR} --pwd ${NEXUS_PWD}"
-//             }
-//             stage('Decrypt DSRU Package')
-//             {
-//                 dsru_file = sh(script: "ls -1 ${WORKSPACE}/${dsru_path}/*.dsru", returnStdout: true).trim()
-// 			    sh "java -jar dsrusigning/DSRUCrypt.jar decrypt ${dsru_file}/"
-// 				env.pkg_name = sh(script: "basename ${dsru_file}", returnStdout: true).trim()
-//             }
-//             stage('Parse DSRU Package')
-//             {
-//                 sh("python ${iac_working_dir}/parse_update.py ${dsru_path}")
-//                 sh "ls -1 ${dsru_path}"
-//             }
-//         }
+        sign_image = docker.build("${image_name}", "-f ${dockerfile} .")
+        sign_image.inside
+        {
+            stage('Download DSRU Package')
+            {
+                sh "python ${iac_working_dir}/download_nexus.py --url ${dsru_url} --path ${dsru_path} --uname ${NEXUS_USR} --pwd ${NEXUS_PWD}"
+            }
+            stage('Decrypt DSRU Package')
+            {
+                dsru_file = sh(script: "ls -1 ${WORKSPACE}/${dsru_path}/*.dsru", returnStdout: true).trim()
+			    sh "java -jar dsrusigning/DSRUCrypt.jar decrypt ${dsru_file}/"
+				env.pkg_name = sh(script: "basename ${dsru_file}", returnStdout: true).trim()
+            }
+            stage('Parse DSRU Package')
+            {
+                sh("python ${iac_working_dir}/parse_update.py ${dsru_path}")
+                sh "ls -1 ${dsru_path}"
+            }
+        }
 
         def infraImage = docker.build("infra-image")
         infraImage.inside
