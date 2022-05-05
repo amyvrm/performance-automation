@@ -43,10 +43,10 @@ node('aws&&docker')
         def msg = ""
         def stats = "stats.html"
         def graph = "band.png"
-        def machine_info = "manifest.json"
         def stats_file =  "${scenario}_stats.html"
         def graph_file =  "${scenario}_band.png"
         def machine_file =  "${scenario}_manifest.json"
+        def manifest_file_path = "${WORKSPACE}/${iac_path}/${machine_file}"
         def image_name = "perf-auto:${env.BUILD_NUMBER}"
         def dockerfile = 'DockerfileSign'
 
@@ -56,15 +56,15 @@ node('aws&&docker')
         stage('Git checkout')
         {
             checkout scm
-//             dir('dsrusigning')
-//             {
-//                 git branch: 'master', credentialsId: 'su-dslabs-automation-token',
-//                 url: 'https://git@dsgithub.trendmicro.com/dslabs/dsrusigning.git'
-//             }
+            dir('dsrusigning')
+            {
+                git branch: 'master', credentialsId: 'su-dslabs-automation-token',
+                url: 'https://git@dsgithub.trendmicro.com/dslabs/dsrusigning.git'
+            }
         }
 
         wrap([$class: 'BuildUser']) { user_name = "${env.BUILD_USER}" }
-        /*
+
         sign_image = docker.build("${image_name}", "-f ${dockerfile} .")
         sign_image.inside
         {
@@ -84,42 +84,37 @@ node('aws&&docker')
                 sh "ls -1 ${dsru_path}"
             }
         }
-        */
-        mfile = "${WORKSPACE}/${iac_path_dsm_dsa}/${machine_file}"
-        echo "manifest file : ${mfile}"
-        if (fileExists("${mfile}"))
+
+        def infraImage = docker.build("infra-image")
+        infraImage.inside
         {
-            def infraImage = docker.build("infra-image")
-            infraImage.inside
+            stage('Get Tools')
             {
-    //             stage('Get Tools')
-    //             {
-    //                 sh ("python ${iac_working_dir}/get_pkg_frm_s3.py --access_key ${S3_ACCESS_KEY}    \
-    //                                                                  --secret_key ${S3_SECRET_KEY}    \
-    //                                                                  --bucket ${bucket_name}          \
-    //                                                                  --path ${target_path}")
-    //             }
-    //             stage('Infra Creation - DSM, DSA and Test')
-    //             {
-    //                 sh "terraform -chdir=${iac_path_dsm_dsa} init"
-    //                 sh "terraform -chdir=${iac_path_dsm_dsa} validate"
-    //                 sh "terraform -chdir=${iac_path_dsm_dsa} plan -var=\'access_key=${AWS_ACCESS_KEY}\' -var=\'secret_key=${AWS_SECRET_KEY}\' -var=\'all_agent_urls=${agents_download_urls}\' -var=\'dsm_redhat_url=${dsm_package_url}\' -var=\'dsm_license=${dsm_key}\' -var=\'random_num=${env.BUILD_NUMBER}\' -out ${plan_dsm_dsa}"
-    //                 sh "terraform -chdir=${iac_path_dsm_dsa} apply -auto-approve ${plan_dsm_dsa}"
-    //                 sh "terraform output -json > ${iac_path}/${machine_file}"
-    //                 archiveArtifacts allowEmptyArchive: true, artifacts: "${iac_path_dsm_dsa}/${machine_file}"
-    //             }
-                stage('Automation machine')
-                {
-                    sh "terraform -chdir=${iac_path} init"
-                    sh "terraform -chdir=${iac_path} validate"
-                    sh "terraform -chdir=${iac_path} plan -var=\'access_key=${AWS_ACCESS_KEY}\' -var=\'secret_key=${AWS_SECRET_KEY}\' -var=\'machine_file=${mfile}\' -var=\'dsmVersion=${dsmVersion}\' -var=\'stats=${stats}\' -var=\'graph=${graph}\' -var=\'dsru_path=${dsru_path}\' -var=\'nexus_user=${NEXUS_USR}\' -var=\'nexus_pass=${NEXUS_PWD}\' -var=\'scenario=${scenario}\' -out ${plan}"
-                    sh "terraform -chdir=${iac_path} apply -auto-approve ${plan}"
-                }
+                sh ("python ${iac_working_dir}/get_pkg_frm_s3.py --access_key ${S3_ACCESS_KEY}    \
+                                                                 --secret_key ${S3_SECRET_KEY}    \
+                                                                 --bucket ${bucket_name}          \
+                                                                 --path ${target_path}")
             }
-        }
-        else
-        {
-            echo "File not found: ${mfile}"
+            stage('Infra Creation - DSM, DSA and Test')
+            {
+                sh "terraform -chdir=${iac_path_dsm_dsa} init"
+                sh "terraform -chdir=${iac_path_dsm_dsa} validate"
+                sh "terraform -chdir=${iac_path_dsm_dsa} plan -var=\'access_key=${AWS_ACCESS_KEY}\' -var=\'secret_key=${AWS_SECRET_KEY}\' -var=\'all_agent_urls=${agents_download_urls}\' -var=\'dsm_redhat_url=${dsm_package_url}\' -var=\'dsm_license=${dsm_key}\' -var=\'random_num=${env.BUILD_NUMBER}\' -out ${plan_dsm_dsa}"
+                sh "terraform -chdir=${iac_path_dsm_dsa} apply -auto-approve ${plan_dsm_dsa}"
+            }
+            stage('DSM infra information')
+            {
+                sh "cd ${iac_path_dsm_dsa}"
+                sh "terraform -chdir=${iac_path_dsm_dsa} output -json > ${manifest_file_path}"
+                archiveArtifacts allowEmptyArchive: true, artifacts: "${manifest_file_path}"
+            }
+            stage('Automation machine')
+            {
+                sh "terraform -chdir=${iac_path} init"
+                sh "terraform -chdir=${iac_path} validate"
+                sh "terraform -chdir=${iac_path} plan -var=\'access_key=${AWS_ACCESS_KEY}\' -var=\'secret_key=${AWS_SECRET_KEY}\' -var=\'machine_file=${manifest_file_path}\' -var=\'dsmVersion=${dsmVersion}\' -var=\'stats=${stats}\' -var=\'graph=${graph}\' -var=\'dsru_path=${dsru_path}\' -var=\'nexus_user=${NEXUS_USR}\' -var=\'nexus_pass=${NEXUS_PWD}\' -var=\'scenario=${scenario}\' -out ${plan}"
+                sh "terraform -chdir=${iac_path} apply -auto-approve ${plan}"
+            }
         }
     }
 }
