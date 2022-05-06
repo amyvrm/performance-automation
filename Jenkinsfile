@@ -105,7 +105,10 @@ node('aws&&docker')
             }
             stage('DSM infra information')
             {
-                sh "terraform -chdir=${iac_path_dsm_dsa} output -json > ${manifest_file_path}"
+                dir("${iac_path_dsm_dsa}")
+                {
+                    sh "terraform output -json > ${manifest_file_path}"
+                }
                 archiveArtifacts allowEmptyArchive: true, artifacts: "${manifest_file_path}"
             }
             stage('Automation machine')

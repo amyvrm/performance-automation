@@ -17,6 +17,9 @@ class MachineInfo(object):
     def get_dsm_public_ip(self):
         return self.machine_info["dsm-public-ip"]["value"]
 
+    def get_dsm_private_ip(self):
+        return self.machine_info["dsm-private-ip"]["value"]
+
     def get_dsm_user(self):
         return self.machine_info["dsm-login-user"]["value"]
 

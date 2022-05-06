@@ -42,6 +42,7 @@ class PerformanceScenario(PerfCommon):
         print("Client Agent {} instance -> Public IP:{}, Private IP: {}".format(instance2, cip, c_priv_ip))
 
         # self.ip_type = {sip: "Server", cip: "Client"}
+        # added this line to work with private ip
         self.ip_type = {s_priv_ip: "Server", c_priv_ip: "Client"}
         # Get the password
         spwd = PerformanceScenario.get_pwd(region, access_key, secret_key, instance1, pem_file, "Server")
