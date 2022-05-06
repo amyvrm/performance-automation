@@ -329,5 +329,5 @@ if __name__ == '__main__':
     auth = (args.nexus_uname, args.nexus_pwd)
     stats_url = scenario.nexus_upload(args.nexus_url, auth, args.stats)
     graph_url = scenario.nexus_upload(args.nexus_url, auth, args.graph)
-    PerformanceScenario.send_teams_notification(args.webhook, args.jenkins_url, args.build_user, scenario,
-                                                stats_url, graph_url)
+    # PerformanceScenario.send_teams_notification(args.webhook, args.jenkins_url, args.build_user, scenario,
+    #                                             stats_url, graph_url)
