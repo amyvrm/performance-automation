@@ -51,6 +51,8 @@ node('aws&&docker')
         def manifest_file_pattern = "${WORKSPACE}/${iac_path}/*.json"
         def image_name = "perf-auto:${env.BUILD_NUMBER}"
         def dockerfile = 'DockerfileSign'
+        def nexus_url_dslabs = "https://dsnexus.trendmicro.com:8443/nexus/repository/dslabs"
+        def nexus_url = "${nexus_url_dslabs}/${env.JOB_BASE_NAME}/${env.BUILD_NUMBER}"
 
         currentBuild.displayName = "${env.BUILD_NUMBER}"
         currentBuild.result = 'SUCCESS'
@@ -109,16 +111,14 @@ node('aws&&docker')
                 dir("${iac_path_dsm_dsa}")
                 {
                     sh "terraform output -json > ${manifest_file_path}"
-                    sh "ls ${manifest_file_path}"
-                    sh "terraform output -json > ${manifest_file}"
-                    archiveArtifacts allowEmptyArchive: true, artifacts: '${manifest_file}'
+                    archiveArtifacts allowEmptyArchive: true, artifacts: "${manifest_file_path}"
                 }
             }
             stage('Automation machine')
             {
                 sh "terraform -chdir=${iac_path} init"
                 sh "terraform -chdir=${iac_path} validate"
-                sh "terraform -chdir=${iac_path} plan -var=\'access_key=${AWS_ACCESS_KEY}\' -var=\'secret_key=${AWS_SECRET_KEY}\' -var=\'machine_file=${manifest_file_path}\' -var=\'dsmVersion=${dsmVersion}\' -var=\'stats=${stats}\' -var=\'graph=${graph}\' -var=\'dsru_path=${dsru_folder}\' -var=\'nexus_user=${NEXUS_USR}\' -var=\'nexus_pass=${NEXUS_PWD}\' -var=\'scenario=${scenario}\' -var=\'random_num=${env.BUILD_NUMBER}\' -out ${plan}"
+                sh "terraform -chdir=${iac_path} plan -var=\'access_key=${AWS_ACCESS_KEY}\' -var=\'secret_key=${AWS_SECRET_KEY}\' -var=\'machine_file=${manifest_file_path}\' -var=\'dsmVersion=${dsmVersion}\' -var=\'stats=${stats}\' -var=\'graph=${graph}\' -var=\'dsru_path=${dsru_folder}\' -var=\'nexus_url=${nexus_url}\' -var=\'nexus_user=${NEXUS_USR}\' -var=\'nexus_pass=${NEXUS_PWD}\' -var=\'scenario=${scenario}\' -var=\'random_num=${env.BUILD_NUMBER}\' -var=\'webhook=${WEBHOOK}\' -var=\'jenkins_url=${env.BUILD_URL}\' -var=\'build_user=${user_name}\' -out ${plan}"
                 sh "terraform -chdir=${iac_path} apply -auto-approve ${plan}"
             }
         }

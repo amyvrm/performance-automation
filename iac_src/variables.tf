@@ -60,6 +60,8 @@ variable "graph" {}
 
 variable "dsru_path" {}
 
+variable "nexus_url" {}
+
 variable "nexus_user" {}
 
 variable "nexus_pass" {}
@@ -67,3 +69,9 @@ variable "nexus_pass" {}
 variable "scenario" {}
 
 variable "random_num" {}
+
+variable "webhook" {}
+
+variable "jenkins_url" {}
+
+variable "build_user" {}

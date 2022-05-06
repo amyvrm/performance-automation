@@ -5,10 +5,13 @@ import simplejson as json
 import pandas as pd
 from dsm_operation import DsmPolicy
 from get_machine_info import MachineInfo
+import requests
+import json
 
 
 class PerformanceScenario(PerfCommon):
-    def __init__(self, machine_info, ver, access_key, secret_key, stats, graph, path_json, nexus_uname, nexus_pwd, scenario):
+    def __init__(self, machine_info, ver, access_key, secret_key, stats, graph, path_json, nexus_uname, nexus_pwd,
+                 scenario):
         machine = MachineInfo(machine_info)
         PerfCommon.__init__(self, stats, graph)
 
@@ -213,6 +216,91 @@ class PerformanceScenario(PerfCommon):
                                                                             len(iter_stats), iter_stats, avg))
         return all_stats, iter_stats, avg
 
+    def nexus_upload(self, nexus_base_url, auth, filename):
+        nexus_url = "{}/{}".format(nexus_base_url, filename)
+        for retry in range(2):
+            print("Attempt-{} to upload {} in {}".format(retry, filename, nexus_url))
+            # read the file
+            with open(filename, "r") as fout:
+                # upload the file
+                res = requests.put(nexus_url, data=fout.read(), auth=auth)
+
+                print("Nexus_upload status: {}".format(res.status_code))
+                if res.status_code == 201:
+                    print("PASS: {} file has benn Uploaded in Nexus Repo {}".format(filename, nexus_url))
+                    return nexus_url
+                time.sleep(10)
+
+        raise Exception("ERROR: while uploading {} file in Nexus repo {}".format(filename, nexus_url))
+
+    @staticmethod
+    def send_teams_notification(webhook, jenkins_url, build_user, scenario, stats_url, graph_url):
+        message = {
+            "@type": "MessageCard",
+            "@context": "http://schema.org/extensions",
+            "themeColor": "00ff00",
+            "summary": "EKS Cluster Deployment",
+            "sections":
+                [
+                    {
+                        "activityTitle": "Performance Automation - {} - {}".format(scenario, jenkins_url.split("/")[-2]),
+                        "activitySubtitle": "Scenario : {}".format(scenario),
+                        "activityImage": "https://teamsnodesample.azurewebsites.net/static/img/image5.png",
+                        "facts":
+                            [
+                                {
+                                    "name": "Performance Test Scenario {}".format(scenario),
+                                    "value": "Success"
+                                },
+                                {
+                                    "name": "Build Run By",
+                                    "value": build_user
+                                }
+                            ],
+                        "markdown": True
+                    }
+                ],
+            "potentialAction":
+                [
+                    {
+                        "@type": "OpenUri",
+                        "name": "Stats in Table URL",
+                        "targets":
+                            [
+                                {
+                                    "os": "default",
+                                    "uri": stats_url
+                                }
+                            ]
+                    },
+                    {
+                        "@type": "OpenUri",
+                        "name": "Stats in Bar Chart URL",
+                        "targets":
+                            [
+                                {
+                                    "os": "default",
+                                    "uri": graph_url
+                                }
+                            ]
+                    },
+                    {
+                        "@type": "OpenUri",
+                        "name": "View Jenkins Build",
+                        "targets":
+                            [
+                                {
+                                    "os": "default",
+                                    "uri": jenkins_url
+                                }
+                            ]
+                    }
+                ]
+        }
+
+        headers = {'content-type': 'application/json'}
+        requests.post(webhook, data=json.dumps(message), headers=headers)
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Please give argument to perform operations')
@@ -223,9 +311,13 @@ if __name__ == '__main__':
     parser.add_argument('--stats', type=str, help="Html file name")
     parser.add_argument('--graph', type=str, help="Graph file name")
     parser.add_argument('--path', type=str, help="Graph file name")
+    parser.add_argument('--nexus_url', type=str, help="Nexus URL")
     parser.add_argument('--nexus_uname', type=str, help="Nexus username")
     parser.add_argument('--nexus_pwd', type=str, help="Nexus password")
     parser.add_argument('--scenario', type=str, help="Scenario name to test")
+    parser.add_argument('--webhook', type=str, help="Teams Webhook")
+    parser.add_argument('--jenkins_url', type=str, help="Jenkins URL")
+    parser.add_argument('--build_user', type=str, help="Jenkins build user")
     args = parser.parse_args()
 
     with open(args.machine_info) as fout:
@@ -237,3 +329,8 @@ if __name__ == '__main__':
                                    args.nexus_uname, args.nexus_pwd,
                                    args.scenario
                                    )
+    auth = (args.nexus_uname, args.nexus_pwd)
+    stats_url = scenario.nexus_upload(args.nexus_url, auth, args.stats)
+    graph_url = scenario.nexus_upload(args.nexus_url, auth, args.graph)
+    PerformanceScenario.send_teams_notification(args.webhook, args.jenkins_url, args.build_user, scenario,
+                                                stats_url, graph_url)
