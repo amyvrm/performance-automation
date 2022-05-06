@@ -108,8 +108,9 @@ node('aws&&docker')
                 dir("${iac_path_dsm_dsa}")
                 {
                     sh "terraform output -json > ${manifest_file_path}"
+                    sh "ls ${manifest_file_path}"
+                    archiveArtifacts allowEmptyArchive: true, artifacts: "${manifest_file_path}"
                 }
-                archiveArtifacts allowEmptyArchive: true, artifacts: "${manifest_file_path}"
             }
             stage('Automation machine')
             {

@@ -23,7 +23,8 @@ output "dsm-security-groups" {
 }
 
 output "dsm-login-url" {
-  value = "https://${aws_instance.rhel_dsm.public_dns}:4119"
+#  value = "https://${aws_instance.rhel_dsm.public_dns}:4119"
+  value = "https://${aws_instance.rhel_dsm.private_dns}:4119"
 }
 
 output "dsm-login-user" {
@@ -35,7 +36,7 @@ output "dsm-login-password" {
 }
 
 output "pem-file" {
-  value = "${var.auth_file_path}/${var.terraform_user}.pem"
+  value = "${var.ssh_key}"
 }
 
 output "pkg-path" {
