@@ -2,6 +2,7 @@ import rsa
 import boto.ec2
 import base64
 from pypsexec.client import Client
+from pypsexec.exceptions import SCMRException
 import simplejson as json
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -172,7 +173,13 @@ class PerfCommon(object):
             print("Error!!! {} while accessing {}".format(e, ip))
         finally:
             machine.cleanup()
-            machine.remove_service()
+            try:
+                machine.remove_service()
+            except SCMRException as exc:
+                if exc.return_code == 1072:  # ERROR_SERVICE_MARKED_FOR_DELETE
+                    pass
+                else:
+                    print("Error!!! Failed to remove service")
             machine.disconnect()
 
     @staticmethod
