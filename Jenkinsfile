@@ -101,34 +101,45 @@ node('aws&&docker')
         def infraImage = docker.build("infra-image")
         infraImage.inside
         {
-//             stage('Get Tools')
-//             {
-//                 sh ("python ${iac_working_dir}/get_pkg_frm_s3.py --access_key ${S3_ACCESS_KEY}    \
-//                                                                  --secret_key ${S3_SECRET_KEY}    \
-//                                                                  --bucket ${bucket_name}          \
-//                                                                  --path ${target_path}")
-//             }
-//             stage('Infra Creation - DSM, DSA and Test')
-//             {
-//                 sh "terraform -chdir=${iac_path_dsm_dsa} init"
-//                 sh "terraform -chdir=${iac_path_dsm_dsa} validate"
-//                 sh "terraform -chdir=${iac_path_dsm_dsa} plan -var=\'access_key=${AWS_ACCESS_KEY}\' -var=\'secret_key=${AWS_SECRET_KEY}\' -var=\'all_agent_urls=${agents_download_urls}\' -var=\'dsm_redhat_url=${dsm_package_url}\' -var=\'dsm_license=${dsm_key}\' -var=\'random_num=${env.BUILD_NUMBER}\' -out ${plan_dsm_dsa}"
-//                 sh "terraform -chdir=${iac_path_dsm_dsa} apply -auto-approve ${plan_dsm_dsa}"
-//             }
-//             stage('DSM infra information')
-//             {
-//                 dir("${iac_path_dsm_dsa}")
-//                 {
-//                     sh "terraform output -json > ${manifest_file_path}"
-//                     archiveArtifacts allowEmptyArchive: true, artifacts: "${manifest_file_pattern}"
-//                 }
-//             }
+            stage('Get Tools')
+            {
+                sh ("python ${iac_working_dir}/get_pkg_frm_s3.py --access_key ${S3_ACCESS_KEY}    \
+                                                                 --secret_key ${S3_SECRET_KEY}    \
+                                                                 --bucket ${bucket_name}          \
+                                                                 --path ${target_path}")
+            }
+            stage('Infra Creation - DSM, DSA and Test')
+            {
+                sh "terraform -chdir=${iac_path_dsm_dsa} init"
+                sh "terraform -chdir=${iac_path_dsm_dsa} validate"
+                sh "terraform -chdir=${iac_path_dsm_dsa} plan -var=\'access_key=${AWS_ACCESS_KEY}\' -var=\'secret_key=${AWS_SECRET_KEY}\' -var=\'all_agent_urls=${agents_download_urls}\' -var=\'dsm_redhat_url=${dsm_package_url}\' -var=\'dsm_license=${dsm_key}\' -var=\'random_num=${env.BUILD_NUMBER}\' -out ${plan_dsm_dsa}"
+                sh "terraform -chdir=${iac_path_dsm_dsa} apply -auto-approve ${plan_dsm_dsa}"
+            }
+            stage('DSM infra information')
+            {
+                dir("${iac_path_dsm_dsa}")
+                {
+                    sh "terraform output -json > ${manifest_file_path}"
+                    archiveArtifacts allowEmptyArchive: true, artifacts: "${manifest_file_pattern}"
+                }
+            }
             stage('Automation machine')
             {
                 sh "terraform -chdir=${iac_path} init"
                 sh "terraform -chdir=${iac_path} validate"
                 sh "terraform -chdir=${iac_path} plan -var=\'access_key=${AWS_ACCESS_KEY}\' -var=\'secret_key=${AWS_SECRET_KEY}\' -var=\'machine_file=${manifest_file_path}\' -var=\'dsmVersion=${dsmVersion}\' -var=\'stats=${stats}\' -var=\'graph=${graph}\' -var=\'dsru_path=${dsru_folder}\' -var=\'nexus_url=${nexus_url}\' -var=\'nexus_user=${NEXUS_USR}\' -var=\'nexus_pass=${NEXUS_PWD}\' -var=\'scenario=${scenario}\' -var=\'random_num=${env.BUILD_NUMBER}\' -var=\'webhook=${teams_webhook}\' -var=\'jenkins_url=${env.BUILD_URL}\' -var=\'build_user=${user_name}\' -var=\'pipeline_num=${pipeline_num}\' -out ${plan}"
                 sh "terraform -chdir=${iac_path} apply -auto-approve ${plan}"
+            }
+            stage('Send Teams Message')
+            {
+                sh("python3 src/team_msg.py --scenario ${scenario}           \
+                                            --webhook \'${teams_webhook}\'   \
+                                            --jenkins_url ${env.BUILD_URL}   \
+                                            --build_user ${user_name}        \
+                                            --stats ${stats}                 \
+                                            --graph ${graph}                 \
+                                            --nexus_url ${nexus_url}         \
+                                            --pipeline_num ${env.BUILD_NUMBER}")
             }
         }
     }
