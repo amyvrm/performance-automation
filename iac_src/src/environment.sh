@@ -15,3 +15,4 @@ pip install urllib3==1.25.8
 pip install pandas
 pip install matplotlib
 pip install seaborn
+echo "Environment Setup Complete"

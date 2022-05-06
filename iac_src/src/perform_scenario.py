@@ -315,9 +315,6 @@ if __name__ == '__main__':
     parser.add_argument('--nexus_uname', type=str, help="Nexus username")
     parser.add_argument('--nexus_pwd', type=str, help="Nexus password")
     parser.add_argument('--scenario', type=str, help="Scenario name to test")
-    parser.add_argument('--webhook', type=str, help="Teams Webhook")
-    parser.add_argument('--jenkins_url', type=str, help="Jenkins URL")
-    parser.add_argument('--build_user', type=str, help="Jenkins build user")
     args = parser.parse_args()
 
     with open(args.machine_info) as fout:
