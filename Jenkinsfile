@@ -88,7 +88,8 @@ node('aws&&docker')
                 dsru_file = sh(script: "ls -1 ${WORKSPACE}/${dsru_path}/*.dsru", returnStdout: true).trim()
 			    sh "java -jar dsrusigning/DSRUCrypt.jar decrypt ${dsru_file}/"
 				env.pkg_name = sh(script: "basename ${dsru_file}", returnStdout: true).trim()
-				nexus_url = "${nexus_url}/${pkg_name}/${pipeline_num}"
+				nexus_url = "${nexus_url}/${env.pkg_name}/${pipeline_num}"
+				echo "nexus_url: ${nexus_url}"
             }
             stage('Parse DSRU Package')
             {
@@ -100,28 +101,28 @@ node('aws&&docker')
         def infraImage = docker.build("infra-image")
         infraImage.inside
         {
-            stage('Get Tools')
-            {
-                sh ("python ${iac_working_dir}/get_pkg_frm_s3.py --access_key ${S3_ACCESS_KEY}    \
-                                                                 --secret_key ${S3_SECRET_KEY}    \
-                                                                 --bucket ${bucket_name}          \
-                                                                 --path ${target_path}")
-            }
-            stage('Infra Creation - DSM, DSA and Test')
-            {
-                sh "terraform -chdir=${iac_path_dsm_dsa} init"
-                sh "terraform -chdir=${iac_path_dsm_dsa} validate"
-                sh "terraform -chdir=${iac_path_dsm_dsa} plan -var=\'access_key=${AWS_ACCESS_KEY}\' -var=\'secret_key=${AWS_SECRET_KEY}\' -var=\'all_agent_urls=${agents_download_urls}\' -var=\'dsm_redhat_url=${dsm_package_url}\' -var=\'dsm_license=${dsm_key}\' -var=\'random_num=${env.BUILD_NUMBER}\' -out ${plan_dsm_dsa}"
-                sh "terraform -chdir=${iac_path_dsm_dsa} apply -auto-approve ${plan_dsm_dsa}"
-            }
-            stage('DSM infra information')
-            {
-                dir("${iac_path_dsm_dsa}")
-                {
-                    sh "terraform output -json > ${manifest_file_path}"
-                    archiveArtifacts allowEmptyArchive: true, artifacts: "${manifest_file_pattern}"
-                }
-            }
+//             stage('Get Tools')
+//             {
+//                 sh ("python ${iac_working_dir}/get_pkg_frm_s3.py --access_key ${S3_ACCESS_KEY}    \
+//                                                                  --secret_key ${S3_SECRET_KEY}    \
+//                                                                  --bucket ${bucket_name}          \
+//                                                                  --path ${target_path}")
+//             }
+//             stage('Infra Creation - DSM, DSA and Test')
+//             {
+//                 sh "terraform -chdir=${iac_path_dsm_dsa} init"
+//                 sh "terraform -chdir=${iac_path_dsm_dsa} validate"
+//                 sh "terraform -chdir=${iac_path_dsm_dsa} plan -var=\'access_key=${AWS_ACCESS_KEY}\' -var=\'secret_key=${AWS_SECRET_KEY}\' -var=\'all_agent_urls=${agents_download_urls}\' -var=\'dsm_redhat_url=${dsm_package_url}\' -var=\'dsm_license=${dsm_key}\' -var=\'random_num=${env.BUILD_NUMBER}\' -out ${plan_dsm_dsa}"
+//                 sh "terraform -chdir=${iac_path_dsm_dsa} apply -auto-approve ${plan_dsm_dsa}"
+//             }
+//             stage('DSM infra information')
+//             {
+//                 dir("${iac_path_dsm_dsa}")
+//                 {
+//                     sh "terraform output -json > ${manifest_file_path}"
+//                     archiveArtifacts allowEmptyArchive: true, artifacts: "${manifest_file_pattern}"
+//                 }
+//             }
             stage('Automation machine')
             {
                 sh "terraform -chdir=${iac_path} init"

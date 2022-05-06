@@ -88,5 +88,6 @@ if __name__ == "__main__":
     graph_file = "{}_{}".format(args.scenario.replace(" ", "_"), args.graph)
     stats_url = "{}/{}".format(args.nexus_url, stats_file)
     graph_url = "{}/{}".format(args.nexus_url, graph_file)
-    send_teams_notification(args.webhook, args.jenkins_url, args.build_user, args.scenario, stats_url, graph_url,
+    team_webhook = "https://trendmicro.webhook.office.com/webhookb2/d6c82240-57b1-41b5-84e8-09def3921052@3e04753a-ae5b-42d4-a86d-d6f05460f9e4/JenkinsCI/b131747740c34e90b770e2a911dea18f/5110c51b-5ae9-4caa-a0a8-aafc778ce125"
+    send_teams_notification(team_webhook, args.jenkins_url, args.build_user, args.scenario, stats_url, graph_url,
                             args.pipeline_num)
