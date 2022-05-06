@@ -57,8 +57,8 @@ resource "null_resource" "run_automation" {
 			"sudo /bin/bash /tmp/src/environment.sh",
 			"cd /tmp/",
 #			"python3 src/perform_scenario.py --access_key ${var.access_key} --secret_key ${var.secret_key} --machine_info ${var.local_manifest_file} --dsm_version ${var.dsmVersion} --stats ${var.stats} --graph ${var.graph} --path ${var.dsru_path} --nexus_url ${var.nexus_url} --nexus_uname ${var.nexus_user} --nexus_pwd ${var.nexus_pass} --scenario ${var.scenario} --webhook ${var.webhook} --jenkins_url ${var.jenkins_url} --build_user ${var.build_user}",
-			"python3 src/perform_scenario.py --access_key ${var.access_key} --secret_key ${var.secret_key} --machine_info ${var.local_manifest_file} --dsm_version ${var.dsmVersion} --stats ${var.stats} --graph ${var.graph} --path ${var.dsru_path} --nexus_url ${var.nexus_url} --nexus_uname ${var.nexus_user} --nexus_pwd ${var.nexus_pass} --scenario ${var.scenario}",
-			"python3 src/team_msg.py --scenario ${var.scenario} --webhook ${var.webhook} --jenkins_url ${var.jenkins_url} --build_user ${var.build_user} --stats ${var.stats} --graph ${var.graph} --nexus_url ${var.nexus_url}",
+			"python3 src/perform_scenario.py --access_key ${var.access_key} --secret_key ${var.secret_key} --machine_info ${var.local_manifest_file} --dsm_version ${var.dsmVersion} --stats ${var.stats} --graph ${var.graph} --path ${var.dsru_path} --nexus_url ${var.nexus_url} --nexus_uname ${var.nexus_user} --nexus_pwd ${var.nexus_pass} --scenario ${var.scenario} --pipeline_num ${var.pipeline_num}",
+			"python3 src/team_msg.py --scenario ${var.scenario} --webhook ${var.webhook} --jenkins_url ${var.jenkins_url} --build_user ${var.build_user} --stats ${var.stats} --graph ${var.graph} --nexus_url ${var.nexus_url} --pipeline_num ${var.pipeline_num}",
 		]
 	}
 	depends_on = [aws_instance.performance_auto_machine]

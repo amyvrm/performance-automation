@@ -15,6 +15,11 @@ node('aws&&docker')
         // Pipeline Variables
         def scenario = params.SCENARIO
         def debug = params.DEBUG
+        def pipeline_num = params.PARENT_PIPELINE_NUMBER
+        if (pipeline_num == "0")
+        {
+            pipeline_num = "individual_${env.BUILD_NUMBER}"
+        }
 
         // Terraform related Pipeline Variables
         def iac_path = "iac_src"
@@ -51,8 +56,9 @@ node('aws&&docker')
         def manifest_file_pattern = "${WORKSPACE}/${iac_path}/*.json"
         def image_name = "perf-auto:${env.BUILD_NUMBER}"
         def dockerfile = 'DockerfileSign'
-        def nexus_url_dslabs = "https://dsnexus.trendmicro.com:8443/nexus/repository/dslabs"
-        def nexus_url = "${nexus_url_dslabs}/${env.JOB_BASE_NAME}/${env.BUILD_NUMBER}"
+//         def nexus_url_dslabs = "https://dsnexus.trendmicro.com:8443/nexus/repository/dslabs"
+//         def nexus_url = "${nexus_url_dslabs}/${env.JOB_BASE_NAME}/${env.BUILD_NUMBER}"
+        def nexus_url = "https://dsnexus.trendmicro.com:8443/nexus/repository/dslabs/performance-test"
         def teams_webhook = 'https://trendmicro.webhook.office.com/webhookb2/d6c82240-57b1-41b5-84e8-09def3921052@3e04753a-ae5b-42d4-a86d-d6f05460f9e4/JenkinsCI/b131747740c34e90b770e2a911dea18f/5110c51b-5ae9-4caa-a0a8-aafc778ce125'
 
         currentBuild.displayName = "${env.BUILD_NUMBER}"
@@ -82,6 +88,7 @@ node('aws&&docker')
                 dsru_file = sh(script: "ls -1 ${WORKSPACE}/${dsru_path}/*.dsru", returnStdout: true).trim()
 			    sh "java -jar dsrusigning/DSRUCrypt.jar decrypt ${dsru_file}/"
 				env.pkg_name = sh(script: "basename ${dsru_file}", returnStdout: true).trim()
+				nexus_url = "${nexus_url}/${pkg_name}/${pipeline_num}"
             }
             stage('Parse DSRU Package')
             {
@@ -119,7 +126,7 @@ node('aws&&docker')
             {
                 sh "terraform -chdir=${iac_path} init"
                 sh "terraform -chdir=${iac_path} validate"
-                sh "terraform -chdir=${iac_path} plan -var=\'access_key=${AWS_ACCESS_KEY}\' -var=\'secret_key=${AWS_SECRET_KEY}\' -var=\'machine_file=${manifest_file_path}\' -var=\'dsmVersion=${dsmVersion}\' -var=\'stats=${stats}\' -var=\'graph=${graph}\' -var=\'dsru_path=${dsru_folder}\' -var=\'nexus_url=${nexus_url}\' -var=\'nexus_user=${NEXUS_USR}\' -var=\'nexus_pass=${NEXUS_PWD}\' -var=\'scenario=${scenario}\' -var=\'random_num=${env.BUILD_NUMBER}\' -var=\'webhook=${teams_webhook}\' -var=\'jenkins_url=${env.BUILD_URL}\' -var=\'build_user=${user_name}\' -out ${plan}"
+                sh "terraform -chdir=${iac_path} plan -var=\'access_key=${AWS_ACCESS_KEY}\' -var=\'secret_key=${AWS_SECRET_KEY}\' -var=\'machine_file=${manifest_file_path}\' -var=\'dsmVersion=${dsmVersion}\' -var=\'stats=${stats}\' -var=\'graph=${graph}\' -var=\'dsru_path=${dsru_folder}\' -var=\'nexus_url=${nexus_url}\' -var=\'nexus_user=${NEXUS_USR}\' -var=\'nexus_pass=${NEXUS_PWD}\' -var=\'scenario=${scenario}\' -var=\'random_num=${env.BUILD_NUMBER}\' -var=\'webhook=${teams_webhook}\' -var=\'jenkins_url=${env.BUILD_URL}\' -var=\'build_user=${user_name}\' -var=\'pipeline_num=${pipeline_num}\' -out ${plan}"
                 sh "terraform -chdir=${iac_path} apply -auto-approve ${plan}"
             }
         }

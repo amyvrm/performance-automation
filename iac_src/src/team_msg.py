@@ -81,6 +81,7 @@ if __name__ == "__main__":
     parser.add_argument('--stats', type=str, help="Html file name")
     parser.add_argument('--graph', type=str, help="Graph file name")
     parser.add_argument('--nexus_url', type=str, help="Nexus URL")
+    parser.add_argument('--pipeline_num', type=str, help="Pipeline Number to manage the file")
     args = parser.parse_args()
 
     stats_file = "{}_{}".format(args.scenario.replace(" ", "_"), args.stats)

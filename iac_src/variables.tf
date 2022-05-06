@@ -75,3 +75,5 @@ variable "webhook" {}
 variable "jenkins_url" {}
 
 variable "build_user" {}
+
+variable "pipeline_num" {}
