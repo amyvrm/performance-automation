@@ -135,7 +135,7 @@ node('aws&&docker')
                 sh("python3 src/team_msg.py --scenario ${scenario}           \
                                             --webhook \'${teams_webhook}\'   \
                                             --jenkins_url ${env.BUILD_URL}   \
-                                            --build_user ${user_name}        \
+                                            --build_user \'${user_name}\'        \
                                             --stats ${stats}                 \
                                             --graph ${graph}                 \
                                             --nexus_url ${nexus_url}         \
