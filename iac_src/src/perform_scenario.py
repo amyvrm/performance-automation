@@ -234,73 +234,6 @@ class PerformanceScenario(PerfCommon):
 
         raise Exception("ERROR: while uploading {} file in Nexus repo {}".format(filename, nexus_url))
 
-    @staticmethod
-    def send_teams_notification(webhook, jenkins_url, build_user, scenario, stats_url, graph_url):
-        message = {
-            "@type": "MessageCard",
-            "@context": "http://schema.org/extensions",
-            "themeColor": "00ff00",
-            "summary": "EKS Cluster Deployment",
-            "sections":
-                [
-                    {
-                        "activityTitle": "Performance Automation - {} - {}".format(scenario, jenkins_url.split("/")[-2]),
-                        "activitySubtitle": "Scenario : {}".format(scenario),
-                        "activityImage": "https://teamsnodesample.azurewebsites.net/static/img/image5.png",
-                        "facts":
-                            [
-                                {
-                                    "name": "Performance Test Scenario {}".format(scenario),
-                                    "value": "Success"
-                                },
-                                {
-                                    "name": "Build Run By",
-                                    "value": build_user
-                                }
-                            ],
-                        "markdown": True
-                    }
-                ],
-            "potentialAction":
-                [
-                    {
-                        "@type": "OpenUri",
-                        "name": "Stats in Table URL",
-                        "targets":
-                            [
-                                {
-                                    "os": "default",
-                                    "uri": stats_url
-                                }
-                            ]
-                    },
-                    {
-                        "@type": "OpenUri",
-                        "name": "Stats in Bar Chart URL",
-                        "targets":
-                            [
-                                {
-                                    "os": "default",
-                                    "uri": graph_url
-                                }
-                            ]
-                    },
-                    {
-                        "@type": "OpenUri",
-                        "name": "View Jenkins Build",
-                        "targets":
-                            [
-                                {
-                                    "os": "default",
-                                    "uri": jenkins_url
-                                }
-                            ]
-                    }
-                ]
-        }
-
-        headers = {'content-type': 'application/json'}
-        requests.post(webhook, data=json.dumps(message), headers=headers)
 
 
 if __name__ == '__main__':
@@ -316,7 +249,6 @@ if __name__ == '__main__':
     parser.add_argument('--nexus_uname', type=str, help="Nexus username")
     parser.add_argument('--nexus_pwd', type=str, help="Nexus password")
     parser.add_argument('--scenario', type=str, help="Scenario name to test")
-    parser.add_argument('--pipeline_num', type=str, help="Pipeline Number to manage the file")
     args = parser.parse_args()
 
     with open(args.machine_info) as fout:
@@ -331,5 +263,3 @@ if __name__ == '__main__':
     auth = (args.nexus_uname, args.nexus_pwd)
     stats_url = scenario.nexus_upload(args.nexus_url, auth, args.stats, args.scenario)
     graph_url = scenario.nexus_upload(args.nexus_url, auth, args.graph, args.scenario)
-    # PerformanceScenario.send_teams_notification(args.webhook, args.jenkins_url, args.build_user, scenario,
-    #                                             stats_url, graph_url)

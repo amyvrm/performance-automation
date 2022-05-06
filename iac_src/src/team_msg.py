@@ -3,7 +3,7 @@ import requests
 import json
 
 
-def send_teams_notification(webhook, jenkins_url, build_user, scenario, stats_url, graph_url):
+def send_teams_notification(webhook, jenkins_url, build_user, scenario, stats_url, graph_url, pipeline_num):
     message = {
         "@type": "MessageCard",
         "@context": "http://schema.org/extensions",
@@ -12,7 +12,7 @@ def send_teams_notification(webhook, jenkins_url, build_user, scenario, stats_ur
         "sections":
             [
                 {
-                    "activityTitle": "Performance Automation - {} - {}".format(scenario, jenkins_url.split("/")[-2]),
+                    "activityTitle": "Performance Automation - Pipeline Number - {}".format(pipeline_num),
                     "activitySubtitle": "Scenario : {}".format(scenario),
                     "activityImage": "https://teamsnodesample.azurewebsites.net/static/img/image5.png",
                     "facts":
@@ -88,4 +88,5 @@ if __name__ == "__main__":
     graph_file = "{}_{}".format(args.scenario.replace(" ", "_"), args.graph)
     stats_url = "{}/{}".format(args.nexus_url, stats_file)
     graph_url = "{}/{}".format(args.nexus_url, graph_file)
-    send_teams_notification(args.webhook, args.jenkins_url, args.build_user, args.scenario, stats_url, graph_url)
+    send_teams_notification(args.webhook, args.jenkins_url, args.build_user, args.scenario, stats_url, graph_url,
+                            args.pipeline_num)
