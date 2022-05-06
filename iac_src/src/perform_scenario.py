@@ -216,12 +216,13 @@ class PerformanceScenario(PerfCommon):
                                                                             len(iter_stats), iter_stats, avg))
         return all_stats, iter_stats, avg
 
-    def nexus_upload(self, nexus_base_url, auth, filename):
+    def nexus_upload(self, nexus_base_url, auth, fname, scenario):
+        filename = "{}_{}".format(scenario.replace(" ", "_"), fname)
         nexus_url = "{}/{}".format(nexus_base_url, filename)
         for retry in range(2):
-            print("Attempt-{} to upload {} in {}".format(retry, filename, nexus_url))
+            print("Attempt-{} to upload {} in {}".format(retry+1, filename, nexus_url))
             # read the file
-            with open(filename, "r") as fout:
+            with open(filename, "rb") as fout:
                 # upload the file
                 res = requests.put(nexus_url, data=fout.read(), auth=auth)
 
@@ -327,7 +328,7 @@ if __name__ == '__main__':
                                    args.scenario
                                    )
     auth = (args.nexus_uname, args.nexus_pwd)
-    stats_url = scenario.nexus_upload(args.nexus_url, auth, args.stats)
-    graph_url = scenario.nexus_upload(args.nexus_url, auth, args.graph)
+    stats_url = scenario.nexus_upload(args.nexus_url, auth, args.stats, args.scenario)
+    graph_url = scenario.nexus_upload(args.nexus_url, auth, args.graph, args.scenario)
     # PerformanceScenario.send_teams_notification(args.webhook, args.jenkins_url, args.build_user, scenario,
     #                                             stats_url, graph_url)

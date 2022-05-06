@@ -33,7 +33,7 @@ def send_teams_notification(webhook, jenkins_url, build_user, scenario, stats_ur
             [
                 {
                     "@type": "OpenUri",
-                    "name": "Stats in Table URL",
+                    "name": "Bandwidth Stats in Table",
                     "targets":
                         [
                             {
@@ -44,7 +44,7 @@ def send_teams_notification(webhook, jenkins_url, build_user, scenario, stats_ur
                 },
                 {
                     "@type": "OpenUri",
-                    "name": "Stats in Bar Chart URL",
+                    "name": "Bandwidth Stats in Bar Chart",
                     "targets":
                         [
                             {
@@ -69,6 +69,7 @@ def send_teams_notification(webhook, jenkins_url, build_user, scenario, stats_ur
 
     headers = {'content-type': 'application/json'}
     requests.post(webhook, data=json.dumps(message), headers=headers)
+    print("Team notification sent successfully")
 
 
 if __name__ == "__main__":
@@ -82,6 +83,8 @@ if __name__ == "__main__":
     parser.add_argument('--nexus_url', type=str, help="Nexus URL")
     args = parser.parse_args()
 
-    stats_url = "{}/{}".format(args.nexus_url, args.stats)
-    graph_url = "{}/{}".format(args.nexus_url, args.graph)
+    stats_file = "{}_{}".format(args.scenario.replace(" ", "_"), args.stats)
+    graph_file = "{}_{}".format(args.scenario.replace(" ", "_"), args.graph)
+    stats_url = "{}/{}".format(args.nexus_url, stats_file)
+    graph_url = "{}/{}".format(args.nexus_url, graph_file)
     send_teams_notification(args.webhook, args.jenkins_url, args.build_user, args.scenario, stats_url, graph_url)
