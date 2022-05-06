@@ -65,3 +65,5 @@ variable "nexus_user" {}
 variable "nexus_pass" {}
 
 variable "scenario" {}
+
+variable "random_num" {}

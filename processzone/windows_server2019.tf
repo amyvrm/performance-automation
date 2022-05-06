@@ -13,7 +13,7 @@ resource "aws_instance" "windows_server2019" {
 	user_data = file("SetUp-WinRM.txt")
 
 	tags = {
-			Name         = var.tag_windows_name
+			Name         = "${var.tag_windows_name}_${var.random_num}"
 			"Trender"    = var.tag_trender
 			"Automation" = var.tag_automation
 			"ValidUntil" = formatdate("YYYY-MM-DD", timeadd(timestamp(), "24h"))
