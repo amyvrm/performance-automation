@@ -159,14 +159,19 @@ class PerfCommon(object):
                     stdout, stderr, rc = machine.run_executable(tool, arguments=cmd, asynchronous=asynchronous)
                     print("Tool: {}, Output: [{}], Error: {}".format(tool, stdout, stderr))
                 if stdout:
-                    return stdout.decode("utf-8").split("\r")[0]
+                    value = stdout.decode("utf-8").split("\r")[0]
+                    print("Value = {}".format(value))
+                    return value
             else:
                 stdout, stderr, rc = machine.run_executable(tool, arguments=cmd, asynchronous=asynchronous)
                 print("{} Output: [{}], pid: {}, Error: {}".format(tool, stdout, rc, stderr))
-                return rc
+                value = rc
+                print("Value = {}".format(value))
+                return value
         except Exception as e:
             print("Error!!! {} while accessing {}".format(e, ip))
         finally:
+            machine.cleanup()
             machine.remove_service()
             machine.disconnect()
 
@@ -180,7 +185,7 @@ class PerfCommon(object):
                         print(line)
                     through_put = out.split("=")[1].split(" ")[-8]
                     t_mbps = round(float(through_put) / 1024.0, 2)
-                    print("{0}\n+ {1}: {2} KBps, {3} MBps +\n{0}".format("+"*50, index + 1, through_put, t_mbps))
+                    print("{0}\n+ {1}: {2} KBps, {3} MBps +\n{0}".format("+" * 50, index + 1, through_put, t_mbps))
                     all_through_put.append(t_mbps)
                     return True
             elif "ab" in cmd:
@@ -192,7 +197,8 @@ class PerfCommon(object):
                         if "Transfer rate" in line:
                             through_put = re.findall("\d+\.\d+", line)[0]
                             t_mbps = round(float(through_put) / 1024.0, 2)
-                            print("{0}\n+ {1}: {2} KBps, {3} MBps +\n{0}".format("+" * 50, index + 1, through_put, t_mbps))
+                            print("{0}\n+ {1}: {2} KBps, {3} MBps +\n{0}".format("+" * 50, index + 1, through_put,
+                                                                                 t_mbps))
                             all_through_put.append(t_mbps)
                             return True
         except Exception as ex:
@@ -271,21 +277,21 @@ class PerfCommon(object):
         return self.execute_cmd(cmd, ip, user, pwd, tool=tool)
 
     def run_pcattcp_rec(self, ip, user, pwd, target_ip, asynchronous=False):
-        print("{0}\n+ Run PCATTCP on {1}-{2} +\n{0}".format("+"*50, self.ip_type[ip], ip))
+        print("{0}\n+ Run PCATTCP on {1}-{2} +\n{0}".format("+" * 50, self.ip_type[ip], ip))
         self.clean(ip, user, pwd)
         tool = "Powershell.exe"
         cmd = '{}PCATTCP\PCATTCP.exe -r -l 490000 {} -c'.format(self.path, target_ip)
         return self.execute_cmd(cmd, ip, user, pwd, tool=tool, bandwidth=False, asynchronous=asynchronous)
 
     def run_pcattcp_tran(self, ip, user, pwd, target_ip, bandwidth=False, asynchronous=False):
-        print("{0}\n+ Run PCATTCP on {1}-{2} and take Reading +\n{0}".format("+"*50, self.ip_type[ip], ip))
+        print("{0}\n+ Run PCATTCP on {1}-{2} and take Reading +\n{0}".format("+" * 50, self.ip_type[ip], ip))
         self.clean(ip, user, pwd)
         tool = "Powershell.exe"
         cmd = '{}PCATTCP\PCATTCP.exe -t -l 490000 {}'.format(self.path, target_ip)
         return self.execute_cmd(cmd, ip, user, pwd, tool=tool, bandwidth=bandwidth, asynchronous=asynchronous)
 
     def run_nginx(self, ip, user, pwd):
-        print("{0}\n+ Run nginx on {1}-{2} +\n{0}".format("+"*50, self.ip_type[ip], ip))
+        print("{0}\n+ Run nginx on {1}-{2} +\n{0}".format("+" * 50, self.ip_type[ip], ip))
         self.clean_nginx(ip, user, pwd)
         tool = "Powershell.exe"
         cmd = "cd {0}nginx-1.19.2; start {0}nginx-1.19.2\\nginx.exe".format(self.path)
@@ -398,12 +404,12 @@ class PerfCommon(object):
 
         port_list = [dict(port) for port in portlist_set if port]
         identifiers = server_rules[:]
-        print("{}\nAll Rules: {}\nServer Rules: {}\nDependency of Server Rules: {}".format("*"*100, all_identifier,
-                                                                                       server_rules, all_dep_rules))
+        print("{}\nAll Rules: {}\nServer Rules: {}\nDependency of Server Rules: {}".format("*" * 100, all_identifier,
+                                                                                           server_rules, all_dep_rules))
         client_rules_iden = client_rules[:]
         print("{}\nClient Rules: {}\nDependency of Client Rules: {}".format("*" * 100, client_rules, client_dep_rules))
         print("Good Rule with Dependency: {}\nNon DPI Rule: {}\n".format(grule_list, non_dpi_rules))
-        print("PortList: {}\n{}".format(port_list, "*"*100))
+        print("PortList: {}\n{}".format(port_list, "*" * 100))
 
         if len(all_dep_rules) > 0:
             server_rules.extend(list(all_dep_rules))
