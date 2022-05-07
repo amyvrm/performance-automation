@@ -46,11 +46,9 @@ variable "conn_timeout" {
 	default = "5m"
 }
 
-variable "local_manifest_file" {
-  default = "/tmp/manifest.json"
-}
+variable "manifest_file_path" {}
 
-variable "machine_file" {}
+variable "manifest_file" {}
 
 variable "dsmVersion" {}
 
@@ -69,11 +67,3 @@ variable "nexus_pass" {}
 variable "scenario" {}
 
 variable "random_num" {}
-
-variable "webhook" {}
-
-variable "jenkins_url" {}
-
-variable "build_user" {}
-
-variable "pipeline_num" {}

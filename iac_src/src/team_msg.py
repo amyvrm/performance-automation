@@ -3,7 +3,8 @@ import requests
 import json
 
 
-def send_teams_notification(webhook, jenkins_url, build_user, scenario, stats_url, graph_url, pipeline_num):
+def send_teams_notification(webhook, jenkins_url, build_user, scenario, stats_url, graph_url, manifest_file_url,
+                            pipeline_num):
     message = {
         "@type": "MessageCard",
         "@context": "http://schema.org/extensions",
@@ -55,6 +56,17 @@ def send_teams_notification(webhook, jenkins_url, build_user, scenario, stats_ur
                 },
                 {
                     "@type": "OpenUri",
+                    "name": "Infra Access Detail",
+                    "targets":
+                        [
+                            {
+                                "os": "default",
+                                "uri": manifest_file_url
+                            }
+                        ]
+                },
+                {
+                    "@type": "OpenUri",
                     "name": "View Jenkins Build",
                     "targets":
                         [
@@ -80,6 +92,7 @@ if __name__ == "__main__":
     parser.add_argument('--build_user', type=str, help="Jenkins build user")
     parser.add_argument('--stats', type=str, help="Html file name")
     parser.add_argument('--graph', type=str, help="Graph file name")
+    parser.add_argument('--manifest_file', type=str, help="Manifest file contains cloud infra access detail")
     parser.add_argument('--nexus_url', type=str, help="Nexus URL")
     parser.add_argument('--pipeline_num', type=str, help="Pipeline Number to manage the file")
     args = parser.parse_args()
@@ -88,6 +101,6 @@ if __name__ == "__main__":
     graph_file = "{}_{}".format(args.scenario.replace(" ", "_"), args.graph)
     stats_url = "{}/{}".format(args.nexus_url, stats_file)
     graph_url = "{}/{}".format(args.nexus_url, graph_file)
-    team_webhook = "https://trendmicro.webhook.office.com/webhookb2/d6c82240-57b1-41b5-84e8-09def3921052@3e04753a-ae5b-42d4-a86d-d6f05460f9e4/JenkinsCI/b131747740c34e90b770e2a911dea18f/5110c51b-5ae9-4caa-a0a8-aafc778ce125"
-    send_teams_notification(team_webhook, args.jenkins_url, args.build_user, args.scenario, stats_url, graph_url,
-                            args.pipeline_num)
+    manifest_file_url = "{}/{}".format(args.nexus_url, args.manifest_file)
+    send_teams_notification(args.webhook, args.jenkins_url, args.build_user, args.scenario, stats_url, graph_url,
+                            manifest_file_url, args.pipeline_num)

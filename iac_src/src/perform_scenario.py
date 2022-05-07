@@ -240,7 +240,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Please give argument to perform operations')
     parser.add_argument('--access_key', type=str, help="Need access key to get the password of instance")
     parser.add_argument('--secret_key', type=str, help="Need secret key to get the password of instance")
-    parser.add_argument('--machine_info', type=str, help="Need infra credential of dsm and dsa")
+    parser.add_argument('--manifest_file', type=str, help="Need infra credential of dsm and dsa")
     parser.add_argument('--dsm_version', type=str, help="Need dsm version to decide the policy template")
     parser.add_argument('--stats', type=str, help="Html file name")
     parser.add_argument('--graph', type=str, help="Graph file name")
@@ -251,7 +251,7 @@ if __name__ == '__main__':
     parser.add_argument('--scenario', type=str, help="Scenario name to test")
     args = parser.parse_args()
 
-    with open(args.machine_info) as fout:
+    with open(args.manifest_file) as fout:
         machine_info = json.load(fout)
     scenario = PerformanceScenario(machine_info,
                                    args.dsm_version,
@@ -263,3 +263,4 @@ if __name__ == '__main__':
     auth = (args.nexus_uname, args.nexus_pwd)
     stats_url = scenario.nexus_upload(args.nexus_url, auth, args.stats, args.scenario)
     graph_url = scenario.nexus_upload(args.nexus_url, auth, args.graph, args.scenario)
+    manifest_url = scenario.nexus_upload(args.nexus_url, auth, args.manifest_file, args.scenario)

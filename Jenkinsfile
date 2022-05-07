@@ -127,7 +127,8 @@ node('aws&&docker')
             {
                 sh "terraform -chdir=${iac_path} init"
                 sh "terraform -chdir=${iac_path} validate"
-                sh "terraform -chdir=${iac_path} plan -var=\'access_key=${AWS_ACCESS_KEY}\' -var=\'secret_key=${AWS_SECRET_KEY}\' -var=\'machine_file=${manifest_file_path}\' -var=\'dsmVersion=${dsmVersion}\' -var=\'stats=${stats}\' -var=\'graph=${graph}\' -var=\'dsru_path=${dsru_folder}\' -var=\'nexus_url=${nexus_url}\' -var=\'nexus_user=${NEXUS_USR}\' -var=\'nexus_pass=${NEXUS_PWD}\' -var=\'scenario=${scenario}\' -var=\'random_num=${env.BUILD_NUMBER}\' -var=\'webhook=${teams_webhook}\' -var=\'jenkins_url=${env.BUILD_URL}\' -var=\'build_user=${user_name}\' -var=\'pipeline_num=${pipeline_num}\' -out ${plan}"
+//                 sh "terraform -chdir=${iac_path} plan -var=\'access_key=${AWS_ACCESS_KEY}\' -var=\'secret_key=${AWS_SECRET_KEY}\' -var=\'machine_file=${manifest_file_path}\' -var=\'dsmVersion=${dsmVersion}\' -var=\'stats=${stats}\' -var=\'graph=${graph}\' -var=\'dsru_path=${dsru_folder}\' -var=\'nexus_url=${nexus_url}\' -var=\'nexus_user=${NEXUS_USR}\' -var=\'nexus_pass=${NEXUS_PWD}\' -var=\'scenario=${scenario}\' -var=\'random_num=${env.BUILD_NUMBER}\' -var=\'webhook=${teams_webhook}\' -var=\'jenkins_url=${env.BUILD_URL}\' -var=\'build_user=${user_name}\' -var=\'pipeline_num=${pipeline_num}\' -out ${plan}"
+                sh "terraform -chdir=${iac_path} plan -var=\'access_key=${AWS_ACCESS_KEY}\' -var=\'secret_key=${AWS_SECRET_KEY}\' -var=\'manifest_file_path=${manifest_file_path}\' -var=\'manifest_file=${manifest_file}\' -var=\'dsmVersion=${dsmVersion}\' -var=\'stats=${stats}\' -var=\'graph=${graph}\' -var=\'dsru_path=${dsru_folder}\' -var=\'nexus_url=${nexus_url}\' -var=\'nexus_user=${NEXUS_USR}\' -var=\'nexus_pass=${NEXUS_PWD}\' -var=\'scenario=${scenario}\' -var=\'random_num=${env.BUILD_NUMBER}\' -out ${plan}"
                 sh "terraform -chdir=${iac_path} apply -auto-approve ${plan}"
             }
             stage('Send Teams Message')
@@ -138,6 +139,7 @@ node('aws&&docker')
                                             --build_user \'${user_name}\'           \
                                             --stats ${stats}                        \
                                             --graph ${graph}                        \
+                                            --manifest_file ${manifest_file}        \
                                             --nexus_url ${nexus_url}                \
                                             --pipeline_num ${env.BUILD_NUMBER}")
             }
