@@ -9,6 +9,7 @@ node('aws&&docker')
 				       credentialsId: 'dslabs-jenkins-automation-credentials', secretKeyVariable: 'S3_SECRET_KEY'],
 					   usernamePassword(credentialsId: 'su-dslabs-creds', usernameVariable: 'NEXUS_USR',
 					                                                    passwordVariable: 'NEXUS_PWD'),
+                       string(credentialsId: 'jenkins-webhook', variable: 'teams_webhook')
 					   string(credentialsId: dsm_license_key, variable: 'dsm_key')])
     {
         deleteDir()
@@ -61,7 +62,7 @@ node('aws&&docker')
 //         def nexus_url_dslabs = "https://dsnexus.trendmicro.com:8443/nexus/repository/dslabs"
 //         def nexus_url = "${nexus_url_dslabs}/${env.JOB_BASE_NAME}/${env.BUILD_NUMBER}"
         def nexus_url = "https://dsnexus.trendmicro.com:8443/nexus/repository/dslabs/performance-test"
-        def teams_webhook = 'https://trendmicro.webhook.office.com/webhookb2/d6c82240-57b1-41b5-84e8-09def3921052@3e04753a-ae5b-42d4-a86d-d6f05460f9e4/JenkinsCI/b131747740c34e90b770e2a911dea18f/5110c51b-5ae9-4caa-a0a8-aafc778ce125'
+//         def teams_webhook = 'https://trendmicro.webhook.office.com/webhookb2/d6c82240-57b1-41b5-84e8-09def3921052@3e04753a-ae5b-42d4-a86d-d6f05460f9e4/JenkinsCI/b131747740c34e90b770e2a911dea18f/5110c51b-5ae9-4caa-a0a8-aafc778ce125'
 
         currentBuild.displayName = "${env.BUILD_NUMBER}"
         currentBuild.result = 'SUCCESS'
@@ -143,7 +144,7 @@ node('aws&&docker')
                                             --graph ${graph}                        \
                                             --manifest_file ${manifest_file}        \
                                             --nexus_url ${nexus_url}                \
-                                            --pipeline_num ${env.BUILD_NUMBER}")
+                                            --pipeline_num ${pipeline_num}")
             }
         }
     }

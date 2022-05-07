@@ -115,7 +115,7 @@ node('aws&&docker')
             // dslabs_auto_monitoring
             slackSend channel: 'dslabs_auto_monitoring', color: "good", message: "${msg}"
             // dsruhandover
-            // slackSend channel: "dsruhandover", color: 'good', message: "${msg}"
+            slackSend channel: "dsruhandover", color: 'good', message: "${msg}"
         }
     }
     catch (e) {
@@ -127,7 +127,7 @@ node('aws&&docker')
         // dslabs_auto_monitoring
         slackSend channel: 'dslabs_auto_monitoring', color: "good", message: "${msg}"
         // dsruhandover
-        // slackSend channel: "dsruhandover", color: 'good', message: "${msg}"
+        slackSend channel: "dsruhandover", color: 'good', message: "${msg}"
         println(e)
         throw e
     }
