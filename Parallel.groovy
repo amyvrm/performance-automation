@@ -57,16 +57,16 @@ node('aws&&docker')
 
         stage("Parallel Perf Test") {
             parallel Server_Upload: {
-                dsru_name = call_scenario_test("Server_Upload", perf_pipeline)
+                dsru_name = call_scenario_test("Server_Upload", perf_pipeline, "${pipeline_num}")
             }, Server_Download: {
                 echo "Waiting 30 sec before running parallel scenario pipeline"
                 sleep time: 30, unit: 'SECONDS'
-                dsru_name = call_scenario_test("Server_Download", perf_pipeline)
+                dsru_name = call_scenario_test("Server_Download", perf_pipeline, "${pipeline_num}")
             },
             Client_Download: {
                 echo "Waiting 60 before running parallel scenario pipeline"
                 sleep time: 60, unit: 'SECONDS'
-                dsru_name = call_scenario_test("Client_Download", perf_pipeline)
+                dsru_name = call_scenario_test("Client_Download", perf_pipeline, "${pipeline_num}")
             },
             failFast: false
         }
@@ -115,7 +115,7 @@ node('aws&&docker')
             // dslabs_auto_monitoring
             slackSend channel: 'dslabs_auto_monitoring', color: "good", message: "${msg}"
             // dsruhandover
-            slackSend channel: "dsruhandover", color: 'good', message: "${msg}"
+            // slackSend channel: "dsruhandover", color: 'good', message: "${msg}"
         }
     }
     catch (e) {
@@ -127,13 +127,13 @@ node('aws&&docker')
         // dslabs_auto_monitoring
         slackSend channel: 'dslabs_auto_monitoring', color: "good", message: "${msg}"
         // dsruhandover
-        slackSend channel: "dsruhandover", color: 'good', message: "${msg}"
+        // slackSend channel: "dsruhandover", color: 'good', message: "${msg}"
         println(e)
         throw e
     }
 }
 
-def call_scenario_test(scenario, perf_pipeline) {
+def call_scenario_test(scenario, perf_pipeline, pipeline_num) {
     //scenario = "Server_Upload"
     echo "Calling ${scenario} test"
     perf = build quietPeriod: 5, job: perf_pipeline,
@@ -147,7 +147,7 @@ def call_scenario_test(scenario, perf_pipeline) {
                     string(name: 'PARENT_PIPELINE_NUMBER', value: "${pipeline_num}")]
 
     echo "Build Number: ${perf.number}"
-    copyArtifacts filter: "**/*.html, **/*.png, **/*.json", projectName: perf_pipeline, selector: specific("${perf.number}")
-    echo "Copied ${scenario} Artifacts"
+//     copyArtifacts filter: "**/*.html, **/*.png, **/*.json", projectName: perf_pipeline, selector: specific("${perf.number}")
+//     echo "Copied ${scenario} Artifacts"
     return perf.buildVariables.pkg_name
 }
