@@ -132,13 +132,13 @@ node('aws&&docker')
             }
             stage('Send Teams Message')
             {
-                sh("python3 src/team_msg.py --scenario ${scenario}           \
-                                            --webhook \'${teams_webhook}\'   \
-                                            --jenkins_url ${env.BUILD_URL}   \
-                                            --build_user \'${user_name}\'        \
-                                            --stats ${stats}                 \
-                                            --graph ${graph}                 \
-                                            --nexus_url ${nexus_url}         \
+                sh("python3 ${iac_working_dir}/team_msg.py --scenario ${scenario}   \
+                                            --webhook ${teams_webhook}              \
+                                            --jenkins_url ${env.BUILD_URL}          \
+                                            --build_user \'${user_name}\'           \
+                                            --stats ${stats}                        \
+                                            --graph ${graph}                        \
+                                            --nexus_url ${nexus_url}                \
                                             --pipeline_num ${env.BUILD_NUMBER}")
             }
         }

@@ -27,6 +27,9 @@ def get_pkg(url, path, uname, pwd):
             os.remove(package_path)
     else:
         fname = "{}.dsru".format(os.path.join(path, name.split(".")[0]))
+        if fname == "sample.dsru":
+            fname_split = fname.split(".")
+            fname = "{}_{}.{}".format(fname_split[0], name.split(".")[2], fname_split[1])
         print("File name: {}".format(fname))
         with open(fname, "wb") as fin:
             fin.write(pkg.content)
