@@ -10,7 +10,7 @@ RUN apt-get update
 RUN apt-get install terraform=1.1.7
 
 RUN apt-get install python3-pip -y
-RUN #pip install requests
+RUN pip install requests
 #RUN pip install lxml
 #RUN pip install pylzma
 #RUN pip install zeep
