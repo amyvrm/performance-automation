@@ -9,7 +9,7 @@ node('aws&&docker')
 				       credentialsId: 'dslabs-jenkins-automation-credentials', secretKeyVariable: 'S3_SECRET_KEY'],
 					   usernamePassword(credentialsId: 'su-dslabs-creds', usernameVariable: 'NEXUS_USR',
 					                                                    passwordVariable: 'NEXUS_PWD'),
-                       string(credentialsId: 'jenkins-webhook', variable: 'teams_webhook')
+                       string(credentialsId: 'jenkins-webhook', variable: 'teams_webhook'),
 					   string(credentialsId: dsm_license_key, variable: 'dsm_key')])
     {
         deleteDir()
