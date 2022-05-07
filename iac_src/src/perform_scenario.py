@@ -1,7 +1,7 @@
 import argparse
 from perf_common import PerfCommon
 import time
-import simplejson as json
+import shutil
 import pandas as pd
 from dsm_operation import DsmPolicy
 from get_machine_info import MachineInfo
@@ -263,4 +263,6 @@ if __name__ == '__main__':
     auth = (args.nexus_uname, args.nexus_pwd)
     stats_url = scenario.nexus_upload(args.nexus_url, auth, args.stats, args.scenario)
     graph_url = scenario.nexus_upload(args.nexus_url, auth, args.graph, args.scenario)
+    destination = "{}_{}".format(args.scenario.replace(" ", "_"), args.manifest_file)
+    shutil.copyfile(args.manifest_file, destination)
     manifest_url = scenario.nexus_upload(args.nexus_url, auth, args.manifest_file, args.scenario)
