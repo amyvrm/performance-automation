@@ -28,6 +28,8 @@ node('aws&&docker')
         def plan = "create.tfplan"
         def iac_path_dsm_dsa = "processzone"
         def plan_dsm_dsa = "create_dsm_dsa.tfplan"
+        def destroy_dsm_dsa = "dsm_dsa_destroy.tfplan"
+        def destroy_auto = "auto_destroy.tfplan"
 
         // DSRU Related Pipeline Variables
         def dsm_package_url = params.DSM_PACKAGE_URL
@@ -117,6 +119,7 @@ node('aws&&docker')
                 sh "terraform -chdir=${iac_path_dsm_dsa} validate"
                 sh "terraform -chdir=${iac_path_dsm_dsa} plan -var=\'access_key=${AWS_ACCESS_KEY}\' -var=\'secret_key=${AWS_SECRET_KEY}\' -var=\'all_agent_urls=${agents_download_urls}\' -var=\'dsm_redhat_url=${dsm_package_url}\' -var=\'dsm_license=${dsm_key}\' -var=\'random_num=${env.BUILD_NUMBER}\' -out ${plan_dsm_dsa}"
                 sh "terraform -chdir=${iac_path_dsm_dsa} apply -auto-approve ${plan_dsm_dsa}"
+                sh "terraform -chdir=${iac_path_dsm_dsa} plan -var=\'access_key=${AWS_ACCESS_KEY}\' -var=\'secret_key=${AWS_SECRET_KEY}\' -var=\'all_agent_urls=${agents_download_urls}\' -var=\'dsm_redhat_url=${dsm_package_url}\' -var=\'dsm_license=${dsm_key}\' -var=\'random_num=${env.BUILD_NUMBER}\' -destroy -out ${destroy_dsm_dsa}"
             }
             stage('DSM infra information')
             {
@@ -133,6 +136,7 @@ node('aws&&docker')
 //                 sh "terraform -chdir=${iac_path} plan -var=\'access_key=${AWS_ACCESS_KEY}\' -var=\'secret_key=${AWS_SECRET_KEY}\' -var=\'machine_file=${manifest_file_path}\' -var=\'dsmVersion=${dsmVersion}\' -var=\'stats=${stats}\' -var=\'graph=${graph}\' -var=\'dsru_path=${dsru_folder}\' -var=\'nexus_url=${nexus_url}\' -var=\'nexus_user=${NEXUS_USR}\' -var=\'nexus_pass=${NEXUS_PWD}\' -var=\'scenario=${scenario}\' -var=\'random_num=${env.BUILD_NUMBER}\' -var=\'webhook=${teams_webhook}\' -var=\'jenkins_url=${env.BUILD_URL}\' -var=\'build_user=${user_name}\' -var=\'pipeline_num=${pipeline_num}\' -out ${plan}"
                 sh "terraform -chdir=${iac_path} plan -var=\'access_key=${AWS_ACCESS_KEY}\' -var=\'secret_key=${AWS_SECRET_KEY}\' -var=\'manifest_file_path=${manifest_file_path}\' -var=\'manifest_file=${manifest}\' -var=\'dsmVersion=${dsmVersion}\' -var=\'stats=${stats}\' -var=\'graph=${graph}\' -var=\'dsru_path=${dsru_folder}\' -var=\'nexus_url=${nexus_url}\' -var=\'nexus_user=${NEXUS_USR}\' -var=\'nexus_pass=${NEXUS_PWD}\' -var=\'scenario=${scenario}\' -var=\'random_num=${env.BUILD_NUMBER}\' -out ${plan}"
                 sh "terraform -chdir=${iac_path} apply -auto-approve ${plan}"
+                sh "terraform -chdir=${iac_path} plan -var=\'access_key=${AWS_ACCESS_KEY}\' -var=\'secret_key=${AWS_SECRET_KEY}\' -var=\'manifest_file_path=${manifest_file_path}\' -var=\'manifest_file=${manifest}\' -var=\'dsmVersion=${dsmVersion}\' -var=\'stats=${stats}\' -var=\'graph=${graph}\' -var=\'dsru_path=${dsru_folder}\' -var=\'nexus_url=${nexus_url}\' -var=\'nexus_user=${NEXUS_USR}\' -var=\'nexus_pass=${NEXUS_PWD}\' -var=\'scenario=${scenario}\' -var=\'random_num=${env.BUILD_NUMBER}\' -destroy -out ${destroy_auto}"
             }
             stage('Send Teams Message')
             {
@@ -145,6 +149,12 @@ node('aws&&docker')
                                             --manifest_file ${manifest_file}        \
                                             --nexus_url ${nexus_url}                \
                                             --pipeline_num ${pipeline_num}")
+            }
+            if ("${debug}" == "false")
+            {
+                echo "Terminating the instance"
+                sh "terraform -chdir=${iac_path_dsm_dsa} apply ${destroy_dsm_dsa}"
+                sh "terraform -chdir=${iac_path} apply ${destroy_auto}"
             }
         }
     }
