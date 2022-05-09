@@ -3,7 +3,19 @@
 node('aws&&docker')
 {
     def nexus_url = "https://dsnexus.trendmicro.com:8443/nexus/repository/dslabs/performance-test"
-    def perf_pipeline = "development-Performance-Scenario-Test"
+    def prod = "Performance-Scenario-Test"
+    def dev = "development-Performance-Scenario-Test"
+    if ("${env.JOB_BASE_NAME}" == "Performance-Test-Parallel")
+    {
+        echo "Production pipeline......."
+        def perf_pipeline = prod
+    }
+    else
+    {
+        echo "Development pipeline......"
+        def perf_pipeline = dev
+    }
+    def perf_pipeline = "Performance-Scenario-Test"
     def pipeline_num = "${env.BUILD_NUMBER}"
     def stats = "stats.html"
     def graph = "band.png"
