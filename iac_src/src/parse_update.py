@@ -58,8 +58,11 @@ def parse(update_package_loc):
             formatted += f"\tNew:\n" + "".join([f"\t\t{x}\n" for x in changed_rules[filter_type]["new"]])
             formatted += f"\tUpdated:\n" + "".join([f"\t\t{x}\n" for x in changed_rules[filter_type]["updated"]])
 
-        with open(os.path.join(package_folder, package_name + ".txt"), "w") as f:
-            f.write(formatted)
+        try:
+            with open(os.path.join(package_folder, package_name + ".txt"), "w", encoding='utf-8') as f:
+                f.write(formatted)
+        except Exception as e:
+            print("Error! {}. Failed to dump parsing data into text file".format(e))
 
         package_info = collect_package_info(package_root, hash)
 
