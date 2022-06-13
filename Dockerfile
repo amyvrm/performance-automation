@@ -15,7 +15,8 @@ RUN pip install requests
 #RUN pip install pylzma
 #RUN pip install zeep
 #RUN pip install urllib3==1.25.8
-RUN pip3 install boto3
+RUN pip install boto3
+#RUN pip3 install boto3
 #RUN pip3 install boto
 #RUN pip3 install rsa
 #RUN apt-get install -y git
