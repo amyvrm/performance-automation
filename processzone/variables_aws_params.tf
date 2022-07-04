@@ -32,7 +32,7 @@ variable "vpc_id" {
 }
 
 variable "dsm_instance_type" {
-	default = "t2.large"
+	default = "t3.large"
 }
 
 //variable "dsa_instance_type" {
@@ -40,7 +40,7 @@ variable "dsm_instance_type" {
 //}
 
 variable "dsa_instance_type" {
-	default = "c5.large"
+	default = "c5.xlarge"
 }
 
 variable "instance_profile" {
