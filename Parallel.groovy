@@ -32,40 +32,41 @@ node('aws&&docker')
 
     try
     {
-//         stage("Get Package URL") {
-//             if (params.PACKAGE_URL == "") {
-//                 stage("Sign and Upload") {
-//                     try {
+        stage("Get Package URL") {
+            if (params.PACKAGE_URL == "") {
+                stage("Sign and Upload") {
+                    try {
+                        def sign = build job: "DSRU Automation/Sign and Upload/Sample DSRU", quietPeriod : 5
 //                         def sign = build job: "DSRU_DOWNLOAD_SIGN_UPLOAD",  quietPeriod: 5
-//
-//                         s_build = sign.number
-//                         dsru_file = sign.buildVariables.vsu
-//                         echo "Signing JOB Build : ${s_build}"
-//                         echo "Build Value  : ${dsru_file}"
-//
-//                         // dslabs_auto_monitoring
-//                         slackSend channel: "dslabs_auto_monitoring", color: "good",
-//                                   message: "${currentBuild.currentResult} in 'Sign and Upload' Stage\n${msg}"
-//                         // dsruhandover
-//                         slackSend channel: "dsruhandover", color: 'good',
-//                                   message: "${currentBuild.currentResult} in 'Sign and Upload' Stage\n${msg}"
-//                     }
-//                     catch(e) {
-//                         currentBuild.result = "FAILURE"
-//                         // dslabs_auto_monitoring
-//                         slackSend channel: 'dslabs_auto_monitoring', color: 'danger',
-//                                    message: "${currentBuild.currentResult} in 'Sign and Upload' Stage\n${msg}"
-//                         // dsruhandover
-//                         slackSend channel: "dsruhandover", color: 'danger',
-//                                   message: "${currentBuild.currentResult} in 'Sign and Upload' Stage\n${msg}"
-//                         error("${e}")
-//                     }
-//                 }
-//             }
-//             else {
-//                 dsru_file = params.PACKAGE_URL
-//             }
-//         }
+
+                        s_build = sign.number
+                        dsru_file = sign.buildVariables.vsu
+                        echo "Signing JOB Build : ${s_build}"
+                        echo "Build Value  : ${dsru_file}"
+
+                        // dslabs_auto_monitoring
+                        slackSend channel: "dslabs_auto_monitoring", color: "good",
+                                  message: "${currentBuild.currentResult} in 'Sign and Upload' Stage\n${msg}"
+                        // dsruhandover
+                        slackSend channel: "dsruhandover", color: 'good',
+                                  message: "${currentBuild.currentResult} in 'Sign and Upload' Stage\n${msg}"
+                    }
+                    catch(e) {
+                        currentBuild.result = "FAILURE"
+                        // dslabs_auto_monitoring
+                        slackSend channel: 'dslabs_auto_monitoring', color: 'danger',
+                                   message: "${currentBuild.currentResult} in 'Sign and Upload' Stage\n${msg}"
+                        // dsruhandover
+                        slackSend channel: "dsruhandover", color: 'danger',
+                                  message: "${currentBuild.currentResult} in 'Sign and Upload' Stage\n${msg}"
+                        error("${e}")
+                    }
+                }
+            }
+            else {
+                dsru_file = params.PACKAGE_URL
+            }
+        }
 
         stage("Parallel Perf Test") {
             parallel Server_Upload: {
