@@ -25,6 +25,7 @@ node('aws&&docker')
     def user_name = "None"
     def dsru_name = ""
     def scenario = ["Server_Upload", "Server_Download", "Client_Download"]
+    def dsru_file = ""
 //     def scenario = ["Server_Upload", "Server_Download"]
 
     wrap([$class: 'BuildUser']) { user_name = "${env.BUILD_USER}" }
@@ -70,16 +71,16 @@ node('aws&&docker')
 
         stage("Parallel Perf Test") {
             parallel Server_Upload: {
-                dsru_name = call_scenario_test("Server_Upload", perf_pipeline, "${pipeline_num}")
+                dsru_name = call_scenario_test("Server_Upload", perf_pipeline, "${pipeline_num}", dsru_file)
             }, Server_Download: {
                 echo "Waiting 30 sec before running parallel scenario pipeline"
                 sleep time: 30, unit: 'SECONDS'
-                dsru_name = call_scenario_test("Server_Download", perf_pipeline, "${pipeline_num}")
+                dsru_name = call_scenario_test("Server_Download", perf_pipeline, "${pipeline_num}", dsru_file)
             },
             Client_Download: {
                 echo "Waiting 60 before running parallel scenario pipeline"
                 sleep time: 60, unit: 'SECONDS'
-                dsru_name = call_scenario_test("Client_Download", perf_pipeline, "${pipeline_num}")
+                dsru_name = call_scenario_test("Client_Download", perf_pipeline, "${pipeline_num}", dsru_file)
             },
             failFast: false
         }
@@ -146,7 +147,7 @@ node('aws&&docker')
     }
 }
 
-def call_scenario_test(scenario, perf_pipeline, pipeline_num) {
+def call_scenario_test(scenario, perf_pipeline, pipeline_num, dsru_file) {
     //scenario = "Server_Upload"
     echo "Calling ${scenario} test"
     perf = build quietPeriod: 5, job: perf_pipeline,
@@ -154,7 +155,7 @@ def call_scenario_test(scenario, perf_pipeline, pipeline_num) {
                     credentials(description: 'DSM License Key for Automation', name: 'DSM_LICENSE_KEY', value: params.DSM_LICENSE_KEY),
                     extendedChoice(name: 'AGENTS', value: params.AGENTS),
                     text(name: 'AGENT_DOWNLOAD_URL', value: params.AGENT_DOWNLOAD_URL),
-                    string(name: 'PACKAGE_URL', value: params.PACKAGE_URL),
+                    string(name: 'PACKAGE_URL', value: dsru_file),
                     string(name: 'SCENARIO', value: scenario),
                     booleanParam(name: 'DEBUG', value: params.DEBUG),
                     string(name: 'PARENT_PIPELINE_NUMBER', value: "${pipeline_num}")]
