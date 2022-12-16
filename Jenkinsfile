@@ -36,7 +36,26 @@ node('aws&&docker')
         def dsm_license_key = params.DSM_LICENSE_KEY
         def agents = params.AGENTS
         def agents_download_urls = params.AGENT_DOWNLOAD_URL
-        def dsru_url = params.PACKAGE_URL
+        def dsru_url = ""
+
+        stage("Get Package URL")
+        {
+            if (params.PACKAGE_URL == "")
+            {
+                stage("Sign and Upload")
+                {
+                    def sign = build job: "DSRU Automation/Sign and Upload/Sample DSRU", quietPeriod : 5
+                    s_build = sign.number
+                    dsru_url = sign.buildVariables.vsu
+                    echo "Signing JOB Build : ${s_build}"
+                    echo "Build Value  : ${dsru_url}"
+                }
+            }
+            else
+            {
+                dsru_url = params.PACKAGE_URL
+            }
+
         def dsru_path = "${iac_path}/update-packages"
         def dsru_folder = "update-packages"
         def dsru_file = ""
