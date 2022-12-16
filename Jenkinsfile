@@ -55,7 +55,7 @@ node('aws&&docker')
             {
                 dsru_url = params.PACKAGE_URL
             }
-
+        }
         def dsru_path = "${iac_path}/update-packages"
         def dsru_folder = "update-packages"
         def dsru_file = ""
