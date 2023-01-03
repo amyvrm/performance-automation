@@ -8,9 +8,15 @@ from get_machine_info import MachineInfo
 import requests
 import os
 
+class BearerAuth(requests.auth.AuthBase):
+    def __init__(self, token):
+        self.token = token
+    def __call__(self, r):
+        r.headers["authorization"] = "Bearer " + self.token
+        return r
 
 class PerformanceScenario(PerfCommon):
-    def __init__(self, machine_info, ver, access_key, secret_key, stats, graph, path_json, nexus_uname, nexus_pwd, scenario):
+    def __init__(self, machine_info, ver, access_key, secret_key, stats, graph, path_json, jfrog_token, scenario):
         machine = MachineInfo(machine_info)
         PerfCommon.__init__(self, stats, graph)
 
@@ -18,7 +24,7 @@ class PerformanceScenario(PerfCommon):
         self.policy_name = "perf_policy"
         self.best_iteration = 5
 
-        self.dsm = DsmPolicy(ver, nexus_uname, nexus_pwd, machine, path_json, self.policy_name, port,
+        self.dsm = DsmPolicy(ver, jfrog_token, machine, path_json, self.policy_name, port,
                              self.server_rule_file, self.client_rule_file)
         # self.dsm.upload_basic_policy()
         # self.dsm.apply_pkg_create_applied_rule_list(self.rule_file)
@@ -223,14 +229,13 @@ if __name__ == '__main__':
     parser.add_argument('--stats', type=str, help="Html file name")
     parser.add_argument('--graph', type=str, help="Graph file name")
     parser.add_argument('--path', type=str, help="Graph file name")
-    parser.add_argument('--nexus_uname', type=str, help="Nexus username")
-    parser.add_argument('--nexus_pwd', type=str, help="Nexus password")
+    parser.add_argument('--jfrog_token', type=str, help="JFrog Token")
     parser.add_argument('--scenario', type=str, help="Scenario name to test")
     args = parser.parse_args()
 
     if not os.path.exists(args.machine_info):
-        url = "https://dsnexus.trendmicro.com:8443/nexus/repository/dslabs/performance-test/performance-test/21-003.dsru/51/manifest.json"
-        machine_info = requests.get(url, auth=(args.nexus_uname, args.nexus_uname)).json()
+        url = "https://jfrog.trendmicro.com/artifactory/dslabs-performance-generic-test-local/performance-test/21-003.dsru/51/manifest.json"
+        machine_info = requests.get(url, auth=BearerAuth(jfrog_token)).json()
     else:
         with open(args.machine_info) as fout:
             machine_info = json.load(fout)
@@ -240,6 +245,6 @@ if __name__ == '__main__':
                                    # args.package_url,
                                    args.access_key, args.secret_key,
                                    args.stats, args.graph, args.path,
-                                   args.nexus_uname, args.nexus_pwd,
+                                   args.jfrog_token,
                                    args.scenario
                                    )

@@ -4,14 +4,13 @@
 DSMIP=$1
 FILTERS=$2
 DSRU=$3
-NX_USR=$4
-NX_PWD=$5
+LABS_JFROG_TOKEN=$4
 
 sudo chmod 777 /tmp
 
 cd /tmp
 
-sudo bash /tmp/download_dsru.sh $DSRU $NX_USR $NX_PWD
+sudo bash /tmp/download_dsru.sh $DSRU $LABS_JFROG_TOKEN
 
 sleep 5
 

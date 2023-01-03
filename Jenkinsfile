@@ -7,8 +7,7 @@ node('aws&&docker')
 					   credentialsId: 'STAGING_AWS', secretKeyVariable: 'AWS_SECRET_KEY'],
 					   [$class: 'AmazonWebServicesCredentialsBinding', accessKeyVariable: 'S3_ACCESS_KEY',
 				       credentialsId: 'dslabs-jenkins-automation-credentials', secretKeyVariable: 'S3_SECRET_KEY'],
-					   usernamePassword(credentialsId: 'su-dslabs-creds', usernameVariable: 'NEXUS_USR',
-					                                                    passwordVariable: 'NEXUS_PWD'),
+					   string(credentialsId: 'dsdeploy-artifactory-token', variable: 'LABS_JFROG_TOKEN'),
                        string(credentialsId: 'jenkins-webhook', variable: 'teams_webhook'),
 					   string(credentialsId: dsm_license_key, variable: 'dsm_key')])
     {
@@ -82,7 +81,8 @@ node('aws&&docker')
         def dockerfile = 'DockerfileSign'
 //         def nexus_url_dslabs = "https://dsnexus.trendmicro.com:8443/nexus/repository/dslabs"
 //         def nexus_url = "${nexus_url_dslabs}/${env.JOB_BASE_NAME}/${env.BUILD_NUMBER}"
-        def nexus_url = "https://dsnexus.trendmicro.com:8443/nexus/repository/dslabs/performance-test"
+//        def nexus_url = "https://dsnexus.trendmicro.com:8443/nexus/repository/dslabs/performance-test"
+def jfrog_url = "https://jfrog.trendmicro.com/artifactory/dslabs-performance-generic-test-local"
 //         def teams_webhook = 'https://trendmicro.webhook.office.com/webhookb2/d6c82240-57b1-41b5-84e8-09def3921052@3e04753a-ae5b-42d4-a86d-d6f05460f9e4/JenkinsCI/b131747740c34e90b770e2a911dea18f/5110c51b-5ae9-4caa-a0a8-aafc778ce125'
 
         currentBuild.displayName = "${env.BUILD_NUMBER}"
@@ -105,15 +105,15 @@ node('aws&&docker')
         {
             stage('Download DSRU Package')
             {
-                sh "python ${iac_working_dir}/download_nexus.py --url ${dsru_url} --path ${dsru_path} --uname ${NEXUS_USR} --pwd ${NEXUS_PWD}"
+                sh "python ${iac_working_dir}/download_jfrog.py --url ${dsru_url} --path ${dsru_path} --token ${LABS_JFROG_TOKEN}"
             }
             stage('Decrypt DSRU Package')
             {
                 dsru_file = sh(script: "ls -1 ${WORKSPACE}/${dsru_path}/*.dsru", returnStdout: true).trim()
 			    sh "java -jar dsrusigning/DSRUCrypt.jar decrypt ${dsru_file}/"
 				env.pkg_name = sh(script: "basename ${dsru_file}", returnStdout: true).trim()
-				nexus_url = "${nexus_url}/${env.pkg_name}/${pipeline_num}"
-				echo "nexus_url: ${nexus_url}"
+				jfrog_url = "${jfrog_url}/${env.pkg_name}/${pipeline_num}"
+				echo "jfrog_url: ${jfrog_url}"
             }
             stage('Parse DSRU Package')
             {
@@ -144,6 +144,7 @@ node('aws&&docker')
             {
                 dir("${iac_path_dsm_dsa}")
                 {
+                    sh "terraform output -json"
                     sh "terraform output -json > ${manifest_file_path}"
                     archiveArtifacts allowEmptyArchive: true, artifacts: "${manifest_file_pattern}"
                 }
@@ -153,9 +154,9 @@ node('aws&&docker')
                 sh "terraform -chdir=${iac_path} init"
                 sh "terraform -chdir=${iac_path} validate"
 //                 sh "terraform -chdir=${iac_path} plan -var=\'access_key=${AWS_ACCESS_KEY}\' -var=\'secret_key=${AWS_SECRET_KEY}\' -var=\'machine_file=${manifest_file_path}\' -var=\'dsmVersion=${dsmVersion}\' -var=\'stats=${stats}\' -var=\'graph=${graph}\' -var=\'dsru_path=${dsru_folder}\' -var=\'nexus_url=${nexus_url}\' -var=\'nexus_user=${NEXUS_USR}\' -var=\'nexus_pass=${NEXUS_PWD}\' -var=\'scenario=${scenario}\' -var=\'random_num=${env.BUILD_NUMBER}\' -var=\'webhook=${teams_webhook}\' -var=\'jenkins_url=${env.BUILD_URL}\' -var=\'build_user=${user_name}\' -var=\'pipeline_num=${pipeline_num}\' -out ${plan}"
-                sh "terraform -chdir=${iac_path} plan -var=\'access_key=${AWS_ACCESS_KEY}\' -var=\'secret_key=${AWS_SECRET_KEY}\' -var=\'manifest_file_path=${manifest_file_path}\' -var=\'manifest_file=${manifest}\' -var=\'dsmVersion=${dsmVersion}\' -var=\'stats=${stats}\' -var=\'graph=${graph}\' -var=\'dsru_path=${dsru_folder}\' -var=\'nexus_url=${nexus_url}\' -var=\'nexus_user=${NEXUS_USR}\' -var=\'nexus_pass=${NEXUS_PWD}\' -var=\'scenario=${scenario}\' -var=\'random_num=${env.BUILD_NUMBER}\' -out ${plan}"
+                sh "terraform -chdir=${iac_path} plan -var=\'access_key=${AWS_ACCESS_KEY}\' -var=\'secret_key=${AWS_SECRET_KEY}\' -var=\'manifest_file_path=${manifest_file_path}\' -var=\'manifest_file=${manifest}\' -var=\'dsmVersion=${dsmVersion}\' -var=\'stats=${stats}\' -var=\'graph=${graph}\' -var=\'dsru_path=${dsru_folder}\' -var=\'jfrog_url=${jfrog_url}\' -var=\'jfrog_token=${LABS_JFROG_TOKEN}\' -var=\'scenario=${scenario}\' -var=\'random_num=${env.BUILD_NUMBER}\' -out ${plan}"
                 sh "terraform -chdir=${iac_path} apply -auto-approve ${plan}"
-                sh "terraform -chdir=${iac_path} plan -var=\'access_key=${AWS_ACCESS_KEY}\' -var=\'secret_key=${AWS_SECRET_KEY}\' -var=\'manifest_file_path=${manifest_file_path}\' -var=\'manifest_file=${manifest}\' -var=\'dsmVersion=${dsmVersion}\' -var=\'stats=${stats}\' -var=\'graph=${graph}\' -var=\'dsru_path=${dsru_folder}\' -var=\'nexus_url=${nexus_url}\' -var=\'nexus_user=${NEXUS_USR}\' -var=\'nexus_pass=${NEXUS_PWD}\' -var=\'scenario=${scenario}\' -var=\'random_num=${env.BUILD_NUMBER}\' -destroy -out ${destroy_auto}"
+                sh "terraform -chdir=${iac_path} plan -var=\'access_key=${AWS_ACCESS_KEY}\' -var=\'secret_key=${AWS_SECRET_KEY}\' -var=\'manifest_file_path=${manifest_file_path}\' -var=\'manifest_file=${manifest}\' -var=\'dsmVersion=${dsmVersion}\' -var=\'stats=${stats}\' -var=\'graph=${graph}\' -var=\'dsru_path=${dsru_folder}\' -var=\'jfrog_url=${jfrog_url}\' -var=\'jfrog_token=${LABS_JFROG_TOKEN}\' -var=\'scenario=${scenario}\' -var=\'random_num=${env.BUILD_NUMBER}\' -destroy -out ${destroy_auto}"
             }
             stage('Send Teams Message')
             {
@@ -166,7 +167,7 @@ node('aws&&docker')
                                             --stats ${stats}                        \
                                             --graph ${graph}                        \
                                             --manifest_file ${manifest_file}        \
-                                            --nexus_url ${nexus_url}                \
+                                            --jfrog_url ${jfrog_url}                \
                                             --pipeline_num ${pipeline_num}")
             }
             if ("${debug}" == "false")

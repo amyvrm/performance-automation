@@ -58,11 +58,9 @@ variable "graph" {}
 
 variable "dsru_path" {}
 
-variable "nexus_url" {}
+variable "jfrog_url" {}
 
-variable "nexus_user" {}
-
-variable "nexus_pass" {}
+variable "jfrog_token" {}
 
 variable "scenario" {}
 
