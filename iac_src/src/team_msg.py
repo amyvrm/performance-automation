@@ -93,14 +93,14 @@ if __name__ == "__main__":
     parser.add_argument('--stats', type=str, help="Html file name")
     parser.add_argument('--graph', type=str, help="Graph file name")
     parser.add_argument('--manifest_file', type=str, help="Manifest file contains cloud infra access detail")
-    parser.add_argument('--nexus_url', type=str, help="Nexus URL")
+    parser.add_argument('--jfrog_url', type=str, help="JFrog URL")
     parser.add_argument('--pipeline_num', type=str, help="Pipeline Number to manage the file")
     args = parser.parse_args()
 
     stats_file = "{}_{}".format(args.scenario.replace(" ", "_"), args.stats)
     graph_file = "{}_{}".format(args.scenario.replace(" ", "_"), args.graph)
-    stats_url = "{}/{}".format(args.nexus_url, stats_file)
-    graph_url = "{}/{}".format(args.nexus_url, graph_file)
-    manifest_file_url = "{}/{}".format(args.nexus_url, args.manifest_file)
+    stats_url = "{}/{}".format(args.jfrog_url, stats_file)
+    graph_url = "{}/{}".format(args.jfrog_url, graph_file)
+    manifest_file_url = "{}/{}".format(args.jfrog_url, args.manifest_file)
     send_teams_notification(args.webhook, args.jenkins_url, args.build_user, args.scenario, stats_url, graph_url,
                             manifest_file_url, args.pipeline_num)
