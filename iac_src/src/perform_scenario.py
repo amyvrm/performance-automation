@@ -8,9 +8,16 @@ from get_machine_info import MachineInfo
 import requests
 import json
 
+class BearerAuth(requests.auth.AuthBase):
+    def __init__(self, token):
+        self.token = token
+    def __call__(self, r):
+        r.headers["authorization"] = "Bearer " + self.token
+        return r
+
 
 class PerformanceScenario(PerfCommon):
-    def __init__(self, machine_info, ver, access_key, secret_key, stats, graph, path_json, nexus_uname, nexus_pwd,
+    def __init__(self, machine_info, ver, access_key, secret_key, stats, graph, path_json, jfrog_token,
                  scenario):
         machine = MachineInfo(machine_info)
         PerfCommon.__init__(self, stats, graph)
@@ -19,7 +26,7 @@ class PerformanceScenario(PerfCommon):
         self.policy_name = "perf_policy"
         self.best_iteration = 5
 
-        self.dsm = DsmPolicy(ver, nexus_uname, nexus_pwd, machine, path_json, self.policy_name, port,
+        self.dsm = DsmPolicy(ver, jfrog_token, machine, path_json, self.policy_name, port,
                              self.server_rule_file, self.client_rule_file)
         self.dsm.upload_basic_policy()
         self.dsm.apply_pkg_create_applied_rule_list(self.rule_file)
@@ -216,23 +223,23 @@ class PerformanceScenario(PerfCommon):
                                                                             len(iter_stats), iter_stats, avg))
         return all_stats, iter_stats, avg
 
-    def nexus_upload(self, nexus_base_url, auth, fname, scenario):
+    def jfrog_upload(self, jfrog_base_url, auth, fname, scenario):
         filename = "{}_{}".format(scenario.replace(" ", "_"), fname)
-        nexus_url = "{}/{}".format(nexus_base_url, filename)
+        jfrog_url = "{}/{}".format(jfrog_base_url, filename)
         for retry in range(2):
-            print("Attempt-{} to upload {} in {}".format(retry+1, filename, nexus_url))
+            print("Attempt-{} to upload {} in {}".format(retry+1, filename, jfrog_url))
             # read the file
             with open(filename, "rb") as fout:
                 # upload the file
-                res = requests.put(nexus_url, data=fout.read(), auth=auth)
+                res = requests.put(jfrog_url, data=fout.read(), auth=auth)
 
-                print("Nexus_upload status: {}".format(res.status_code))
+                print("jfrog_upload status: {}".format(res.status_code))
                 if res.status_code == 201:
-                    print("PASS: {} file has benn Uploaded in Nexus Repo {}".format(filename, nexus_url))
-                    return nexus_url
+                    print("PASS: {} file has benn Uploaded in Nexus Repo {}".format(filename, jfrog_url))
+                    return jfrog_url
                 time.sleep(10)
 
-        raise Exception("ERROR: while uploading {} file in Nexus repo {}".format(filename, nexus_url))
+        raise Exception("ERROR: while uploading {} file in Nexus repo {}".format(filename, jfrog_url))
 
 
 
@@ -245,9 +252,8 @@ if __name__ == '__main__':
     parser.add_argument('--stats', type=str, help="Html file name")
     parser.add_argument('--graph', type=str, help="Graph file name")
     parser.add_argument('--path', type=str, help="Graph file name")
-    parser.add_argument('--nexus_url', type=str, help="Nexus URL")
-    parser.add_argument('--nexus_uname', type=str, help="Nexus username")
-    parser.add_argument('--nexus_pwd', type=str, help="Nexus password")
+    parser.add_argument('--jfrog_url', type=str, help="JFrog URL")
+    parser.add_argument('--jfrog_token', type=str, help="JFrog Token")
     parser.add_argument('--scenario', type=str, help="Scenario name to test")
     args = parser.parse_args()
 
@@ -257,12 +263,12 @@ if __name__ == '__main__':
                                    args.dsm_version,
                                    args.access_key, args.secret_key,
                                    args.stats, args.graph, args.path,
-                                   args.nexus_uname, args.nexus_pwd,
+                                   args.jfrog_token,
                                    args.scenario
                                    )
-    auth = (args.nexus_uname, args.nexus_pwd)
-    stats_url = scenario.nexus_upload(args.nexus_url, auth, args.stats, args.scenario)
-    graph_url = scenario.nexus_upload(args.nexus_url, auth, args.graph, args.scenario)
+    auth = BearerAuth(args.jfrog_token)
+    stats_url = scenario.jfrog_upload(args.jfrog_url, auth, args.stats, args.scenario)
+    graph_url = scenario.jfrog_upload(args.jfrog_url, auth, args.graph, args.scenario)
     destination = "{}_{}".format(args.scenario.replace(" ", "_"), args.manifest_file)
     shutil.copyfile(args.manifest_file, destination)
-    manifest_url = scenario.nexus_upload(args.nexus_url, auth, args.manifest_file, args.scenario)
+    manifest_url = scenario.jfrog_upload(args.jfrog_url, auth, args.manifest_file, args.scenario)

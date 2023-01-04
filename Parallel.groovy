@@ -2,7 +2,7 @@
 
 node('aws&&docker')
 {
-    def nexus_url = "https://dsnexus.trendmicro.com:8443/nexus/repository/dslabs/performance-test"
+    def jfrog_url = "https://jfrog.trendmicro.com/artifactory/dslabs-performance-generic-test-local"
     def prod = "Performance-Scenario-Test"
     def dev = "development-Performance-Scenario-Test"
     if ("${env.JOB_BASE_NAME}" == "Performance-Test-Parallel")
@@ -112,7 +112,7 @@ node('aws&&docker')
 //             }
 //         }
         stage("Slack Message") {
-            nexus_url = "${nexus_url}/${dsru_name}/${pipeline_num}"
+            jfrog_url = "${jfrog_url}/${dsru_name}/${pipeline_num}"
             msg = "Pipeline: <${env.BUILD_URL}|Perform Automation> User: ${user_name}\n"
             msg += "${currentBuild.result}: :green_circle:\n\n"
             for (int i = 0; i < scenario.size(); i++) {
@@ -122,9 +122,9 @@ node('aws&&docker')
                 echo "stats_file: ${stats_file}"
                 echo "graph_file: ${graph_file}"
                 echo "machine_file: ${machine_file}"
-                msg += "${scenario[i]} Iteration Stats: <${nexus_url}/${stats_file}|Table>\n"
-                msg += "${scenario[i]} Average Iteration: <${nexus_url}/${graph_file}|Bar Chart>\n"
-                msg += "${scenario[i]} Machine info: <${nexus_url}/${machine_file}|Json File>\n\n"
+                msg += "${scenario[i]} Iteration Stats: <${jfrog_url}/${stats_file}|Table>\n"
+                msg += "${scenario[i]} Average Iteration: <${jfrog_url}/${graph_file}|Bar Chart>\n"
+                msg += "${scenario[i]} Machine info: <${jfrog_url}/${machine_file}|Json File>\n\n"
             }
             // dslabs_auto_monitoring
             slackSend channel: 'dslabs_auto_monitoring', color: "good", message: "${msg}"

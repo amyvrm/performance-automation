@@ -6,16 +6,22 @@ import zipfile
 import argparse
 import requests
 
+class BearerAuth(requests.auth.AuthBase):
+    def __init__(self, token):
+        self.token = token
+    def __call__(self, r):
+        r.headers["authorization"] = "Bearer " + self.token
+        return r
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("-u", "--package_url", action="store", help="URL of package to download")
-    parser.add_argument("-c", "--nexus_cred", nargs="+", help="Nexus Credentials")
+    parser.add_argument("-c", "--jfrog_token", action="store", help="JFrog Credentials")
     args = parser.parse_args()
-    nexus_username, nexus_password = args.nexus_cred
+    jfrog_token = args.jfrog_token
 
     with requests.Session() as session:
-        session.auth = (nexus_username, nexus_password)
+        session.auth = BearerAuth(jfrog_token)
         # Most general way of looking for package name is to try and grab it from the URL itself
         package_name = args.package_url.rsplit("/")[-1]
 

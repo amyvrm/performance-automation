@@ -12,9 +12,16 @@ import simplejson as json
 from string import Template
 from get_machine_info import MachineInfo
 
+class BearerAuth(requests.auth.AuthBase):
+    def __init__(self, token):
+        self.token = token
+    def __call__(self, r):
+        r.headers["authorization"] = "Bearer " + self.token
+        return r
+
 
 class DsmPolicy(object):
-    def __init__(self, dsm_ver, nexus_uname, nexus_pwd, machine, path, policy_name, port, server_rule, client_rule):
+    def __init__(self, dsm_ver, jfrog_token, machine, path, policy_name, port, server_rule, client_rule):
         # dsm_ip = machine.get_dsm_public_ip()
         dsm_ip = machine.get_dsm_private_ip()
         print("+ DSM IP: {} +".format(dsm_ip))
@@ -30,7 +37,7 @@ class DsmPolicy(object):
         self.uname = machine.get_dsm_user()
         self.pwd = machine.get_dsm_pwd()
         self.dsm_ver = dsm_ver
-        self.cred = (nexus_uname, nexus_pwd)
+        self.cred = BearerAuth(jfrog_token)
         self.server_rule_file = server_rule
         self.client_rule_file = client_rule
         self.connect()

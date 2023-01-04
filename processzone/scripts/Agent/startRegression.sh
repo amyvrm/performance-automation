@@ -4,8 +4,7 @@
 
 DSMIP=$1
 FILTER=$2
-NX_USR=$3
-NX_PWD=$4
+LABS_JFROG_TOKEN=$3
 
 cd /tmp
 
@@ -13,4 +12,4 @@ python3 /tmp/SecurityCenter/runRegression.py -i $DSMIP -c supermasteradmin Orang
 
 cd /tmp
 
-sudo python3 /tmp/nexus_upload.py -c $NX_USR $NX_PWD
+sudo python3 /tmp/nexus_upload.py -c $LABS_JFROG_TOKEN
