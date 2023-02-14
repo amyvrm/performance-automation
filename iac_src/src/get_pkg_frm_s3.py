@@ -42,7 +42,7 @@ if __name__ == '__main__':
     parser.add_argument('--path', type=str, help="Please give Download path")
     args = parser.parse_args()
 
-    pkg_list = ["PCATTCP.zip", "ab.exe", "nginx-1.19.2ready.zip"]
+    pkg_list = ["PCATTCP.zip", "ab.exe", "hey.exe", "nginx-1.19.2ready.zip"]
 
     get_pkg = GetPkgFromS3Bucket(args.access_key, args.secret_key, args.bucket, args.path)
     get_pkg.list_all_bucket()

@@ -9,5 +9,6 @@ variable "dsm_windows_ami"{
 
 variable "dsa_windows_ami"{
 #	default = "ami-0c95d38b24a19de18"
-	default = "ami-06371c9f2ad704460"
+#	default = "ami-06371c9f2ad704460"
+	default = "ami-051a0421f3df4c021"
 }

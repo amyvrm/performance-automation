@@ -266,7 +266,7 @@ if __name__ == '__main__':
                                    args.jfrog_token,
                                    args.scenario
                                    )
-    auth = BearerAuth(jfrog_token)
+    auth = BearerAuth(args.jfrog_token)
     stats_url = scenario.jfrog_upload(args.jfrog_url, auth, args.stats, args.scenario)
     graph_url = scenario.jfrog_upload(args.jfrog_url, auth, args.graph, args.scenario)
     destination = "{}_{}".format(args.scenario.replace(" ", "_"), args.manifest_file)
