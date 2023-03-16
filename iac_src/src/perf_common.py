@@ -338,7 +338,7 @@ class PerfCommon(object):
         print("{0}\n+ Run Hey.exe {1}-{2} +\n{0}".format("+" * 50, self.ip_type[ip], ip))
         tool = "Powershell.exe"
         cmd = "{}hey.exe -c 10 -n 100 http://{}/test.htm".format(self.path, target_ip)
-        return self.execute_cmd(cmd, ip, user, pwd, tool=tool, bandwidth=True, asynchronous=False)
+        return self.execute_cmd(cmd, ip, user, pwd, tool=tool, bandwidth=True, asynchronous=False, iteration=20)
 
     def check_test_page(self, ip, user, pwd, target_ip):
         print("{0}\n+ Run Wget {1}-{2} +\n{0}".format("+" * 50, self.ip_type[ip], ip))
