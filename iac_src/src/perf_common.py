@@ -98,7 +98,7 @@ class PerfCommon(object):
             self.clean_ab(cip, cuser, cpwd)
 
             for retry in range(2):
-                if len(through_put) == 10:
+                if len(through_put) == 20:
                     return through_put
                 else:
                     print("Exception: Attempt-{} to get the stats...Found stats=[{}]".format(retry, through_put))
