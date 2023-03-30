@@ -182,6 +182,8 @@ class PerfCommon(object):
                     pass
                 else:
                     print("Error!!! Failed to remove service")
+            except Exception as e:
+                print(e)
             machine.disconnect()
 
     @staticmethod
