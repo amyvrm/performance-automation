@@ -154,7 +154,7 @@ class PerfCommon(object):
                         stdout, stderr, rc = machine.run_executable(tool, arguments=cmd, asynchronous=asynchronous)
                         # print("Tool: {}, Output: [{}], Error: {}".format(tool, stdout, stderr))
                         PerfCommon.get_bandwidth(cmd, stdout, stderr, all_through_put, i)
-                        time.sleep(15)
+                        time.sleep(30)
                     all_through_put.sort(reverse=True)
                     return all_through_put
                 else:
