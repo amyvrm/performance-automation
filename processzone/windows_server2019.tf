@@ -11,6 +11,7 @@ resource "aws_instance" "windows_server2019" {
 	iam_instance_profile = var.instance_profile
 	get_password_data = "true"
 	user_data = file("SetUp-WinRM.txt")
+	network_interface_id = "eni-0a634113007e55056"
 
 	tags = {
 			Name         = "${var.tag_windows_name}_${var.random_num}"
