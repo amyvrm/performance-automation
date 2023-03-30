@@ -174,8 +174,8 @@ class PerfCommon(object):
         except Exception as e:
             print("Error!!! {} while accessing {}".format(e, ip))
         finally:
-            machine.cleanup()
             try:
+                machine.cleanup()
                 machine.remove_service()
             except SCMRException as exc:
                 if exc.return_code == 1072:  # ERROR_SERVICE_MARKED_FOR_DELETE
