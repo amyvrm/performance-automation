@@ -40,7 +40,7 @@ variable "dsm_instance_type" {
 //}
 
 variable "dsa_instance_type" {
-	default = "c5.xlarge"
+	default = "m5.large"
 }
 
 variable "instance_profile" {
