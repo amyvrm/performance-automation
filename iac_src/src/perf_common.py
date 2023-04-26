@@ -91,13 +91,14 @@ class PerfCommon(object):
             print("Waiting 3 min, to flow the traffic")
             time.sleep(180)
             # Run Apache Bench
-            through_put = self.run_ab(cip, cuser, cpwd, s_priv_ip)
+            #through_put = self.run_ab(cip, cuser, cpwd, s_priv_ip)
+            through_put = self.run_hey(cip, cuser, cpwd, s_priv_ip)
             print("Through put: {}".format(through_put))
             self.clean_nginx(sip, suser, spwd)
             self.clean_ab(cip, cuser, cpwd)
 
             for retry in range(2):
-                if len(through_put) == 10:
+                if len(through_put) == 20:
                     return through_put
                 else:
                     print("Exception: Attempt-{} to get the stats...Found stats=[{}]".format(retry, through_put))
@@ -106,10 +107,11 @@ class PerfCommon(object):
                     print("Waiting 3 min, to flow the traffic")
                     time.sleep(180)
                     # Run Apache Bench
-                    through_put = self.run_ab(cip, cuser, cpwd, s_priv_ip)
+                    #through_put = self.run_ab(cip, cuser, cpwd, s_priv_ip)
+                    through_put = self.run_hey(cip, cuser, cpwd, s_priv_ip)
                     print("Through put: {}".format(through_put))
                     self.clean_nginx(sip, suser, spwd)
-                    self.clean_ab(cip, cuser, cpwd)
+                    #self.clean_ab(cip, cuser, cpwd)
         elif scenario_name == "Server Upload":
             # receiver
             pid = self.run_pcattcp_rec(sip, suser, spwd, c_priv_ip, asynchronous=True)
@@ -152,7 +154,7 @@ class PerfCommon(object):
                         stdout, stderr, rc = machine.run_executable(tool, arguments=cmd, asynchronous=asynchronous)
                         # print("Tool: {}, Output: [{}], Error: {}".format(tool, stdout, stderr))
                         PerfCommon.get_bandwidth(cmd, stdout, stderr, all_through_put, i)
-                        time.sleep(2)
+                        time.sleep(30)
                     all_through_put.sort(reverse=True)
                     return all_through_put
                 else:
@@ -172,14 +174,16 @@ class PerfCommon(object):
         except Exception as e:
             print("Error!!! {} while accessing {}".format(e, ip))
         finally:
-            machine.cleanup()
             try:
+                machine.cleanup()
                 machine.remove_service()
             except SCMRException as exc:
                 if exc.return_code == 1072:  # ERROR_SERVICE_MARKED_FOR_DELETE
                     pass
                 else:
                     print("Error!!! Failed to remove service")
+            except Exception as e:
+                print(e)
             machine.disconnect()
 
     @staticmethod
@@ -208,6 +212,23 @@ class PerfCommon(object):
                                                                                  t_mbps))
                             all_through_put.append(t_mbps)
                             return True
+            elif "hey" in cmd:
+                if stdout:
+                    out = stdout.decode("utf-8")
+                    time = "time"
+                    size = "size"
+                    for line in out.split("\n"):
+                        print(line)
+                        if "Total:" in line:
+                            time = re.findall("\d+\.\d+", line)[0]
+                        elif "Total data:" in line:
+                            size = re.findall("\d+", line)[0]
+                    if time != "time" and size != "size":
+                        through_put = round(float(size) / float(time) / 1024.0, 2)
+                        t_mbps = round(float(size) / float(time) / 1024.0 / 1024.0, 2)
+                        print("{0}\n+ {1}: {2} KBps, {3} MBps +\n{0}".format("+" * 50, index + 1, through_put, t_mbps))
+                        all_through_put.append(t_mbps)
+                        return True
         except Exception as ex:
             print("Exception: {}".format(ex))
             return False
@@ -314,6 +335,12 @@ class PerfCommon(object):
         cmd = "{}ab.exe -c 10 -n 100 http://{}/test.htm".format(self.path, target_ip)
         # cmd = "{}ab.exe -c 10 -t 60 -n 100 http://{}/test.htm".format(self.path, target_ip)
         return self.execute_cmd(cmd, ip, user, pwd, tool=tool, bandwidth=True, asynchronous=False)
+
+    def run_hey(self, ip, user, pwd, target_ip):
+        print("{0}\n+ Run Hey.exe {1}-{2} +\n{0}".format("+" * 50, self.ip_type[ip], ip))
+        tool = "Powershell.exe"
+        cmd = "{}hey.exe -c 10 -n 100 http://{}/test.htm".format(self.path, target_ip)
+        return self.execute_cmd(cmd, ip, user, pwd, tool=tool, bandwidth=True, asynchronous=False, iteration=20)
 
     def check_test_page(self, ip, user, pwd, target_ip):
         print("{0}\n+ Run Wget {1}-{2} +\n{0}".format("+" * 50, self.ip_type[ip], ip))

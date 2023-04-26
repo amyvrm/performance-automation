@@ -78,7 +78,7 @@ node('aws&&docker')
         def manifest_file_path = "${WORKSPACE}/${iac_path}/${manifest_file}"
         def manifest_file_pattern = "${WORKSPACE}/${iac_path}/*.json"
         def image_name = "perf-auto:${env.BUILD_NUMBER}"
-        def dockerfile = 'DockerfileSign'
+        def dockerfile = 'docker/DockerfileSign'
 //         def nexus_url_dslabs = "https://dsnexus.trendmicro.com:8443/nexus/repository/dslabs"
 //         def nexus_url = "${nexus_url_dslabs}/${env.JOB_BASE_NAME}/${env.BUILD_NUMBER}"
 //        def nexus_url = "https://dsnexus.trendmicro.com:8443/nexus/repository/dslabs/performance-test"
@@ -122,7 +122,7 @@ def jfrog_url = "https://jfrog.trendmicro.com/artifactory/dslabs-performance-gen
             }
         }
 
-        def infraImage = docker.build("infra-image")
+        def infraImage = docker.build("infra-image", "-f docker/Dockerfile .")
         infraImage.inside
         {
             stage('Get Tools')

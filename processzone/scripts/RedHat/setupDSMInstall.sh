@@ -23,11 +23,11 @@ sleep 2
 sudo mkdir -p /tmp/dsa_install
 sleep 2
 sudo docker run --rm --privileged --name pg-docker -v /data/postgresql_data:/var/lib/postgresql/data -p 5432:5432 -e POSTGRES_PASSWORD=pgsql -e POSTGRES_DB=dsm -d postgres:10
-sleep 2
+sleep 20
 printf 'pgsql\ncreate database dsmtest with owner=postgres encoding=UTF8;\n\q' | sudo docker run -i --rm --link pg-docker:postgres postgres:10 psql -h postgres -U postgres
-sleep 2
+sleep 20
 sudo wget $DSMSETUPFILE -O /tmp/LinuxDSMSetup.sh
-sleep 2
+sleep 20
 sudo chmod +x /tmp/LinuxDSMSetup.sh
 sleep 2
 sudo chmod +x /tmp/generatePropertiesDSM.sh 
