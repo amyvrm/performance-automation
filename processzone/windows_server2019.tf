@@ -3,19 +3,14 @@ resource "aws_instance" "windows_server2019" {
 	ami = data.aws_ami.windows_server2019_ami.id
 	instance_type = var.dsa_instance_type
 	key_name = var.ssh_key_name
-#	associate_public_ip_address = "true"
+	associate_public_ip_address = "true"
 #	subnet_id = var.subnet_id
 #	security_groups = [aws_security_group.allow-winrm-ips.id]
-#	subnet_id = var.subnet_id
-#	security_groups = [var.wfh_sg]
+	subnet_id = var.subnet_id
+	security_groups = [var.wfh_sg]
 	iam_instance_profile = var.instance_profile
 	get_password_data = "true"
 	user_data = file("SetUp-WinRM.txt")
-
-	network_interface {
-		network_interface_id = "eni-0408c4a4d96b52511"
-		device_index         = 0
-	}
 
 	tags = {
 			Name         = "${var.tag_windows_name}_${var.random_num}"
