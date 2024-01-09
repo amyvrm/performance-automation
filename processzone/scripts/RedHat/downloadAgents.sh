@@ -21,6 +21,7 @@ cd /tmp
 
 #python3.7 -m pip install zeep
 
-sudo pip3 install zeep
+#sudo pip3 install zeep
+pip3 install zeep
 
 python3 uploadDSAToDSM.py --dsmHost 127.0.0.1 --dsmUser supermasteradmin --dsmPasswd OrangePlant#1980 --agentFolder /tmp/AgentPackages/
