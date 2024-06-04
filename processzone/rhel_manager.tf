@@ -1,6 +1,7 @@
 resource "aws_instance" "rhel_dsm" {
 	
-	ami = data.aws_ami.rhel8_ami.id
+	/*ami = data.aws_ami.rhel8_ami.id*/
+	ami = "ami-07163e0e71bca147b"
 	instance_type = var.dsm_instance_type
 	key_name = var.ssh_key_name
 	associate_public_ip_address = "true"
