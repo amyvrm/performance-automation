@@ -158,7 +158,7 @@ def jfrog_url = "https://jfrog.trendmicro.com/artifactory/dslabs-performance-gen
             stage('Send Teams Message')
             {
                 sh("python3 ${iac_working_dir}/team_msg.py --scenario ${scenario}   \
-                                            --webhook ${teams_webhook}              \
+                                            --webhook \'${teams_webhook}\'              \
                                             --jenkins_url ${env.BUILD_URL}          \
                                             --build_user \'${user_name}\'           \
                                             --stats ${stats}                        \
