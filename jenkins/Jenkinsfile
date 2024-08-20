@@ -161,10 +161,10 @@ def jfrog_url = "https://jfrog.trendmicro.com/artifactory/dslabs-performance-gen
                                             --webhook \'${teams_webhook}\'              \
                                             --jenkins_url ${env.BUILD_URL}          \
                                             --build_user \'${user_name}\'           \
-                                            --stats ${stats}                        \
-                                            --graph ${graph}                        \
-                                            --manifest_file ${manifest_file}        \
-                                            --jfrog_url ${jfrog_url}                \
+                                            --stats \'${stats}\'                        \
+                                            --graph \'${graph}\'                        \
+                                            --manifest_file \'${manifest_file}\'        \
+                                            --jfrog_url \'${jfrog_url}\'                \
                                             --pipeline_num ${pipeline_num}")
             }
             if ("${debug}" == "false")
