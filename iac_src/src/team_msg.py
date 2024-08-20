@@ -47,6 +47,7 @@ def send_teams_notification(webhook, jenkins_url, build_user, scenario, stats_ur
 
     headers = {'content-type': 'application/json'}
     try:
+        print(json.dumps(message, indent=2))
         response = requests.post(webhook, data=json.dumps(message), headers=headers)
         response.raise_for_status()
         print("Team notification sent successfully")
