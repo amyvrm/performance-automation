@@ -18,7 +18,7 @@ def send_teams_notification(webhook, jenkins_url, build_user, scenario, stats_ur
                     {"name": "Performance Test Scenario {}".format(scenario), "value": "Success"},
                     {"name": "Build Run By", "value": build_user}
                 ],
-                "markdown": True
+                "markdown": "True"
             }
         ],
         "potentialAction": [
@@ -48,11 +48,11 @@ def send_teams_notification(webhook, jenkins_url, build_user, scenario, stats_ur
     headers = {'Content-Type': 'application/json'}
     try:
         print(json.dumps(message, indent=2))
-        message = "AHOY TEST"
-        #response = requests.post(webhook, data=json.dumps(message), headers=headers)
-        response = requests.post(webhook, data=message)
+        #message = "AHOY TEST"
+        response = requests.post(webhook, data=json.dumps(message), headers=headers)
+        #response = requests.post(webhook, data=message)
         response.raise_for_status()
-        prnt("Team notification sent successfully")
+        print("Team notification sent successfully")
     except requests.exceptions.RequestException as e:
         print(f"Failed to send notification: {e}")
 
