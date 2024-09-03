@@ -5,7 +5,7 @@ import json
 def send_teams_notification(webhook, jenkins_url, build_user, scenario, stats_url, graph_url, manifest_file_url,
                             pipeline_num):
     message = {
-        "@type": "MessageCard",
+        "@type": "AdaptiveCard",
         "@context": "http://schema.org/extensions",
         "themeColor": "00ff00",
         "summary": "EKS Cluster Deployment",
