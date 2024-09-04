@@ -8,7 +8,7 @@ node('aws&&docker')
 					   [$class: 'AmazonWebServicesCredentialsBinding', accessKeyVariable: 'S3_ACCESS_KEY',
 				       credentialsId: 'dslabs-jenkins-automation-credentials', secretKeyVariable: 'S3_SECRET_KEY'],
 					   string(credentialsId: 'dsdeploy-artifactory-token', variable: 'LABS_JFROG_TOKEN'),
-                       string(credentialsId: 'jenkins-webhook-workflow', variable: 'teams_webhook'),
+                       			string(credentialsId: 'jenkins-webhook-card-workflow', variable: 'teams_webhook'),
 					   string(credentialsId: dsm_license_key, variable: 'dsm_key')])
     {
         deleteDir()
@@ -79,9 +79,8 @@ node('aws&&docker')
         def manifest_file_pattern = "${WORKSPACE}/${iac_path}/*.json"
         def image_name = "perf-auto:${env.BUILD_NUMBER}"
         def dockerfile = 'docker/DockerfileSign'
-def jfrog_url = "https://jfrog.trendmicro.com/artifactory/dslabs-performance-generic-test-local"
-//         def teams_webhook = 'https://trendmicro.webhook.office.com/webhookb2/d6c82240-57b1-41b5-84e8-09def3921052@3e04753a-ae5b-42d4-a86d-d6f05460f9e4/JenkinsCI/b131747740c34e90b770e2a911dea18f/5110c51b-5ae9-4caa-a0a8-aafc778ce125'
-
+	def jfrog_url = "https://jfrog.trendmicro.com/artifactory/dslabs-performance-generic-test-local"
+	    
         currentBuild.displayName = "${env.BUILD_NUMBER}"
         currentBuild.result = 'SUCCESS'
 
