@@ -86,31 +86,6 @@ node('aws&&docker')
         }
 
         currentBuild.result = 'SUCCESS'
-//         stage("Nexus Upload") {
-//             nexus_url = "${nexus_url}/${dsru_name}/${env.BUILD_NUMBER}"
-//             withCredentials([usernamePassword(credentialsId: 'dslabs-nexus', usernameVariable: "NEX_USER",
-//                                               passwordVariable: 'NEX_PASS')]) {
-//
-//                 for (int i = 0; i < scenario.size(); i++) {
-//                     stats_file =  "${scenario[i]}_${stats}"
-//                     graph_file =  "${scenario[i]}_${graph}"
-//                     machine_file =  "${scenario[i]}_${machine_info}"
-//                     // Get table name
-//                     html_file = sh(script: "ls -1 ${WORKSPACE}/${main_dir}/${stats_file}", returnStdout: true).trim()
-//                     fname = sh(script: "basename ${html_file}", returnStdout: true).trim()
-//                     // Get bar chart name
-//                     png_file = sh(script: "ls -1 ${WORKSPACE}/${main_dir}/${graph_file}", returnStdout: true).trim()
-//                     gfile = sh(script: "basename ${png_file}", returnStdout: true).trim()
-//                     // Get Machine info
-//                     def manifest_file = sh(script: "ls -1 ${WORKSPACE}/${main_dir}/${machine_file}", returnStdout: true).trim()
-//                     def mfile = sh(script: "basename ${manifest_file}", returnStdout: true).trim()
-//                     // Upload file
-//                     sh "curl --user ${NEX_USER}:${NEX_PASS} --upload-file ${html_file} ${nexus_url}/${fname} --fail -v"
-//                     sh "curl --user ${NEX_USER}:${NEX_PASS} --upload-file ${png_file} ${nexus_url}/${gfile} --fail -v"
-//                     sh "curl --user ${NEX_USER}:${NEX_PASS} --upload-file ${manifest_file} ${nexus_url}/${mfile} --fail -v"
-//                 }
-//             }
-//         }
         stage("Slack Message") {
             jfrog_url = "${jfrog_url}/${dsru_name}/${pipeline_num}"
             msg = "Pipeline: <${env.BUILD_URL}|Perform Automation> User: ${user_name}\n"
