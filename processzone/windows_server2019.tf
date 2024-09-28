@@ -16,7 +16,7 @@ resource "aws_instance" "windows_server2019" {
 			Name         = "${var.tag_windows_name}_${var.random_num}"
 			"Trender"    = var.tag_trender
 			"Automation" = var.tag_automation
-			"ValidUntil" = formatdate("YYYY-MM-DD", timeadd(timestamp(), "24h"))
+			"ValidUntil" = formatdate("YYYY-MM-DD", timeadd(timestamp(), "48h"))
 			"workingHours" = "IGNORE"
 	}
 	
