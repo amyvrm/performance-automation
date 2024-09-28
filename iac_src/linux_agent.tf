@@ -14,7 +14,7 @@ resource "aws_instance" "performance_auto_machine" {
 	tags = {
 		Name           = "performance_auto_machine_${var.random_num}"
 		"Trender"      = var.trender
-		"ValidUntil"   = formatdate("YYYY-MM-DD", timeadd(timestamp(), "24h"))
+		"ValidUntil"   = formatdate("YYYY-MM-DD", timeadd(timestamp(), "48h"))
 		"workingHours" = "IGNORE"
 	}
 }
