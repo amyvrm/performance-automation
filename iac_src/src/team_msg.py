@@ -2,7 +2,7 @@ import argparse
 import requests
 import json
 
-def send_teams_notification(webhook, status, build_url, build_user, scenario, stats_url, graph_url, manifest_file_url, build_num):
+def send_teams_notification(webhook, pipeline_name,  status, build_url, build_user, scenario, stats_url, graph_url, manifest_file_url, build_num):
     status_color = "red"
     if "SUCCESS" in status or "PASSED" in status:
         status_color="green"
@@ -74,6 +74,7 @@ def send_teams_notification(webhook, status, build_url, build_user, scenario, st
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Please give argument to perform operations')
+    parser.add_argument('--pipeline_name', type=str, help="Pipeline name")
     parser.add_argument('--scenario', type=str, help="Scenario name to test")
     parser.add_argument('--status', type=str, help="Status of the job")
     parser.add_argument('--webhook', type=str, help="Teams Webhook")
@@ -91,5 +92,5 @@ if __name__ == "__main__":
     stats_url = "{}/{}".format(args.jfrog_url, stats_file)
     graph_url = "{}/{}".format(args.jfrog_url, graph_file)
     manifest_file_url = "{}/{}".format(args.jfrog_url, args.manifest_file)
-    send_teams_notification(args.webhook, args.status, args.jenkins_url, args.build_user, args.scenario, stats_url, graph_url,
+    send_teams_notification(args.webhook, args.pipeline_name, args.status, args.jenkins_url, args.build_user, args.scenario, stats_url, graph_url,
                             manifest_file_url, args.build_num)
