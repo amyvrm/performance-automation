@@ -10,11 +10,11 @@ def send_teams_notification(webhook, pipeline_name,  status, build_url, build_us
     text += "<b>Status:</b>  <b style=\"color: {};\">{}</b>".format(status_color,status)
     if "FAILED" in status or "FAILURE" in status:
         text += " (see <a href='{}console'>Console Logs</a>)".format(build_url)
-    text += "<br><b>Run by</b>: {}<br>".format(build_user)
+    text += "<br><b>Run by</b>: {}".format(build_user)
+    text += "<br><b>Test scenario:</b>&nbsp;&nbsp;{}".format(scenario)
 
     if "SUCCESS" in status or "PASSED" in status:
         # Results load 
-        text += "<br>Test scenario: <b>{}</b>&nbsp;&nbsp;{}".format(scenario)
         text += "<hr>"
         text += "<b><a href={} style='background-color: #c0c0c0; color: black; font-weight: bold; font-size: 16px; padding: 10px 20px; border: 2px solid white; border-radius: 15px; text-align: center; text-decoration: none; display: inline-block;'>&nbsp;&nbsp;Bandwidth Stats in Table&nbsp;&nbsp;</a></b>".format(stats_url)   
         text += "&nbsp;&nbsp;&nbsp;&nbsp;<b><a href={} style='background-color: #c0c0c0; color: black; font-weight: bold; font-size: 16px; padding: 10px 20px; border: 2px solid white; border-radius: 15px; text-align: center; text-decoration: none; display: inline-block;'>&nbsp;&nbsp;Bandwidth Stats in Bar Chart&nbsp;&nbsp;</a></b>".format(graph_url)   
