@@ -91,5 +91,5 @@ if __name__ == "__main__":
     stats_url = "{}/{}".format(args.jfrog_url, stats_file)
     graph_url = "{}/{}".format(args.jfrog_url, graph_file)
     manifest_file_url = "{}/{}".format(args.jfrog_url, args.manifest_file)
-    send_teams_notification(args.webhook, args.jenkins_url, args.build_user, args.scenario, stats_url, graph_url,
+    send_teams_notification(args.webhook, args.status, args.jenkins_url, args.build_user, args.scenario, stats_url, graph_url,
                             manifest_file_url, args.build_num)
