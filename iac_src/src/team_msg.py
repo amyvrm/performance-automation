@@ -84,7 +84,7 @@ if __name__ == "__main__":
     parser.add_argument('--graph', type=str, help="Graph file name")
     parser.add_argument('--manifest_file', type=str, help="Manifest file contains cloud infra access detail")
     parser.add_argument('--jfrog_url', type=str, help="JFrog URL")
-    parser.add_argument('--build_num', type=str, help="Pipeline Number to manage the file")
+    parser.add_argument('--build_number', type=str, help="Pipeline Number to manage the file")
     args = parser.parse_args()
 
     stats_file = "{}_{}".format(args.scenario.replace(" ", "_"), args.stats)
@@ -93,4 +93,4 @@ if __name__ == "__main__":
     graph_url = "{}/{}".format(args.jfrog_url, graph_file)
     manifest_file_url = "{}/{}".format(args.jfrog_url, args.manifest_file)
     send_teams_notification(args.webhook, args.pipeline_name, args.status, args.jenkins_url, args.build_user, args.scenario, stats_url, graph_url,
-                            manifest_file_url, args.build_num)
+                            manifest_file_url, args.build_number)
