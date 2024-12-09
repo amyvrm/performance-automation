@@ -21,7 +21,7 @@ def send_teams_notification(webhook, build_url, build_user, scenario, stats_url,
         text += "&nbsp;&nbsp;&nbsp;&nbsp;<b><a href={} style='background-color: #c0c0c0; color: black; font-weight: bold; font-size: 16px; padding: 10px 20px; border: 2px solid white; border-radius: 15px; text-align: center; text-decoration: none; display: inline-block;'>&nbsp;&nbsp;Bandwidth Stats in Bar Chart&nbsp;&nbsp;</a></b>".format(graph_url)   
         text += "&nbsp;&nbsp;&nbsp;&nbsp;<b><a href={} style='background-color: #c0c0c0; color: black; font-weight: bold; font-size: 16px; padding: 10px 20px; border: 2px solid white; border-radius: 15px; text-align: center; text-decoration: none; display: inline-block;'>&nbsp;&nbsp;Infra Access Detail&nbsp;&nbsp;</a></b>".format(manifest_file_url)   
         text += "&nbsp;&nbsp;&nbsp;&nbsp;<b><a href={} style='background-color: #c0c0c0; color: black; font-weight: bold; font-size: 16px; padding: 10px 20px; border: 2px solid white; border-radius: 15px; text-align: center; text-decoration: none; display: inline-block;'>&nbsp;&nbsp;View Jenkins Build&nbsp;&nbsp;</a></b>".format(build_url)   
-      message = {"text": text}
+    message = {"text": text}
       
     message2 = {
         "@type": "AdaptiveCard",
@@ -62,7 +62,7 @@ def send_teams_notification(webhook, build_url, build_user, scenario, stats_url,
                 "targets": [{"os": "default", "uri": jenkins_url}]
             }
         ]
-    }  */
+    }
 
     headers = {'Content-Type': 'application/json'}
     try:
