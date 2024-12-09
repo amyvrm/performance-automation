@@ -7,11 +7,11 @@ def send_teams_notification(webhook, pipeline_name,  status, build_url, build_us
     if "SUCCESS" in status or "PASSED" in status:
         status_color="green"
     text = "<b>Job: </b><span style='font-size: 20px; font-weight: bold;'>{},</span> <span style='font-size: 16px; font-weight: bold;'><a href='{}'> build: {}</a></span><br>".format(pipeline_name, build_url, build_number)
+    text += "<br><b>Test scenario:</b>&nbsp;&nbsp;{}".format(scenario)
     text += "<b>Status:</b>  <b style=\"color: {};\">{}</b>".format(status_color,status)
     if "FAILED" in status or "FAILURE" in status:
         text += " (see <a href='{}console'>Console Logs</a>)".format(build_url)
     text += "<br><b>Run by</b>: {}".format(build_user)
-    text += "<br><b>Test scenario:</b>&nbsp;&nbsp;{}".format(scenario)
 
     if "SUCCESS" in status or "PASSED" in status:
         # Results load 
