@@ -15,7 +15,7 @@ node('aws&&docker')
         // Pipeline Variables
         def scenario = params.SCENARIO
         def debug = params.DEBUG
-        def pipeline_num = params.PARENT_PIPELINE_NUMBER
+        def pipeline_num = "parent_${params.PARENT_PIPELINE_NUMBER}" 
 	print (pipeline_num)
         if (pipeline_num == "0")
         {
