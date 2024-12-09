@@ -16,11 +16,13 @@ node('aws&&docker')
         def scenario = params.SCENARIO
         def debug = params.DEBUG
         def pipeline_num = params.PARENT_PIPELINE_NUMBER
+	print (pipeline_num)
         if (pipeline_num == "0")
         {
             pipeline_num = "individual_${env.BUILD_NUMBER}"
         }
-
+        print (pipeline_num)
+	error ("to je konec")
         // Terraform related Pipeline Variables
         def iac_path = "iac_src"
         def iac_working_dir = "${iac_path}/src"
