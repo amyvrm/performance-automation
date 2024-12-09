@@ -2,8 +2,7 @@ import argparse
 import requests
 import json
 
-def send_teams_notification(webhook, build_url, build_user, scenario, stats_url, graph_url, manifest_file_url,
-                            pipeline_num):
+def send_teams_notification(webhook, status, build_url, build_user, scenario, stats_url, graph_url, manifest_file_url, build_num):
     status_color = "red"
     if "SUCCESS" in status or "PASSED" in status:
         status_color="green"
@@ -11,7 +10,7 @@ def send_teams_notification(webhook, build_url, build_user, scenario, stats_url,
     text += "<b>Status:</b>  <b style=\"color: {};\">{}</b>".format(status_color,status)
     if "FAILED" in status or "FAILURE" in status:
         text += " (see <a href='{}console'>Console Logs</a>)".format(build_url)
-    text += "<br><b>Run by</b>: {}<br>".format(user)
+    text += "<br><b>Run by</b>: {}<br>".format(build_user)
 
     if "SUCCESS" in status or "PASSED" in status:
         # Results load 
@@ -76,6 +75,7 @@ def send_teams_notification(webhook, build_url, build_user, scenario, stats_url,
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Please give argument to perform operations')
     parser.add_argument('--scenario', type=str, help="Scenario name to test")
+    parser.add_argument('--status', type=str, help="Status of the job")
     parser.add_argument('--webhook', type=str, help="Teams Webhook")
     parser.add_argument('--jenkins_url', type=str, help="Jenkins URL")
     parser.add_argument('--build_user', type=str, help="Jenkins build user")
@@ -83,7 +83,7 @@ if __name__ == "__main__":
     parser.add_argument('--graph', type=str, help="Graph file name")
     parser.add_argument('--manifest_file', type=str, help="Manifest file contains cloud infra access detail")
     parser.add_argument('--jfrog_url', type=str, help="JFrog URL")
-    parser.add_argument('--pipeline_num', type=str, help="Pipeline Number to manage the file")
+    parser.add_argument('--build_num', type=str, help="Pipeline Number to manage the file")
     args = parser.parse_args()
 
     stats_file = "{}_{}".format(args.scenario.replace(" ", "_"), args.stats)
@@ -92,4 +92,4 @@ if __name__ == "__main__":
     graph_url = "{}/{}".format(args.jfrog_url, graph_file)
     manifest_file_url = "{}/{}".format(args.jfrog_url, args.manifest_file)
     send_teams_notification(args.webhook, args.jenkins_url, args.build_user, args.scenario, stats_url, graph_url,
-                            manifest_file_url, args.pipeline_num)
+                            manifest_file_url, args.build_num)
