@@ -173,7 +173,7 @@ node('aws&&docker')
                                             --graph \'${graph}\'                        \
                                             --manifest_file \'${manifest_file}\'        \
                                             --jfrog_url \'${jfrog_url}\'                \
-                                            --build_num ${pipeline_num}")
+                                            --build_number ${pipeline_num}")
             }
             if ("${debug}" == "false")
             {
