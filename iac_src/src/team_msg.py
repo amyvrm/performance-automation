@@ -21,47 +21,6 @@ def send_teams_notification(webhook, pipeline_name,  status, build_url, build_us
         text += "&nbsp;&nbsp;&nbsp;&nbsp;<b><a href={} style='background-color: #c0c0c0; color: black; font-weight: bold; font-size: 16px; padding: 10px 20px; border: 2px solid white; border-radius: 15px; text-align: center; text-decoration: none; display: inline-block;'>&nbsp;&nbsp;Infra Access Detail&nbsp;&nbsp;</a></b>".format(manifest_file_url)   
         text += "&nbsp;&nbsp;&nbsp;&nbsp;<b><a href={} style='background-color: #c0c0c0; color: black; font-weight: bold; font-size: 16px; padding: 10px 20px; border: 2px solid white; border-radius: 15px; text-align: center; text-decoration: none; display: inline-block;'>&nbsp;&nbsp;View Jenkins Build&nbsp;&nbsp;</a></b>".format(build_url)   
     message = {"text": text}
-      
-    message2 = {
-        "@type": "AdaptiveCard",
-        "@context": "http://schema.org/extensions",
-        "themeColor": "00ff00",
-        "summary": "EKS Cluster Deployment",
-        "sections": [
-            {
-                "activityTitle": "Performance Automation - Pipeline Number - {}".format(pipeline_num),
-                "activitySubtitle": "Scenario : {}".format(scenario),
-                "activityImage": "https://teamsnodesample.azurewebsites.net/static/img/image5.png",
-                "facts": [
-                    {"name": "Performance Test Scenario {}".format(scenario), "value": "Success"},
-                    {"name": "Build Run By", "value": build_user}
-                ],
-                "markdown": "True"
-            }
-        ],
-        "potentialAction": [
-            {
-                "@type": "OpenUri",
-                "name": "Bandwidth Stats in Table",
-                "targets": [{"os": "default", "uri": stats_url}]
-            },
-            {
-                "@type": "OpenUri",
-                "name": "Bandwidth Stats in Bar Chart",
-                "targets": [{"os": "default", "uri": graph_url}]
-            },
-            {
-                "@type": "OpenUri",
-                "name": "Infra Access Detail",
-                "targets": [{"os": "default", "uri": manifest_file_url}]
-            },
-            {
-                "@type": "OpenUri",
-                "name": "View Jenkins Build",
-                "targets": [{"os": "default", "uri": jenkins_url}]
-            }
-        ]
-    }
 
     headers = {'Content-Type': 'application/json'}
     try:
