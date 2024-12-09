@@ -2,9 +2,28 @@ import argparse
 import requests
 import json
 
-def send_teams_notification(webhook, jenkins_url, build_user, scenario, stats_url, graph_url, manifest_file_url,
+def send_teams_notification(webhook, build_url, build_user, scenario, stats_url, graph_url, manifest_file_url,
                             pipeline_num):
-    message = {
+    status_color = "red"
+    if "SUCCESS" in status or "PASSED" in status:
+        status_color="green"
+    text = "<b>Job: </b><span style='font-size: 20px; font-weight: bold;'>{},</span> <span style='font-size: 16px; font-weight: bold;'><a href='{}'> build: {}</a></span><br>".format(pipeline_name, build_url, build_number)
+    text += "<b>Status:</b>  <b style=\"color: {};\">{}</b>".format(status_color,status)
+    if "FAILED" in status or "FAILURE" in status:
+        text += " (see <a href='{}console'>Console Logs</a>)".format(build_url)
+    text += "<br><b>Run by</b>: {}<br>".format(user)
+
+    if "SUCCESS" in status or "PASSED" in status:
+        # Results load 
+        text += "<br>Test scenario: <b>{}</b>&nbsp;&nbsp;{}".format(scenario)
+        text += "<hr>"
+        text += "<b><a href={} style='background-color: #c0c0c0; color: black; font-weight: bold; font-size: 16px; padding: 10px 20px; border: 2px solid white; border-radius: 15px; text-align: center; text-decoration: none; display: inline-block;'>&nbsp;&nbsp;Bandwidth Stats in Table&nbsp;&nbsp;</a></b>".format(stats_url)   
+        text += "&nbsp;&nbsp;&nbsp;&nbsp;<b><a href={} style='background-color: #c0c0c0; color: black; font-weight: bold; font-size: 16px; padding: 10px 20px; border: 2px solid white; border-radius: 15px; text-align: center; text-decoration: none; display: inline-block;'>&nbsp;&nbsp;Bandwidth Stats in Bar Chart&nbsp;&nbsp;</a></b>".format(graph_url)   
+        text += "&nbsp;&nbsp;&nbsp;&nbsp;<b><a href={} style='background-color: #c0c0c0; color: black; font-weight: bold; font-size: 16px; padding: 10px 20px; border: 2px solid white; border-radius: 15px; text-align: center; text-decoration: none; display: inline-block;'>&nbsp;&nbsp;Infra Access Detail&nbsp;&nbsp;</a></b>".format(manifest_file_url)   
+        text += "&nbsp;&nbsp;&nbsp;&nbsp;<b><a href={} style='background-color: #c0c0c0; color: black; font-weight: bold; font-size: 16px; padding: 10px 20px; border: 2px solid white; border-radius: 15px; text-align: center; text-decoration: none; display: inline-block;'>&nbsp;&nbsp;View Jenkins Build&nbsp;&nbsp;</a></b>".format(build_url)   
+      message = {"text": text}
+      
+    message2 = {
         "@type": "AdaptiveCard",
         "@context": "http://schema.org/extensions",
         "themeColor": "00ff00",
@@ -43,7 +62,7 @@ def send_teams_notification(webhook, jenkins_url, build_user, scenario, stats_ur
                 "targets": [{"os": "default", "uri": jenkins_url}]
             }
         ]
-    }
+    }  */
 
     headers = {'Content-Type': 'application/json'}
     try:
