@@ -4,13 +4,14 @@ import json
 import re
 
 def send_teams_notification(webhook, pipeline_name,  status, build_url, build_user, scenario, stats_url, graph_url, manifest_file_url, build_number):
+    parent_url = build_url
     if "parent_" in build_number:
         updated_url = build_url.replace("parent_", "")
-        build_url = re.sub(r"/\d+/$", f"/{build_number}/", updated_url)
+        parent_url = re.sub(r"/\d+/$", f"/{build_number.replace("parent_", "")}/", updated_url)
     status_color = "red"
     if "SUCCESS" in status or "PASSED" in status:
         status_color="green"
-    text = "<b>Job: </b><span style='font-size: 20px; font-weight: bold;'>{},</span> <span style='font-size: 16px; font-weight: bold;'><a href='{}'> build: {}</a></span><br>".format(pipeline_name, build_url, build_number)
+    text = "<b>Job: </b><span style='font-size: 20px; font-weight: bold;'>{},</span> <span style='font-size: 16px; font-weight: bold;'><a href='{}'> build: {}</a></span><br>".format(pipeline_name, parent_url, build_number)
     text += "<b>Test scenario:</b>&nbsp;&nbsp;{}".format(scenario)
     text += "<br><b>Status:</b>  <b style=\"color: {};\">{}</b>".format(status_color,status)
     if "FAILED" in status or "FAILURE" in status:
