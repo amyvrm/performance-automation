@@ -14,6 +14,9 @@ node('aws&&docker')
         deleteDir()
         // Pipeline Variables
         def scenario = params.SCENARIO
+	if (!(Scenario in ["Server_Upload", "Server_Download", "Client_Download"])) {
+    	    error ("Scenario unknown")
+	}
         def debug = params.DEBUG
         def pipeline_num = "parent_${params.PARENT_PIPELINE_NUMBER}" 
         if (pipeline_num == "0")
