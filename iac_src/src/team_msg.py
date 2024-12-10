@@ -4,7 +4,7 @@ import json
 
 def send_teams_notification(webhook, pipeline_name,  status, build_url, build_user, scenario, stats_url, graph_url, manifest_file_url, build_number):
     if "parent_" in build_number:
-        updated_url = url.replace("parent_", "")
+        updated_url = build_url.replace("parent_", "")
         build_url = re.sub(r"/\d+/$", f"/{build_number}/", updated_url)
     status_color = "red"
     if "SUCCESS" in status or "PASSED" in status:
