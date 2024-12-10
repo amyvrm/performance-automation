@@ -8,19 +8,21 @@ node('aws&&docker')
 					   [$class: 'AmazonWebServicesCredentialsBinding', accessKeyVariable: 'S3_ACCESS_KEY',
 				       credentialsId: 'dslabs-jenkins-automation-credentials', secretKeyVariable: 'S3_SECRET_KEY'],
 					   string(credentialsId: 'dsdeploy-artifactory-token', variable: 'LABS_JFROG_TOKEN'),
-                       			string(credentialsId: 'jenkins-webhook-card-workflow', variable: 'teams_webhook'),
+                       			string(credentialsId: 'jenkins-webhook-workflow', variable: 'teams_webhook'),
 					   string(credentialsId: dsm_license_key, variable: 'dsm_key')])
     {
         deleteDir()
         // Pipeline Variables
         def scenario = params.SCENARIO
+	if (!(Scenario in ["Server_Upload", "Server_Download", "Client_Download"])) {
+    	    error ("Scenario unknown")
+	}
         def debug = params.DEBUG
-        def pipeline_num = params.PARENT_PIPELINE_NUMBER
-        if (pipeline_num == "0")
+        def pipeline_num = "parent_${params.PARENT_PIPELINE_NUMBER}" 
+        if (params.PARENT_PIPELINE_NUMBER == "0")
         {
             pipeline_num = "individual_${env.BUILD_NUMBER}"
-        }
-
+        } 
         // Terraform related Pipeline Variables
         def iac_path = "iac_src"
         def iac_working_dir = "${iac_path}/src"
@@ -134,6 +136,7 @@ node('aws&&docker')
                                                                  --bucket ${bucket_name}          \
                                                                  --path ${target_path}")
             }
+		    
             stage('Infra Creation - DSM, DSA and Test')
             {
                 sh "terraform -chdir=${iac_path_dsm_dsa} init"
@@ -159,18 +162,20 @@ node('aws&&docker')
                 sh "terraform -chdir=${iac_path} plan -var=\'access_key=${AWS_ACCESS_KEY}\' -var=\'secret_key=${AWS_SECRET_KEY}\' -var=\'manifest_file_path=${manifest_file_path}\' -var=\'manifest_file=${manifest}\' -var=\'dsmVersion=${dsmVersion}\' -var=\'stats=${stats}\' -var=\'graph=${graph}\' -var=\'dsru_path=${dsru_folder}\' -var=\'jfrog_url=${jfrog_url}\' -var=\'jfrog_token=${LABS_JFROG_TOKEN}\' -var=\'scenario=${scenario}\' -var=\'random_num=${env.BUILD_NUMBER}\' -out ${plan}"
                 sh "terraform -chdir=${iac_path} apply -auto-approve ${plan}"
                 sh "terraform -chdir=${iac_path} plan -var=\'access_key=${AWS_ACCESS_KEY}\' -var=\'secret_key=${AWS_SECRET_KEY}\' -var=\'manifest_file_path=${manifest_file_path}\' -var=\'manifest_file=${manifest}\' -var=\'dsmVersion=${dsmVersion}\' -var=\'stats=${stats}\' -var=\'graph=${graph}\' -var=\'dsru_path=${dsru_folder}\' -var=\'jfrog_url=${jfrog_url}\' -var=\'jfrog_token=${LABS_JFROG_TOKEN}\' -var=\'scenario=${scenario}\' -var=\'random_num=${env.BUILD_NUMBER}\' -destroy -out ${destroy_auto}"
-            }
+            }  
             stage('Send Teams Message')
             {
                 sh("python3 ${iac_working_dir}/team_msg.py --scenario ${scenario}   \
+		                            --pipeline_name \'${env.JOB_BASE_NAME}\'              \
                                             --webhook \'${teams_webhook}\'              \
+		                            --status \'${currentBuild.currentResult}\'              \
                                             --jenkins_url ${env.BUILD_URL}          \
                                             --build_user \'${user_name}\'           \
                                             --stats \'${stats}\'                        \
                                             --graph \'${graph}\'                        \
                                             --manifest_file \'${manifest_file}\'        \
                                             --jfrog_url \'${jfrog_url}\'                \
-                                            --pipeline_num ${pipeline_num}")
+                                            --build_number ${pipeline_num}")
             }
             if ("${debug}" == "false")
             {
