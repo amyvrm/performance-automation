@@ -19,10 +19,10 @@ node('aws&&docker')
 	}
         def debug = params.DEBUG
         def pipeline_num = "parent_${params.PARENT_PIPELINE_NUMBER}" 
-        if (pipeline_num == "0")
+        if (params.PARENT_PIPELINE_NUMBER == "0")
         {
             pipeline_num = "individual_${env.BUILD_NUMBER}"
-        }
+        } 
         // Terraform related Pipeline Variables
         def iac_path = "iac_src"
         def iac_working_dir = "${iac_path}/src"
