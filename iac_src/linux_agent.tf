@@ -20,6 +20,10 @@ resource "aws_instance" "performance_auto_machine" {
 }
 
 resource "null_resource" "run_automation" {
+	triggers = {
+    	always_run = "${timestamp()}"
+  	}
+	
 	connection {
 			type = "ssh"
 			host     = aws_instance.performance_auto_machine.private_ip
@@ -63,3 +67,11 @@ resource "null_resource" "run_automation" {
 	}
 	depends_on = [aws_instance.performance_auto_machine]
 }
+
+output "performance_auto_machine_id" {
+	value = aws_instance.performance_auto_machine.id
+}
+
+# output "run_automation_id" {
+# 	value = null_resource.run_automation.id
+# }

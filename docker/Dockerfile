@@ -11,11 +11,11 @@ RUN apt-get install terraform=1.1.7
 
 RUN apt-get install python3-pip -y
 RUN pip install requests==2.27.1
+RUN pip install boto3==1.26.70
 #RUN pip install lxml
 #RUN pip install pylzma
 #RUN pip install zeep
 #RUN pip install urllib3==1.25.8
-RUN pip install boto3==1.26.70
 #RUN pip3 install boto3
 #RUN pip3 install boto
 #RUN pip3 install rsa
