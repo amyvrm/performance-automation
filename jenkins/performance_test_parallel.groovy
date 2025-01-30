@@ -76,14 +76,6 @@ node('aws&&docker')
     }
     catch (e) {
         currentBuild.result = 'FAILURE'
-        msg = "Pipeline: <${env.BUILD_URL}|Perform Automation> User: ${user_name}\n"
-        msg += "${currentBuild.result}: :dot-red:\nError: ${e}\n"
-        msg += "Infrastructure may be kept for Debug Purpose."
-
-        // dslabs_auto_monitoring
-        slackSend channel: 'dslabs_auto_monitoring', color: "good", message: "${msg}"
-        // dsruhandover
-        slackSend channel: "dsruhandover", color: 'good', message: "${msg}"
         println(e)
         throw e
     }
