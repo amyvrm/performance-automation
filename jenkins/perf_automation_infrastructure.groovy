@@ -12,7 +12,19 @@ node('aws&&docker')
                        			string(credentialsId: 'jenkins-webhook-workflow', variable: 'teams_webhook'),
 					   string(credentialsId: dsm_license_key, variable: 'dsm_key')])
     {
+        deleteDir()
         def scenario = params.SCENARIO
+        if (!(Scenario in ["Server_Upload", "Server_Download", "Client_Download"])) {
+    	    error ("Scenario unknown")
+	    }
+        if (params.PARENT_PIPELINE_NUMBER == "0")
+        {
+            pipeline_num = "individual_${env.BUILD_NUMBER}"
+        }
+        else
+        {
+            pipeline_num = "parent_${params.PARENT_PIPELINE_NUMBER}"
+        }
 
         // DSRU Related Pipeline Variables
             def dsm_package_url = params.DSM_PACKAGE_URL
