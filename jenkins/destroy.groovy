@@ -25,7 +25,7 @@ node(nodeLabel) {
 																	branches         : [[name: infrastructure_branch]],
 																	extensions       : [[$class: 'RelativeTargetDirectory', relativeTargetDir: TERRAFORM_DIR]],
 																	userRemoteConfigs: [[credentialsId: 'su-dslabs-automation-token',
-																						url          : 'https://dsgithub.trendmicro.com/dslabs/tear-down-performance-automation-Infra.git']]]
+																						url          : 'https://dsgithub.trendmicro.com/dslabs/performance-automation.git']]]
 					}
 					
 					
