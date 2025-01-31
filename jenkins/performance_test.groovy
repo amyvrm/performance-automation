@@ -125,6 +125,14 @@ node('aws&&docker')
 
             infraImage.inside
             {
+                stage('Get Tools')
+                {
+                    sh ("python ${iac_working_dir}/get_pkg_frm_s3.py --access_key ${S3_ACCESS_KEY}    \
+                                                                    --secret_key ${S3_SECRET_KEY}    \
+                                                                    --bucket ${bucket_name}          \
+                                                                    --path ${target_path}")
+                }
+
                 stage('Automation machine')
                 {
                         sh "ls -la ${iac_path}"
