@@ -11,6 +11,7 @@ node(nodeLabel) {
 							credentialsId: 'STAGING_AWS', secretKeyVariable: 'AWS_SECRET_ACCESS_KEY']]) {
 				
 				def aws_resources = params.AWS_RESOURCES
+				def terraform_dir = "iac_destroy"
 				
 				def displayName
 				def infrastructure_branch = params.INFRASTRUCTURE_BRANCH
@@ -37,11 +38,11 @@ node(nodeLabel) {
 						stage('Destroying resources') {
 							dir(MAIN_DIR){
 								sh """
-								    python iac_destroy/destroy_infra.py \
+								    python ${terraform_dir}/destroy_infra.py \
 								    --access_key "${AWS_ACCESS_KEY_ID}" \
 								    --secret_key "${AWS_SECRET_ACCESS_KEY}" \
 								    --resource_list "${aws_resources}" \
-								    --terraform_dir "src"
+								    --terraform_dir "${terraform_dir}"
 								"""
 							}
 						}
