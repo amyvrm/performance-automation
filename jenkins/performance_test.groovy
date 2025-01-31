@@ -23,6 +23,10 @@ node('aws&&docker')
             pipeline_num = "individual_${env.BUILD_NUMBER}"
         }
 
+        // S3 bucket Related Pipeline Variables
+            def bucket_name = "perf-auto-pkg"
+            def target_path = "${iac_path_dsm_dsa}/Temp"
+
         // Terraform related Pipeline Variables
             def iac_path = "iac_src"
             def iac_working_dir = "${iac_path}/src"
