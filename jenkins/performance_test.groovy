@@ -24,6 +24,7 @@ node('aws&&docker')
         }
 
         // S3 bucket Related Pipeline Variables
+            def iac_path_dsm_dsa = "processzone"
             def bucket_name = "perf-auto-pkg"
             def target_path = "${iac_path_dsm_dsa}/Temp"
 
