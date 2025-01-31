@@ -161,7 +161,7 @@ node('aws&&docker')
 						
 						build job: 'Performance-Scenario-teardown',
 						parameters: [
-							string(name: 'AWS_RESOURCES', value: all_ids)
+							string(name: 'AWS_RESOURCES', value: all_ids),
                             string(name: 'INFRASTRUCTURE_BRANCH', value: infra_branch)
 						]
 					}
@@ -179,7 +179,3 @@ node('aws&&docker')
         }
     }
 }
-
-
-
-            
