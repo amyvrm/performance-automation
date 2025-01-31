@@ -13,6 +13,7 @@ node(nodeLabel) {
 				def aws_resources = params.AWS_RESOURCES
 				
 				def displayName
+				def infrastructure_branch = params.INFRASTRUCTURE_BRANCH
 				deleteDir()
 				
 				try {
@@ -21,7 +22,7 @@ node(nodeLabel) {
 					
 					stage('Download infrastructure automation') {
 						checkout changelog: false, poll: false, scm: [$class           : 'GitSCM',
-																	branches         : [[name: 'main']],
+																	branches         : [[name: infrastructure_branch]],
 																	extensions       : [[$class: 'RelativeTargetDirectory', relativeTargetDir: TERRAFORM_DIR]],
 																	userRemoteConfigs: [[credentialsId: 'su-dslabs-automation-token',
 																						url          : 'https://dsgithub.trendmicro.com/dslabs/tear-down-performance-automation-Infra.git']]]

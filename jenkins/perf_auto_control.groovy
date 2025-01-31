@@ -13,6 +13,7 @@ node('aws&&docker')
 					   string(credentialsId: dsm_license_key, variable: 'dsm_key')])
     {
         def scenario = params.SCENARIO
+        def infra_branch = params.INFRASTRUCTURE_BRANCH
 
         // DSRU Related Pipeline Variables
             def dsm_package_url = params.DSM_PACKAGE_URL
@@ -161,6 +162,7 @@ node('aws&&docker')
 						build job: 'Performance-Scenario-teardown',
 						parameters: [
 							string(name: 'AWS_RESOURCES', value: all_ids)
+                            string(name: 'INFRASTRUCTURE_BRANCH', value: infra_branch)
 						]
 					}
 					else{
