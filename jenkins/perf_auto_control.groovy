@@ -120,6 +120,7 @@ node('aws&&docker')
                 job_number = infrajob.getNumber().toString()
                 perf_test = build job: 'Performance_Scenario_Test',
                 parameters: [
+                    string(name: 'DSM_PACKAGE_URL', value: dsm_package_url),
                     string(name: 'SCENARIO', value: scenario),
                     string(name: 'PACKAGE_URL', value: "${package_url}"),
                     string(name: 'JOB_NUMBER', value: job_number)
