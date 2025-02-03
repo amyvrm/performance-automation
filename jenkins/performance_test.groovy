@@ -16,6 +16,7 @@ node('aws&&docker')
 
         def scenario = params.SCENARIO
         def job_number = params.JOB_NUMBER
+        def dsm_package_url = params.DSM_PACKAGE_URL
 
         def pipeline_num = "parent_${params.PARENT_PIPELINE_NUMBER}" 
         if (params.PARENT_PIPELINE_NUMBER == "0")
