@@ -21,6 +21,7 @@ node('aws&&docker')
             def agents = params.AGENTS
             def agents_download_urls = params.AGENT_DOWNLOAD_URL
             def package_url = params.PACKAGE_URL
+            def rule_id = params.RULE_ID
             def dsru_url = ""
 
         // Terraform related Pipeline Variables
@@ -123,7 +124,8 @@ node('aws&&docker')
                     string(name: 'DSM_PACKAGE_URL', value: dsm_package_url),
                     string(name: 'SCENARIO', value: scenario),
                     string(name: 'PACKAGE_URL', value: "${package_url}"),
-                    string(name: 'JOB_NUMBER', value: job_number)
+                    string(name: 'JOB_NUMBER', value: job_number),
+                    string(name: 'RULE_ID', value: rule_id)
                 ]
             }
 

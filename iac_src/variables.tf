@@ -65,3 +65,7 @@ variable "jfrog_token" {}
 variable "scenario" {}
 
 variable "random_num" {}
+
+variable "rule_id" {
+  default = 0
+}

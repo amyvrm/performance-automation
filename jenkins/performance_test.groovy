@@ -17,6 +17,7 @@ node('aws&&docker')
         def scenario = params.SCENARIO
         def job_number = params.JOB_NUMBER
         def dsm_package_url = params.DSM_PACKAGE_URL
+        def rule_id = params.RULE_ID
 
         def pipeline_num = "parent_${params.PARENT_PIPELINE_NUMBER}" 
         if (params.PARENT_PIPELINE_NUMBER == "0")
@@ -61,8 +62,7 @@ node('aws&&docker')
 
             def jfrog_url = "https://jfrog.trendmicro.com/artifactory/dslabs-performance-generic-test-local"
 
-        try
-        {
+
             stage('Git checkout')
             {
                 checkout scm
@@ -128,88 +128,100 @@ node('aws&&docker')
             }
 
             def infraImage = docker.build("infra-image", "-f docker/Dockerfile .")
-
+            
             infraImage.inside
             {
-                stage('Get Tools')
+                try 
                 {
-                    sh ("python ${iac_working_dir}/get_pkg_frm_s3.py --access_key ${S3_ACCESS_KEY}    \
-                                                                    --secret_key ${S3_SECRET_KEY}    \
-                                                                    --bucket ${bucket_name}          \
-                                                                    --path ${target_path}")
-                }
-
-                stage('Automation machine')
-                {
-                        sh "ls -la ${iac_path}"
-
-                        sh "terraform -chdir=${iac_path} init"
-
-                        sh "terraform -chdir=${iac_path} validate"
-
-                        sh "terraform -chdir=${iac_path} plan -var=\'access_key=${AWS_ACCESS_KEY}\' -var=\'secret_key=${AWS_SECRET_KEY}\' -var=\'manifest_file_path=${manifest_file_path}\' -var=\'manifest_file=${manifest}\' -var=\'dsmVersion=${dsmVersion}\' -var=\'stats=${stats}\' -var=\'graph=${graph}\' -var=\'dsru_path=${dsru_folder}\' -var=\'jfrog_url=${jfrog_url}\' -var=\'jfrog_token=${LABS_JFROG_TOKEN}\' -var=\'scenario=${scenario}\' -var=\'random_num=${env.BUILD_NUMBER}\' -out ${plan}"
-
-                        sh "terraform -chdir=${iac_path} apply -auto-approve ${plan}"
-                }
-
-                stage('Automation machine information')
-                {
-                    dir("${iac_path}")
+                    stage('Get Tools')
                     {
-                        sh "ls -la"
-                        sh "pwd"
-                        sh "terraform output -json"
-                        sh "terraform output -json > ${manifest_file}"
-                        archiveArtifacts allowEmptyArchive: true, artifacts: "${manifest_file}"
+                        sh ("python ${iac_working_dir}/get_pkg_frm_s3.py --access_key ${S3_ACCESS_KEY}    \
+                                                                        --secret_key ${S3_SECRET_KEY}    \
+                                                                        --bucket ${bucket_name}          \
+                                                                        --path ${target_path}")
+                    }
+
+                    stage('Automation machine')
+                    {
+                            sh "ls -la ${iac_path}"
+
+                            sh "terraform -chdir=${iac_path} init"
+
+                            sh "terraform -chdir=${iac_path} validate"
+
+                            if (rule_id != null && !rule_id.isEmpty())
+                            {
+                                echo "Rule ID Automation machine stage: ${rule_id}"
+                                sh "terraform -chdir=${iac_path} plan -var=\'access_key=${AWS_ACCESS_KEY}\' -var=\'secret_key=${AWS_SECRET_KEY}\' -var=\'manifest_file_path=${manifest_file_path}\' -var=\'manifest_file=${manifest}\' -var=\'dsmVersion=${dsmVersion}\' -var=\'stats=${stats}\' -var=\'graph=${graph}\' -var=\'dsru_path=${dsru_folder}\' -var=\'jfrog_url=${jfrog_url}\' -var=\'jfrog_token=${LABS_JFROG_TOKEN}\' -var=\'scenario=${scenario}\' -var=\'random_num=${env.BUILD_NUMBER}\' -var=\'rule_id=${rule_id}\' -out ${plan}"
+                                sh "terraform -chdir=${iac_path} apply -auto-approve ${plan}"   
+                            }
+                            else{
+                                echo "Executing plan without rule ID"
+                                sh "terraform -chdir=${iac_path} plan -var=\'access_key=${AWS_ACCESS_KEY}\' -var=\'secret_key=${AWS_SECRET_KEY}\' -var=\'manifest_file_path=${manifest_file_path}\' -var=\'manifest_file=${manifest}\' -var=\'dsmVersion=${dsmVersion}\' -var=\'stats=${stats}\' -var=\'graph=${graph}\' -var=\'dsru_path=${dsru_folder}\' -var=\'jfrog_url=${jfrog_url}\' -var=\'jfrog_token=${LABS_JFROG_TOKEN}\' -var=\'scenario=${scenario}\' -var=\'random_num=${env.BUILD_NUMBER}\' -out ${plan}"
+                                sh "terraform -chdir=${iac_path} apply -auto-approve ${plan}"
+                            }
+                    }
+
+                    stage('Automation machine information')
+                    {
+                        dir("${iac_path}")
+                        {
+                            sh "ls -la"
+                            sh "pwd"
+                            sh "terraform output -json"
+                            sh "terraform output -json > ${manifest_file}"
+                            archiveArtifacts allowEmptyArchive: true, artifacts: "${manifest_file}"
+                        }
+                    }
+
+                    stage('Automation machine Infrastructure - IDs')
+                    {
+                        script
+                        {
+                            echo "Reading the manifest file"
+                            def manifestFile = readFile("${iac_path}/${manifest_file}")
+                            echo "Manifest File : ${manifestFile}"
+                            def jsonSlurper = new groovy.json.JsonSlurper()
+                            def jsonText = jsonSlurper.parseText(manifestFile)
+                            echo "Tear Down IDs : ${jsonText}"
+                            def keysToExtract = ['performance_auto_machine_id', 'run_automation_id']
+                            all_ids = keysToExtract.collect { key -> jsonText[key]?.value }.findAll { it != null }.join(', ')
+                            destroy_param = 'AWS_RESOURCES = ' + all_ids
+
+                            echo "Destroy Manifest File : ${destroy_param}"
+                        }
+                    }
+
+                    stage('Tear Down Infrastructure - Manifest')
+                    {
+                            writeFile file: 'tear_down_params_automation.txt', text: destroy_param
+
+                            archiveArtifacts allowEmptyArchive: true, artifacts: '**/tear_down_params_automation.txt'
                     }
                 }
-
-                stage('Automation machine Infrastructure - IDs')
+                catch (e)
                 {
-                    script
+                    currentBuild.result = 'FAILURE'
+                    println(e)
+                    throw e
+                }
+                finally
+                {
+                    stage('Send Teams Message')
                     {
-                        echo "Reading the manifest file"
-                        def manifestFile = readFile("${iac_path}/${manifest_file}")
-                        echo "Manifest File : ${manifestFile}"
-                        def jsonSlurper = new groovy.json.JsonSlurper()
-                        def jsonText = jsonSlurper.parseText(manifestFile)
-                        echo "Tear Down IDs : ${jsonText}"
-                        def keysToExtract = ['performance_auto_machine_id', 'run_automation_id']
-                        all_ids = keysToExtract.collect { key -> jsonText[key]?.value }.findAll { it != null }.join(', ')
-                        destroy_param = 'AWS_RESOURCES = ' + all_ids
-
-                        echo "Destroy Manifest File : ${destroy_param}"
+                        sh("python3 ${iac_working_dir}/team_msg.py --scenario ${scenario}   \
+		                                    --pipeline_name \'${env.JOB_BASE_NAME}\'              \
+                                                    --webhook \'${teams_webhook}\'              \
+		                                    --status \'${currentBuild.currentResult}\'              \
+                                                    --jenkins_url ${env.BUILD_URL}          \
+                                                    --build_user \'${user_name}\'           \
+                                                    --stats \'${stats}\'                        \
+                                                    --graph \'${graph}\'                        \
+                                                    --manifest_file \'${manifest_file}\'        \
+                                                    --jfrog_url \'${jfrog_url}\'                \
+                                                    --build_number ${pipeline_num}")
                     }
-                }
-
-                stage('Tear Down Infrastructure - Manifest')
-                {
-                        writeFile file: 'tear_down_params_automation.txt', text: destroy_param
-
-                        archiveArtifacts allowEmptyArchive: true, artifacts: '**/tear_down_params_automation.txt'
-                }
-
-                stage('Send Teams Message')
-                {
-                sh("python3 ${iac_working_dir}/team_msg.py --scenario ${scenario}   \
-		                            --pipeline_name \'${env.JOB_BASE_NAME}\'              \
-                                            --webhook \'${teams_webhook}\'              \
-		                            --status \'${currentBuild.currentResult}\'              \
-                                            --jenkins_url ${env.BUILD_URL}          \
-                                            --build_user \'${user_name}\'           \
-                                            --stats \'${stats}\'                        \
-                                            --graph \'${graph}\'                        \
-                                            --manifest_file \'${manifest_file}\'        \
-                                            --jfrog_url \'${jfrog_url}\'                \
-                                            --build_number ${pipeline_num}")
                 }
             }
-        }
-        catch (e)
-        {
-            currentBuild.result = 'FAILURE'
-            println(e)
-            throw e
-        }
     }
 }
