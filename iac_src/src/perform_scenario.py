@@ -7,6 +7,7 @@ from dsm_operation import DsmPolicy
 from get_machine_info import MachineInfo
 import requests
 import json
+import os
 
 class BearerAuth(requests.auth.AuthBase):
     def __init__(self, token):
@@ -18,7 +19,7 @@ class BearerAuth(requests.auth.AuthBase):
 
 class PerformanceScenario(PerfCommon):
     def __init__(self, machine_info, ver, access_key, secret_key, stats, graph, path_json, jfrog_token,
-                 scenario):
+                 scenario,rule_id):
         machine = MachineInfo(machine_info)
         PerfCommon.__init__(self, stats, graph)
 
@@ -26,10 +27,19 @@ class PerformanceScenario(PerfCommon):
         self.policy_name = "perf_policy"
         self.best_iteration = 5
 
+        print(f"Rule Id's Perform_scenario: {rule_id}")
+
+        if rule_id != "0":
+            #rule_file = rule_id
+            print(f"Rule identifiers are {rule_id}\n")
+            rule_file = rule_id.split(',')
+        else:
+            rule_file = self.rule_file
+
         self.dsm = DsmPolicy(ver, jfrog_token, machine, path_json, self.policy_name, port,
                              self.server_rule_file, self.client_rule_file)
         self.dsm.upload_basic_policy()
-        self.dsm.apply_pkg_create_applied_rule_list(self.rule_file)
+        self.dsm.apply_pkg_create_applied_rule_list(rule_file)
 
         if scenario == "Client_Download":
             grule = "1005366"
@@ -129,9 +139,11 @@ class PerformanceScenario(PerfCommon):
               wo_filter_stats, w_filter_stats, iter_rulelist, iter_rule))
         self.col = ['Without Filter Driver', 'With Filter Driver + No Rule', 'Best Case Rule']
         if scenario_name == "Server Upload" or scenario_name == "Server Download":
-            self.col.append('Server Rules (No. of Rules: {})'.format(len(self.server_rule)))
+            self.col.append('Server Rules (No. of Rules: {} Ids: {})'.format(len(self.server_rule), self.server_rule))
+            #self.col.append('Server Rules (Rule Ids: {})'.format(self.server_rule))
         elif scenario_name == "Client Download":
-            self.col.append('Client Rules (No. of Rules: {})'.format(len(self.client_rules)))
+            self.col.append('Client Rules (No. of Rules: {} Ids: {})'.format(len(self.client_rules), self.client_rules))
+            #self.col.append('Client Rules (Rule Ids: {})'.format(self.client_rules))
         df = pd.DataFrame([wo_filter_stats, w_filter_stats, iter_rulelist, iter_rule], index=self.col,
                           columns=self.title)
         # Create Html
@@ -177,9 +189,10 @@ class PerformanceScenario(PerfCommon):
             wo_filter_stats, w_filter_stats, iter_rulelist, iter_rule))
         self.col = ['Without Filter Driver', 'With Filter Driver + No Rule', 'Best Case Rule']
         if scenario_name == "Server Upload" or scenario_name == "Server Download":
-            self.col.append('Server Rules (No. of Rules: {})'.format(len(self.server_rule)))
+            self.col.append('Server Rules (No. of Rules: {} Ids: {})'.format(len(self.server_rule), self.server_rule))
+
         elif scenario_name == "Client Download":
-            self.col.append('Client Rules (No. of Rules: {})'.format(len(self.client_rules)))
+            self.col.append('Client Rules (No. of Rules: {} Ids: {})'.format(len(self.client_rules), self.client_rules))
         df = pd.DataFrame([wo_filter_stats, w_filter_stats, iter_rulelist, iter_rule], index=self.col,
                           columns=self.title)
         # Create Html
@@ -212,6 +225,7 @@ class PerformanceScenario(PerfCommon):
         elif action == "rule":
             self.dsm.connect()
             identifier = self.dsm.apply_rule(scenario_name, rule_list=grule_list)
+            print("\n# {} Rule Applied \n".format(grule_list))
             print("{0}{0}\n# {1} Rule Applied \n{0}{0}".format(self.header, identifier))
 
         # print("Waiting 3 min")
@@ -255,16 +269,20 @@ if __name__ == '__main__':
     parser.add_argument('--jfrog_url', type=str, help="JFrog URL")
     parser.add_argument('--jfrog_token', type=str, help="JFrog Token")
     parser.add_argument('--scenario', type=str, help="Scenario name to test")
+    parser.add_argument('--rule_id', type=str, help="Rule Id's to be tested")
     args = parser.parse_args()
 
     with open(args.manifest_file) as fout:
         machine_info = json.load(fout)
+    if args.rule_id:
+        rule_file = args.rule_id
     scenario = PerformanceScenario(machine_info,
                                    args.dsm_version,
                                    args.access_key, args.secret_key,
                                    args.stats, args.graph, args.path,
                                    args.jfrog_token,
-                                   args.scenario
+                                   args.scenario,
+                                   rule_file
                                    )
     auth = BearerAuth(args.jfrog_token)
     stats_url = scenario.jfrog_upload(args.jfrog_url, auth, args.stats, args.scenario)

@@ -456,6 +456,8 @@ class PerfCommon(object):
             os.remove(self.server_rule_file)
         with open(self.server_rule_file, "w") as f:
             f.write(",".join(server_rules))
+        with open(self.server_rule_file, "r") as f:
+            print("Server Rule: {}".format(f.read()))
         with open(self.portlist_file, "w") as f:
             json.dump(port_list, f)
         client_rules.extend(non_dpi_rules)
@@ -463,6 +465,8 @@ class PerfCommon(object):
             os.remove(self.client_rule_file)
         with open(self.client_rule_file, "w") as f:
             f.write(",".join(client_rules))
+        with open(self.client_rule_file, "r") as f:
+            print("Client Rule: {}".format(f.read()))
         return grule_list, identifiers, client_rules_iden
 
     def check_dpi_server_rule(self, identifier):

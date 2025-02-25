@@ -135,6 +135,7 @@ class DsmPolicy(object):
         with open(os.path.join("update-info", "port_list.txt"), "r") as f:
             port_list = json.load(f)
         print("Length of port list: {}".format(len(port_list)))
+        print("Port list: {}".format(port_list))
 
         tree = ET.parse(source_fname)
         portlist = tree.find(port1)
@@ -193,10 +194,20 @@ class DsmPolicy(object):
         print("Here are the rules that were added/updated on the DSM:")
         print(response["contentSummary"])
 
-        identifiers = [x[0] for x in re.findall("^\s*(\d+) - (.*)$", response["contentSummary"], re.MULTILINE)]
-        print(f"Rule identifiers are {identifiers}\n")
-        with open(rule_file, "w") as f:
-            f.write(",".join(identifiers))
+        if rule_file == os.path.join("update-info", "rule-identifiers.txt"):
+            identifiers = [x[0] for x in re.findall("^\s*(\d+) - (.*)$", response["contentSummary"], re.MULTILINE)]
+            with open(rule_file, "w") as f:
+                f.write(",".join(identifiers))
+            with open(rule_file, "r") as f:
+                print(f"Rule Identifiers_Apply_pkg_create_applied_rule_list: {f.read()}")
+        else:
+            identifiers = rule_file
+            #identifiers = [x[0] for x in re.findall("^\s*(\d+) - (.*)$", response["contentSummary"], re.MULTILINE)]
+            print(f"Rule identifiers are {identifiers}\n")
+            with open(os.path.join("update-info", "rule-identifiers.txt"), "w") as f:
+                f.write(",".join(identifiers))
+            with open(os.path.join("update-info", "rule-identifiers.txt"), "r") as f:
+                print(f"Rule Identifiers .txt: {f.read()}")
 
         print("Attempting to apply update package", flush=True)
         response = self.client.service.securityUpdateApply(ID=update_id, detectOnly=False, sID=self.sID)
