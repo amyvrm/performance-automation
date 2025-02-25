@@ -105,6 +105,10 @@ node('aws&&docker')
                                                                         --secret_key ${S3_SECRET_KEY}    \
                                                                         --bucket ${bucket_name}          \
                                                                         --path ${target_path}")
+                        
+                        sh "ls -ls ${target_path}"
+
+                        sh "ls -ls ${iac_path_dsm_dsa}"
                     }
 
                     stage('Initialize Infra automation') 
