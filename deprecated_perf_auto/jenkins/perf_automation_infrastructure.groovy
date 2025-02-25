@@ -37,7 +37,7 @@ node('aws&&docker')
             def iac_path = "deprecated_perf_auto/iac_src"
             def iac_working_dir = "${iac_path}/src"
             def plan = "create.tfplan"
-            def iac_path_dsm_dsa = "${iac_path}/processzone"
+            def iac_path_dsm_dsa = "deprecated_perf_auto/processzone"
             def plan_dsm_dsa = "create_dsm_dsa.tfplan"
             def destroy_dsm_dsa = "dsm_dsa_destroy.tfplan"
             def destroy_auto = "auto_destroy.tfplan"
@@ -101,14 +101,10 @@ node('aws&&docker')
                         
                     stage('Get Tools')
                     {
-                        sh "ls -ls ${iac_path_dsm_dsa}"
-                        
                         sh ("python ${iac_working_dir}/get_pkg_frm_s3.py --access_key ${S3_ACCESS_KEY}    \
                                                                         --secret_key ${S3_SECRET_KEY}    \
                                                                         --bucket ${bucket_name}          \
                                                                         --path ${target_path}")
-                        
-                        sh "ls -ls ${target_path}"
                     }
 
                     stage('Initialize Infra automation') 
