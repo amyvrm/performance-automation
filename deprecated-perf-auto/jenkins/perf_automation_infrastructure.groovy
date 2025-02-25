@@ -101,14 +101,14 @@ node('aws&&docker')
                         
                     stage('Get Tools')
                     {
+                        sh "ls -ls ${iac_path_dsm_dsa}"
+                        
                         sh ("python ${iac_working_dir}/get_pkg_frm_s3.py --access_key ${S3_ACCESS_KEY}    \
                                                                         --secret_key ${S3_SECRET_KEY}    \
                                                                         --bucket ${bucket_name}          \
                                                                         --path ${target_path}")
                         
                         sh "ls -ls ${target_path}"
-
-                        sh "ls -ls ${iac_path_dsm_dsa}"
                     }
 
                     stage('Initialize Infra automation') 
