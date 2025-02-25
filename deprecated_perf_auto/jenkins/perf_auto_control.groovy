@@ -25,10 +25,10 @@ node('aws&&docker')
             def dsru_url = ""
 
         // Terraform related Pipeline Variables
-            def iac_path = "deprecated-perf-auto/iac_src"
+            def iac_path = "deprecated_perf_auto/iac_src"
             def iac_working_dir = "${iac_path}/src"
             def plan = "create.tfplan"
-            def iac_path_dsm_dsa = "deprecated-perf-auto/processzone"
+            def iac_path_dsm_dsa = "deprecated_perf_auto/processzone"
             def plan_dsm_dsa = "create_dsm_dsa.tfplan"
             def destroy_dsm_dsa = "dsm_dsa_destroy.tfplan"
             def destroy_auto = "auto_destroy.tfplan"

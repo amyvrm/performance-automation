@@ -26,12 +26,12 @@ node('aws&&docker')
         }
 
         // S3 bucket Related Pipeline Variables
-            def iac_path_dsm_dsa = "deprecated-perf-auto/processzone"
+            def iac_path_dsm_dsa = "deprecated_perf_auto/processzone"
             def bucket_name = "perf-auto-pkg"
             def target_path = "${iac_path_dsm_dsa}/Temp"
 
         // Terraform related Pipeline Variables
-            def iac_path = "deprecated-perf-auto/iac_src"
+            def iac_path = "deprecated_perf_auto/iac_src"
             def iac_working_dir = "${iac_path}/src"
             def plan = "create.tfplan"
             def destroy_auto = "auto_destroy.tfplan"
@@ -58,7 +58,7 @@ node('aws&&docker')
 
             wrap([$class: 'BuildUser']) { user_name = "${env.BUILD_USER}" }
             def image_name = "perf-auto:${env.BUILD_NUMBER}"
-            def dockerfile = 'deprecated-perf-auto/docker/DockerfileSign'
+            def dockerfile = 'deprecated_perf_auto/docker/DockerfileSign'
 
             def jfrog_url = "https://jfrog.trendmicro.com/artifactory/dslabs-performance-generic-test-local"
 
@@ -127,7 +127,7 @@ node('aws&&docker')
                 }
             }
 
-            def infraImage = docker.build("infra-image", "-f deprecated-perf-auto/docker/Dockerfile .")
+            def infraImage = docker.build("infra-image", "-f deprecated_perf_auto/docker/Dockerfile .")
             
             infraImage.inside
             {

@@ -34,7 +34,7 @@ node('aws&&docker')
             def dsru_url = ""
 
         // Terraform related Pipeline Variables
-            def iac_path = "deprecated-perf-auto/iac_src"
+            def iac_path = "deprecated_perf_auto/iac_src"
             def iac_working_dir = "${iac_path}/src"
             def plan = "create.tfplan"
             def iac_path_dsm_dsa = "${iac_path}/processzone"
@@ -94,7 +94,7 @@ node('aws&&docker')
            wrap([$class: 'BuildUser']) { user_name = "${env.BUILD_USER}" }
 
 
-            def infraImage = docker.build("infra-image", "-f deprecated-perf-auto/docker/Dockerfile .")
+            def infraImage = docker.build("infra-image", "-f deprecated_perf_auto/docker/Dockerfile .")
             
                 infraImage.inside
                 {

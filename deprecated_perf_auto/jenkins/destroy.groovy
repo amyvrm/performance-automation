@@ -11,7 +11,7 @@ node(nodeLabel) {
 							credentialsId: 'STAGING_AWS', secretKeyVariable: 'AWS_SECRET_ACCESS_KEY']]) {
 				
 				def aws_resources = params.AWS_RESOURCES
-				def terraform_dir = "deprecated-perf-auto/iac_destroy"
+				def terraform_dir = "deprecated_perf_auto/iac_destroy"
 				
 				def displayName
 				def infrastructure_branch = params.INFRASTRUCTURE_BRANCH
