@@ -84,10 +84,10 @@ node('aws&&docker')
             {
                     checkout scm
                     withCredentials([file(credentialsId: 'perf_dslabs_automation_pem', variable: 'PEM_FILE_PATH')]){
-	            	sh "cat ${PEM_FILE_PATH} > processzone/dslabs_automation.pem"
+	            	sh "cat ${PEM_FILE_PATH} > deprecated_perf_auto/processzone/dslabs_automation.pem"
 	                }
                     withCredentials([file(credentialsId: 'perf_TerraformDemo_pem', variable: 'PEM_FILE_PATH')]){
-	            	sh "cat ${PEM_FILE_PATH} > processzone/TerraformDemo.pem"
+	            	sh "cat ${PEM_FILE_PATH} > deprecated_perf_auto/processzone/TerraformDemo.pem"
 	                }
             }
 
