@@ -11,9 +11,9 @@ class GetPkgFromS3Bucket(object):
         print("Bucker name: {}, Download path: {}".format(bucket, target_path))
         # create path
         self.path = os.path.join(os.getcwd(), target_path)
-        print("Files and folders under {}: {}".format(self.path, os.listdir(self.path)))
         print("Download path absolute: {}".format(self.path))
         if os.path.exists(self.path):
+            print("Removing old folder {} ".format(self.path))
             shutil.rmtree(self.path)
         os.mkdir(self.path)
 
