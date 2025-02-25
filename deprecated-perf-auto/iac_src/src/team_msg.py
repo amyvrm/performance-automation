@@ -1,0 +1,60 @@
+import argparse
+import requests
+import json
+import re
+
+def send_teams_notification(webhook, pipeline_name,  status, build_url, build_user, scenario, stats_url, graph_url, manifest_file_url, build_number):
+    parent_url = build_url
+    if "parent_" in build_number:
+        updated_url = build_url.replace("parent_", "")
+        parent_url = re.sub(r"/\d+/$", f"/{build_number.replace("parent_", "")}/", updated_url)
+    status_color = "red"
+    if "SUCCESS" in status or "PASSED" in status:
+        status_color="green"
+    text = "<b>Job: </b><span style='font-size: 20px; font-weight: bold;'>{},</span> <span style='font-size: 16px; font-weight: bold;'><a href='{}'> build: {}</a></span><br>".format(pipeline_name, parent_url, build_number)
+    text += "<b>Test scenario:</b>&nbsp;&nbsp;{}".format(scenario)
+    text += "<br><b>Status:</b>  <b style=\"color: {};\">{}</b>".format(status_color,status)
+    if "FAILED" in status or "FAILURE" in status:
+        text += " (see <a href='{}console'>Console Logs</a>)".format(build_url)
+    text += "<br><b>Run by</b>: {}".format(build_user)
+
+    if "SUCCESS" in status or "PASSED" in status:
+        # Results load 
+        text += "<hr>"
+        text += "<b><a href={} style='background-color: #c0c0c0; color: black; font-weight: bold; font-size: 16px; padding: 10px 20px; border: 2px solid white; border-radius: 15px; text-align: center; text-decoration: none; display: inline-block;'>&nbsp;&nbsp;Bandwidth Stats in Table&nbsp;&nbsp;</a></b>".format(stats_url)   
+        text += "&nbsp;&nbsp;&nbsp;&nbsp;<b><a href={} style='background-color: #c0c0c0; color: black; font-weight: bold; font-size: 16px; padding: 10px 20px; border: 2px solid white; border-radius: 15px; text-align: center; text-decoration: none; display: inline-block;'>&nbsp;&nbsp;Bandwidth Stats in Bar Chart&nbsp;&nbsp;</a></b>".format(graph_url)   
+        text += "&nbsp;&nbsp;&nbsp;&nbsp;<b><a href={} style='background-color: #c0c0c0; color: black; font-weight: bold; font-size: 16px; padding: 10px 20px; border: 2px solid white; border-radius: 15px; text-align: center; text-decoration: none; display: inline-block;'>&nbsp;&nbsp;Infra Access Detail&nbsp;&nbsp;</a></b>".format(manifest_file_url)   
+        text += "&nbsp;&nbsp;&nbsp;&nbsp;<b><a href={} style='background-color: #c0c0c0; color: black; font-weight: bold; font-size: 16px; padding: 10px 20px; border: 2px solid white; border-radius: 15px; text-align: center; text-decoration: none; display: inline-block;'>&nbsp;&nbsp;View Jenkins Build&nbsp;&nbsp;</a></b>".format(build_url)   
+    message = {"text": text}
+
+    headers = {'Content-Type': 'application/json'}
+    try:
+        #print(json.dumps(message, indent=2))
+        response = requests.post(webhook, data=json.dumps(message), headers=headers)
+        response.raise_for_status()
+        print("Team notification sent successfully")
+    except requests.exceptions.RequestException as e:
+        print(f"Failed to send notification: {e}")
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description='Please give argument to perform operations')
+    parser.add_argument('--pipeline_name', type=str, help="Pipeline name")
+    parser.add_argument('--scenario', type=str, help="Scenario name to test")
+    parser.add_argument('--status', type=str, help="Status of the job")
+    parser.add_argument('--webhook', type=str, help="Teams Webhook")
+    parser.add_argument('--jenkins_url', type=str, help="Jenkins URL")
+    parser.add_argument('--build_user', type=str, help="Jenkins build user")
+    parser.add_argument('--stats', type=str, help="Html file name")
+    parser.add_argument('--graph', type=str, help="Graph file name")
+    parser.add_argument('--manifest_file', type=str, help="Manifest file contains cloud infra access detail")
+    parser.add_argument('--jfrog_url', type=str, help="JFrog URL")
+    parser.add_argument('--build_number', type=str, help="Pipeline Number to manage the file")
+    args = parser.parse_args()
+
+    stats_file = "{}_{}".format(args.scenario.replace(" ", "_"), args.stats)
+    graph_file = "{}_{}".format(args.scenario.replace(" ", "_"), args.graph)
+    stats_url = "{}/{}".format(args.jfrog_url, stats_file)
+    graph_url = "{}/{}".format(args.jfrog_url, graph_file)
+    manifest_file_url = "{}/{}".format(args.jfrog_url, args.manifest_file)
+    send_teams_notification(args.webhook, args.pipeline_name, args.status, args.jenkins_url, args.build_user, args.scenario, stats_url, graph_url,
+                            manifest_file_url, args.build_number)
