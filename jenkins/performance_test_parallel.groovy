@@ -93,7 +93,8 @@ def call_scenario_test(scenario, perf_pipeline, pipeline_num, dsru_file) {
                     string(name: 'SCENARIO', value: scenario),
                     booleanParam(name: 'DEBUG', value: params.DEBUG),
                     string(name: 'PARENT_PIPELINE_NUMBER', value: "${pipeline_num}"),
-                    string(name: 'INFRASTRUCTURE_BRANCH', value: params.INFRASTRUCTURE_BRANCH)]
+                    string(name: 'INFRASTRUCTURE_BRANCH', value: params.INFRASTRUCTURE_BRANCH),
+                    string(name: 'RULE_ID', value: params.RULE_ID)]
 
     echo "Build Number: ${perf.number}"
 //     copyArtifacts filter: "**/*.html, **/*.png, **/*.json", projectName: perf_pipeline, selector: specific("${perf.number}")
