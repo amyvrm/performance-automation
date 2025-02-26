@@ -11,7 +11,7 @@ pip install boto
 pip install lxml
 pip install pylzma
 pip install zeep
-pip install urllib3==1.25.8
+pip install urllib3
 pip install pandas
 pip install matplotlib
 pip install seaborn

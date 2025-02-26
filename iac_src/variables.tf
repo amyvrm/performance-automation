@@ -26,6 +26,10 @@ variable "trender" {
   default = "DSLABS_Automation"
 }
 
+variable "performance_auto_machine_ami_id" {
+  default = "ami-0767d6800887542a9"
+}
+
 variable "instance_type" {
     default = "t2.micro"
 }

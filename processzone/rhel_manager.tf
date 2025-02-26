@@ -1,7 +1,7 @@
 resource "aws_instance" "rhel_dsm" {
 	
 	/*ami = data.aws_ami.rhel8_ami.id*/
-	ami = "ami-07163e0e71bca147b"
+	ami = var.red_hat_ami
 	instance_type = var.dsm_instance_type
 	key_name = var.ssh_key_name
 	associate_public_ip_address = "true"
@@ -38,7 +38,7 @@ resource "aws_instance" "rhel_dsm" {
 					"chmod +x /tmp/downloadAgents.sh",
 					"chmod +x /tmp/uploadDSAToDSM.py",
 					"sudo sh /tmp/setupDSMInstall.sh ${var.dsm_redhat_url} ${var.dsm_license}",
-					"sudo sh /tmp/setupPython3.6.sh",
+					//"sudo sh /tmp/setupPython3.6.sh",
 					"sh /tmp/downloadAgents.sh ${var.all_agent_urls}"
 				]
 	}
