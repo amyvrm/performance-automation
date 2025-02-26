@@ -47,7 +47,3 @@ resource "aws_instance" "rhel_dsm" {
 		volume_size = var.volume_size
 	}
 }
-
-output "dsm-rhel-id" {
-	value = aws_instance.rhel_dsm.id
-}
