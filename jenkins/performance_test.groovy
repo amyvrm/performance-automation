@@ -71,6 +71,9 @@ node('aws&&docker')
                     git branch: 'master', credentialsId: 'su-dslabs-automation-token',
                     url: 'https://git@dsgithub.trendmicro.com/dslabs/dsrusigning.git'
                 }
+                withCredentials([file(credentialsId: 'perf_dslabs_automation_pem', variable: 'PEM_FILE_PATH')]){
+                    sh "cat ${PEM_FILE_PATH} > iac_src/dslabs_automation.pem"
+	            }
             }
 
 
