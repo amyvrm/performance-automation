@@ -27,7 +27,7 @@ variable "trender" {
 }
 
 variable "performance_auto_machine_ami_id" {
-  default = "ami-0767d6800887542a9"
+  default = "ami-0df590ece33ad66f8"
 }
 
 variable "instance_type" {
