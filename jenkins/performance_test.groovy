@@ -209,7 +209,7 @@ node('aws&&docker')
                 {
                     stage('Send Teams Message')
                     {
-                        sh("python3 ${iac_working_dir}/team_msg.py --scenario ${scenario}   \
+                        /*sh("python3 ${iac_working_dir}/team_msg.py --scenario ${scenario}   \
 		                                    --pipeline_name \'${env.JOB_BASE_NAME}\'              \
                                                     --webhook \'${teams_webhook}\'              \
 		                                    --status \'${currentBuild.currentResult}\'              \
@@ -219,7 +219,7 @@ node('aws&&docker')
                                                     --graph \'${graph}\'                        \
                                                     --manifest_file \'${manifest_file}\'        \
                                                     --jfrog_url \'${jfrog_url}\'                \
-                                                    --build_number ${pipeline_num}")
+                                                    --build_number ${pipeline_num}")*/
                     }
                 }
             }
