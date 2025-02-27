@@ -6,6 +6,7 @@ from pypsexec.exceptions import SCMRException
 import simplejson as json
 import pandas as pd
 import matplotlib.pyplot as plt
+from matplotlib.patches import Patch
 import seaborn as sns
 import numpy as np
 import time
@@ -23,7 +24,7 @@ class PerfCommon(object):
         self.client_rule_file = os.path.join("update-info", "client-rule-identifiers.txt")
         self.portlist_file = os.path.join("update-info", "port_list.txt")
 
-    def create_html_table(self, df, scenario_name):
+    def create_html_table(self, df, scenario_name, filtered_rules):
         print(df)
         fname = "{}_{}".format(scenario_name.replace(" ", "_"), self.stats)
         if os.path.exists(fname):
@@ -31,9 +32,12 @@ class PerfCommon(object):
         # create table
         with open(fname, "a") as fin:
             fin.write(self.create_html_header())
+            fin.write('<h4 style="text-align: center; padding: 10px;">Scenario Name: {}</h4>'.format(scenario_name))
             fin.write("<div class=\"container\"><div class=\"row\">")
-            fin.write(df.to_html(classes='table table-striped', justify='center'))
-            fin.write("</div></div>")
+            fin.write(df.to_html(classes='table table-striped', justify='center', border=1))
+            fin.write("<h2 style=\"text-align: center; padding: 10px;\">Performance Tested Rules:</h2><br>")
+            fin.write("</div><div><br><pre>{}</pre>".format(filtered_rules.strip()))
+            fin.write("</div>")
             fin.write("</body>\n</html>\n")
 
     def create_bar_chart(self, avg, scenario_name):
@@ -61,7 +65,6 @@ class PerfCommon(object):
 
         # map names to colors
         cmap = dict(zip(self.col, colors))
-        from matplotlib.patches import Patch
         # create the rectangles for the legend
         patches = [Patch(color=v, label=k) for k, v in cmap.items()]
         # add the legend
