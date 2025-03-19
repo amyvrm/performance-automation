@@ -1,0 +1,8 @@
+<PayloadFilter2MetadataOverride id="4">
+	<SecurityProfileID>${security_profile_id}</SecurityProfileID>
+	<HostID isNull="true"/>
+	<PayloadFilter2MetadataID>1037</PayloadFilter2MetadataID>
+	<Value>192.168.1.1</Value>
+</PayloadFilter2MetadataOverride>
+
+where name  = <Name>excludeip</Name> grab id of PayloadFilter2Metadata

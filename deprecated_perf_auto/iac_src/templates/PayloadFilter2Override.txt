@@ -1,0 +1,19 @@
+<PayloadFilter2Override id="${override_id}">
+	<SecurityProfileID>${security_profile_id}</SecurityProfileID>
+	<HostID isNull="true"/>
+	<PayloadFilter2ID>${filter_id}</PayloadFilter2ID>
+	<Mode isNull="true"/>
+	<OverrideLog>false</OverrideLog>
+	<DisableLog>false</DisableLog>
+	<LogPacketDrop>true</LogPacketDrop>
+	<LogPacketModify>true</LogPacketModify>
+	<IncludePacketData>false</IncludePacketData>
+	<Alert isNull="true"/>
+	<OverrideSchedule>false</OverrideSchedule>
+	<ScheduleID isNull="true"/>
+	<OverrideMetadata>true</OverrideMetadata>
+	<RecommendationsMode isNull="true"/>
+	<DebugMode>false</DebugMode>
+	<OverrideRuleContext>false</OverrideRuleContext>
+	<RuleContextID isNull="true"/>
+</PayloadFilter2Override>

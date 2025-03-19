@@ -54,15 +54,3 @@ resource "aws_instance" "windows_server2019" {
 				]
 	}
 }
-
-output "dsa-windows-id-2" {
-	value = aws_instance.windows_server2019.id
-}
-
-output "dsa-public-ip-2" {
-	value = aws_instance.windows_server2019.public_ip
-}
-
-output "dsa-user-2" {
-	value = "Administrator"
-}

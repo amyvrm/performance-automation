@@ -1,8 +1,5 @@
 resource "aws_instance" "performance_auto_machine" {
-	# ubuntu 22.04
-#	ami = "ami-09d56f8956ab235b3"
-	# ubuntu 20.04
-	ami                         = "ami-0c4f7023847b90238"
+	ami                         = var.performance_auto_machine_ami_id
 	instance_type               = var.instance_type
 	key_name                    = var.key_name
 	associate_public_ip_address = "true"
@@ -58,7 +55,7 @@ resource "null_resource" "run_automation" {
 			"chmod +x /tmp/src/environment.sh",
 			"chmod +x src/perform_scenario.py",
 			"chmod +x src/team_msg.py",
-			"sudo /bin/bash /tmp/src/environment.sh",
+			//"sudo /bin/bash /tmp/src/environment.sh",
 			"cd /tmp/",
 #			"python3 src/perform_scenario.py --access_key ${var.access_key} --secret_key ${var.secret_key} --machine_info ${var.local_manifest_file} --dsm_version ${var.dsmVersion} --stats ${var.stats} --graph ${var.graph} --path ${var.dsru_path} --nexus_url ${var.nexus_url} --nexus_uname ${var.nexus_user} --nexus_pwd ${var.nexus_pass} --scenario ${var.scenario} --webhook ${var.webhook} --jenkins_url ${var.jenkins_url} --build_user ${var.build_user}",
 			"echo python3 src/perform_scenario.py --access_key ${var.access_key} --secret_key ${var.secret_key} --manifest_file ${var.manifest_file} --dsm_version ${var.dsmVersion} --stats ${var.stats} --graph ${var.graph} --path ${var.dsru_path} --jfrog_url ${var.jfrog_url} --jfrog_token ${var.jfrog_token} --scenario ${var.scenario} --rule_id ${var.rule_id}> cmd.txt",

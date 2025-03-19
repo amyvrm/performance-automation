@@ -1,0 +1,32 @@
+# Build Container with Java,Ruby,GIT and perl
+
+# Create a base image with common OS utilities needed in all the images
+# Create a base image with common OS utilities needed in all the images
+FROM ubuntu:18.04 as base
+SHELL ["/bin/bash", "-c"]
+RUN apt-get -qq update && \
+    apt-get -qq install -y \
+	curl \
+	wget \
+	openssl \
+	perl \
+	git \
+	build-essential
+
+RUN apt-get install openjdk-8-jdk -y
+RUN apt-get install iputils-ping -y
+RUN apt-get install zip -y
+
+RUN apt-get install software-properties-common -y
+#RUN add-apt-repository ppa:fkrull/deadsnakes
+RUN apt-get update
+# RUN apt-get install python3.6 -y
+#RUN add-apt-repository ppa:fkrull/deadsnakes && apt-get -qq update && apt-get install python3.6 -y
+RUN apt-get install python3.6 -y
+RUN apt-get install python3-pip -y
+
+RUN ln -s /usr/bin/python3.6 /usr/bin/python && \
+    ln -s /usr/bin/pip3 /usr/bin/pip
+
+RUN python -m pip install requests==2.27.1
+RUN python -m pip install lxml==4.9.2

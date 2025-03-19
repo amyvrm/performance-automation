@@ -46,3 +46,30 @@ output "pkg-path" {
 output "region" {
   value = "${var.common_region}"
 }
+
+output "dsm-rhel-id" {
+	value = aws_instance.rhel_dsm.id
+}
+
+output "dsa-windows-id" {
+	value = "${aws_instance.windows_server2019_agent.id}"
+}
+output "dsa-public-ip" {
+	value = "${aws_instance.windows_server2019_agent.public_ip}"
+}
+output "dsa-user" {
+	value = "Administrator"
+}
+
+output "dsa-windows-id-2" {
+	value = aws_instance.windows_server2019.id
+}
+
+output "dsa-public-ip-2" {
+	value = aws_instance.windows_server2019.public_ip
+}
+
+output "dsa-user-2" {
+	value = "Administrator"
+}
+

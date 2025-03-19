@@ -30,8 +30,6 @@ class PerformanceScenario(PerfCommon):
         print(f"Rule Id's Perform_scenario: {rule_id}")
 
         if rule_id != "0":
-            #rule_file = rule_id
-            print(f"Rule identifiers are {rule_id}\n")
             rule_file = rule_id.split(',')
         else:
             rule_file = self.rule_file
@@ -39,7 +37,7 @@ class PerformanceScenario(PerfCommon):
         self.dsm = DsmPolicy(ver, jfrog_token, machine, path_json, self.policy_name, port,
                              self.server_rule_file, self.client_rule_file)
         self.dsm.upload_basic_policy()
-        self.dsm.apply_pkg_create_applied_rule_list(rule_file)
+        summary = self.dsm.apply_pkg_create_applied_rule_list(rule_file)
 
         if scenario == "Client_Download":
             grule = "1005366"
@@ -82,9 +80,19 @@ class PerformanceScenario(PerfCommon):
         self.ip_type = {sip: "Server", cip: "Client"}
         print("Server Machine Public IP:{}, Private IP: {}".format(sip, s_priv_ip))
         print("Client Machine Public IP:{}, Private IP: {}".format(cip, c_priv_ip))
+        
+        if len(self.server_rule) > 0:
+            filtered_rules = "Server Rules:\n" + "\n".join(line for line in summary.split("\n") if any(rule_id.strip() in line for rule_id in self.server_rule))
+        else:
+            filtered_rules = "Server Rules: None"
+
+        if len(self.client_rules) > 0:
+            filtered_rules += "\nClient Rules:\n" + "\n".join(line for line in summary.split("\n") if any(rule_id.strip() in line for rule_id in self.client_rules))
+        else:
+            filtered_rules += "\nClient Rules: None"
 
         if scenario == "Server_Upload" or scenario == "All":
-            self.perf_scenario_test(suser, sip, spwd, s_priv_ip, cuser, cip, cpwd, c_priv_ip, "Server Upload")
+            self.perf_scenario_test(suser, sip, spwd, s_priv_ip, cuser, cip, cpwd, c_priv_ip, "Server Upload", filtered_rules)
         # Testing Server Upload Scenario based on discussion with Arun and Sunil on 7-Jan-2021
         if scenario == "Server_Download" or scenario == "All":
             if scenario == "All":
@@ -92,16 +100,16 @@ class PerformanceScenario(PerfCommon):
                 self.dsm.clean_rules_from_dsm()
                 # Enable both agents and filter
                 self.enable_agent_filter(sip, suser, spwd, cip, cuser, cpwd)
-            self.perf_scenario_test_reverse(suser, sip, spwd, s_priv_ip, cuser, cip, cpwd, c_priv_ip, "Server Download")
+            self.perf_scenario_test_reverse(suser, sip, spwd, s_priv_ip, cuser, cip, cpwd, c_priv_ip, "Server Download", filtered_rules)
         if scenario == "Client_Download" or scenario == "All":
             if scenario == "All":
                 # Clean Rules from DSM
                 self.dsm.clean_rules_from_dsm()
                 # Enable both agents and filter
                 self.enable_agent_filter(sip, suser, spwd, cip, cuser, cpwd)
-            self.perf_scenario_test(suser, sip, spwd, s_priv_ip, cuser, cip, cpwd, c_priv_ip, "Client Download")
+            self.perf_scenario_test(suser, sip, spwd, s_priv_ip, cuser, cip, cpwd, c_priv_ip, "Client Download", filtered_rules)
 
-    def perf_scenario_test(self, suser, sip, spwd, s_priv_ip, cuser, cip, cpwd, c_priv_ip, scenario_name):
+    def perf_scenario_test(self, suser, sip, spwd, s_priv_ip, cuser, cip, cpwd, c_priv_ip, scenario_name, filtered_rules):
         print("{0}\n### {1} ###\n{0}".format("#" * 50, scenario_name))
         # Without Filter Driver
         print("{0}{0}\n# Without Filter Driver #\n{0}{0}".format(self.header))
@@ -140,18 +148,15 @@ class PerformanceScenario(PerfCommon):
         self.col = ['Without Filter Driver', 'With Filter Driver + No Rule', 'Best Case Rule']
         if scenario_name == "Server Upload" or scenario_name == "Server Download":
             self.col.append('Server Rules (No. of Rules: {} Ids: {})'.format(len(self.server_rule), self.server_rule))
-            #self.col.append('Server Rules (Rule Ids: {})'.format(self.server_rule))
         elif scenario_name == "Client Download":
             self.col.append('Client Rules (No. of Rules: {} Ids: {})'.format(len(self.client_rules), self.client_rules))
-            #self.col.append('Client Rules (Rule Ids: {})'.format(self.client_rules))
         df = pd.DataFrame([wo_filter_stats, w_filter_stats, iter_rulelist, iter_rule], index=self.col,
                           columns=self.title)
-        # Create Html
-        self.create_html_table(df, scenario_name)
+        self.create_html_table(df, scenario_name, filtered_rules)
         # Create Bar Diagram
         self.create_bar_chart([wof_avg, wf_avg, rulelist_avg, rule_avg], scenario_name)
 
-    def perf_scenario_test_reverse(self, suser, sip, spwd, s_priv_ip, cuser, cip, cpwd, c_priv_ip, scenario_name):
+    def perf_scenario_test_reverse(self, suser, sip, spwd, s_priv_ip, cuser, cip, cpwd, c_priv_ip, scenario_name, filtered_rules):
         print("{0}\n### {1} ###\n{0}".format("#" * 50, scenario_name))
         # With All Server/Client side rule
         rule_stats, iter_rule, rule_avg = self.apply_rule_get_stats(suser, sip, spwd, s_priv_ip, cuser, cip, cpwd,
@@ -196,7 +201,7 @@ class PerformanceScenario(PerfCommon):
         df = pd.DataFrame([wo_filter_stats, w_filter_stats, iter_rulelist, iter_rule], index=self.col,
                           columns=self.title)
         # Create Html
-        self.create_html_table(df, scenario_name)
+        self.create_html_table(df, scenario_name, filtered_rules)
         # Create Bar Diagram
         self.create_bar_chart([wof_avg, wf_avg, rulelist_avg, rule_avg], scenario_name)
 

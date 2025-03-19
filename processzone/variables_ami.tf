@@ -1,5 +1,5 @@
 variable "red_hat_ami"{
-	default = "ami-096fda3c22c1c990a"
+	default = "ami-00da411e2377e25a0"
 }
 
 variable "dsm_windows_ami"{

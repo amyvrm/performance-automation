@@ -1,0 +1,9 @@
+<LogInspectionRuleOverride id="${override_id}">
+	<SecurityProfileID>${security_profile_id}</SecurityProfileID>
+	<HostID isNull="true"/>
+	<LogInspectionRuleID>${filter_id}</LogInspectionRuleID>
+	<Alert isNull="true"/>
+	<AlertMinSeverity isNull="true"/>
+	<OverrideMetadata>true</OverrideMetadata>
+	<RecommendationsMode isNull="true"/>
+</LogInspectionRuleOverride>

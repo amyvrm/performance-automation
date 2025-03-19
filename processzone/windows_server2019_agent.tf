@@ -57,13 +57,3 @@ resource "null_resource" "provision-agent" {
 		null_resource.edit_user_data_script
 	]
 }
-
-output "dsa-windows-id" {
-	value = "${aws_instance.windows_server2019_agent.id}"
-}
-output "dsa-public-ip" {
-	value = "${aws_instance.windows_server2019_agent.public_ip}"
-}
-output "dsa-user" {
-	value = "Administrator"
-}
