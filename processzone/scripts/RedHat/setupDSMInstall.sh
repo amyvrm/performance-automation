@@ -23,8 +23,8 @@ sudo /opt/dsm/dsm_c -action changesetting -name settings.configuration.webservic
 sudo /opt/dsm/dsm_c -action changesetting -name settings.configuration.agentInitiatedActivation -value 1
 sudo /opt/dsm/dsm_c -action changesetting -name settings.security.activeSessionsAllowed -value -1
 sudo /opt/dsm/dsm_c -action changesetting -name settings.configuration.dsruAutoApplyNewDSRUs -value false
-sudo /opt/dsm/dsm_c -action changesetting -name settings.security.activeSessionExceededAction -value 2
-sudo /opt/dsm/dsm_c -action changesetting -name settings.security.minutesToTimeout -value 120.0
+sudo /opt/dsm/dsm_c -action changesetting -name settings.security.activeSessionExceededAction -value 1
+sudo /opt/dsm/dsm_c -action changesetting -name settings.security.minutesToTimeout -value 180.0
 sleep 2
 sudo cat > /opt/dsm/dsm_s.vmoptions<<EOF1
 -Xmx8g

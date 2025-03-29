@@ -1,5 +1,5 @@
 resource "aws_instance" "windows_server2019_agent" {
-
+	count                       = var.instance_count + 1
 	ami                         = data.aws_ami.windows_server2019_ami.id
 	instance_type               = var.dsa_instance_type
 	key_name                    = var.ssh_key_name
@@ -11,7 +11,7 @@ resource "aws_instance" "windows_server2019_agent" {
 	user_data                   = file("SetUp-WinRM.txt")
 
 	tags = {
-		Name           = "${var.tag_dsa_windows_name}_${var.random_num}"
+		Name           = "${var.tag_dsa_windows_name}_${var.random_num}_${count.index}"
 		"Trender"      = var.tag_trender
 		"Automation"   = var.tag_automation
 		"ValidUntil"   = formatdate("YYYY-MM-DD", timeadd(timestamp(), "48h"))
@@ -20,12 +20,17 @@ resource "aws_instance" "windows_server2019_agent" {
 }
 
 resource "null_resource" "provision-agent" {
+	triggers = {
+    	always_run = "${timestamp()}"
+  	}
+	
+	count = var.instance_count + 1
 	connection {
 			type     = "winrm"
-			host     = aws_instance.windows_server2019_agent.private_ip
+			host     = aws_instance.windows_server2019_agent[count.index].private_ip
 			timeout  = var.conn_timeout
 			user     = "Administrator"
-			password = rsadecrypt(aws_instance.windows_server2019_agent.password_data, file(var.ssh_key))
+			password = rsadecrypt(aws_instance.windows_server2019_agent[count.index].password_data, file(var.ssh_key))
 			insecure = "true"	
 	}
 
@@ -46,11 +51,11 @@ resource "null_resource" "provision-agent" {
 
 	provisioner "remote-exec"  {
 		inline = [
-					"powershell.exe -File C:\\temp\\WindowsAgentDeploymentScript.ps1 ${aws_instance.windows_server2019_agent.private_ip}",
-					"powershell.exe -File C:\\temp\\install_pcattcp.ps1",
-					"powershell.exe -File C:\\temp\\install_nginx.ps1",
-					"powershell.exe -File C:\\temp\\install_openssh.ps1",
-					"powershell.exe -File C:\\temp\\install_ab.ps1",
+					"powershell.exe -File C:\\temp\\WindowsAgentDeploymentScript.ps1 ${aws_instance.windows_server2019_agent[count.index].private_ip}",
+					"powershell.exe -File C:\\temp\\InstallAllDependencies.ps1",
+					# "powershell.exe -File C:\\temp\\install_nginx.ps1",
+					# "powershell.exe -File C:\\temp\\install_openssh.ps1",
+					# "powershell.exe -File C:\\temp\\install_ab.ps1",
 				]
 	}
 	depends_on = [

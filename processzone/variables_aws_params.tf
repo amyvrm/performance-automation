@@ -40,7 +40,7 @@ variable "dsm_instance_type" {
 //}
 
 variable "dsa_instance_type" {
-	default = "m5a.large"
+	default = "m5.large"
 }
 
 variable "instance_profile" {
@@ -57,7 +57,7 @@ variable "tag_automation" {
 }
 
 variable "conn_timeout" {
-	default = "5m"
+	default = "10m"
 }
 
 variable "conn_user" {

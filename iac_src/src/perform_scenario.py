@@ -8,6 +8,7 @@ from get_machine_info import MachineInfo
 import requests
 import json
 import os
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 class BearerAuth(requests.auth.AuthBase):
     def __init__(self, token):
@@ -19,200 +20,205 @@ class BearerAuth(requests.auth.AuthBase):
 
 class PerformanceScenario(PerfCommon):
     def __init__(self, machine_info, ver, access_key, secret_key, stats, graph, path_json, jfrog_token,
-                 scenario,rule_id):
+                 scenario,rule_id, individual_rule_test):
         machine = MachineInfo(machine_info)
         PerfCommon.__init__(self, stats, graph)
+
+        print(f"individual_rule_test: {individual_rule_test}")
 
         port = "80,5001"
         self.policy_name = "perf_policy"
         self.best_iteration = 5
 
         print(f"Rule Id's Perform_scenario: {rule_id}")
+        rule_file = ""
 
         if rule_id != "0":
             rule_file = rule_id.split(',')
         else:
             rule_file = self.rule_file
 
-        self.dsm = DsmPolicy(ver, jfrog_token, machine, path_json, self.policy_name, port,
-                             self.server_rule_file, self.client_rule_file)
-        self.dsm.upload_basic_policy()
-        summary = self.dsm.apply_pkg_create_applied_rule_list(rule_file)
+        print(f"Rule File: {rule_file}")
 
-        if scenario == "Client_Download":
-            grule = "1005366"
-            instance1 = machine.get_instance_two_id()
-            instance2 = machine.get_instance_one_id()
-            suser = machine.get_instance_two_user()
-            cuser = machine.get_instance_one_user()
-        else:
-            grule = "1006436"
-            instance1 = machine.get_instance_one_id()
-            instance2 = machine.get_instance_two_id()
-            suser = machine.get_instance_one_user()
-            cuser = machine.get_instance_two_user()
+        dsm_private_ips = machine.get_dsm_private_ips()
+        print(f"Debug: DSM Private IPs response: {dsm_private_ips}")
+
+        all_dsm_server = list(dsm_private_ips.get('dsm-private-ips', {}).values())
+
+        dsm = {}  # Initialize dsm as a dictionary
+        for x in range(0, len(all_dsm_server)):
+            dsm_server = all_dsm_server[x]
+            dsm[x] = DsmPolicy(ver, jfrog_token, machine, path_json, self.policy_name, port,
+                                    self.server_rule_file, self.client_rule_file, self.portlist_file, dsm_server)
+
+        grule = "1005366" if scenario == "Client_Download" else "1006436"
+
+        all_instance_server = list(machine.get_all_windows_instance_ids().get('dsa-windows-ids', {}).values())
+        all_instance_agent = list(machine.get_all_windows_agent_ids().get('dsa-windows_agent-ids', {}).values())
+
+        all_instance = all_instance_server + all_instance_agent
+
+        suser = machine.get_instance_one_user()
+        cuser = machine.get_instance_two_user()
 
         region = machine.get_region()
         pem_file = machine.get_pem_file()
-        sip, s_priv_ip = self.reboot_instance(instance1, access_key, secret_key, region)
-        print("Server Agent {} instance -> Public IP:{}, Private IP: {}".format(instance1, sip, s_priv_ip))
-        cip, c_priv_ip = self.reboot_instance(instance2, access_key, secret_key, region)
-        print("Client Agent {} instance -> Public IP:{}, Private IP: {}".format(instance2, cip, c_priv_ip))
 
-        # self.ip_type = {sip: "Server", cip: "Client"}
-        # added this line to work with private ip
-        self.ip_type = {s_priv_ip: "Server", c_priv_ip: "Client"}
-        # Get the password
-        spwd = PerformanceScenario.get_pwd(region, access_key, secret_key, instance1, pem_file, "Server")
-        cpwd = PerformanceScenario.get_pwd(region, access_key, secret_key, instance2, pem_file, "Client")
+        def sequential_dsm_tasks(dsm, rule_file):
+            dsm.upload_basic_policy()
+            summary, identifiers = dsm.apply_pkg_create_applied_rule_list(rule_file)
+            return summary, identifiers
 
-        # Get the Server Rule and dependency with portlist
-        self.grule_list, self.server_rule, self.client_rules = self.get_dependency_portlist(path_json, grule)
-        self.dsm.upload_basic_policy(change_policy=True)
-        self.title = ["iter-1 (MB/s)", "iter-2 (MB/s)", "iter-3 (MB/s)", "iter-4 (MB/s)", "iter-5 (MB/s)",
-                      "Average (MB/s)"]
-        self.path = machine.get_pkg_path()
-        sip, cip = s_priv_ip, c_priv_ip
-        # Get adaptor name
-        self.s_adap_name = self.get_adaptor_name(sip, suser, spwd)
-        self.c_adap_name = self.get_adaptor_name(cip, cuser, cpwd)
 
-        self.ip_type = {sip: "Server", cip: "Client"}
-        print("Server Machine Public IP:{}, Private IP: {}".format(sip, s_priv_ip))
-        print("Client Machine Public IP:{}, Private IP: {}".format(cip, c_priv_ip))
+        def reboot_instance(instance):
+            return self.reboot_instance(instance, access_key, secret_key, region)
+
+        with ThreadPoolExecutor(max_workers=len(all_instance)) as executor:
+
+            future_dsm_tasks = [executor.submit(
+                    sequential_dsm_tasks, dsm[x], rule_file) for x in range(len(dsm))]
+
+            future_to_instance = {
+            executor.submit(reboot_instance, instance): instance for instance in all_instance
+            }
+            results = {future_to_instance[future]: future.result() for future in future_to_instance}
+
+            print("Results: {}".format([future.result() for future in future_dsm_tasks]))
+
+            summaries_and_identifiers = [future.result() for future in future_dsm_tasks]
+            summary, identifiers = zip(*summaries_and_identifiers)
+
+        _sip = [] 
+        _cip = [] 
+        _s_priv_ip = [] 
+        _c_priv_ip = []
+        for x in range(0, len(all_instance_server)):
+            print("Server Instance Public IP: {}".format(results[all_instance_server[x]][0]))
+            print("Server Instance Private IP: {}".format(results[all_instance_server[x]][1]))
+            _sip.append(results[all_instance_server[x]][0])
+            _s_priv_ip.append(results[all_instance_server[x]][1])
+        for x in range(0, len(all_instance_agent)):
+            print("Client Instance Public IP: {}".format(results[all_instance_agent[x]][0]))
+            print("Client Instance Private IP: {}".format(results[all_instance_agent[x]][1]))
+            _cip.append(results[all_instance_agent[x]][0])
+            _c_priv_ip.append(results[all_instance_agent[x]][1])
+
+
+        sip, s_priv_ip = results[all_instance_server[0]]
+        print("Server Agent {} instance -> Public IP:{}, Private IP: {}".format(all_instance_server[0], sip, s_priv_ip))
+
+        cip, c_priv_ip = results[all_instance_agent[0]]
+        print("Client Agent {} instance -> Public IP:{}, Private IP: {}".format(all_instance_agent[0], cip, c_priv_ip))
+
+        self.ip_type = {}
+        for x in range(0, len(all_instance_server)):
+            self.ip_type[x] = {_s_priv_ip[x]: "Server", _c_priv_ip[x]: "Client"}
+            print("ip_type_forloop: {}".format(self.ip_type[x]))
         
-        if len(self.server_rule) > 0:
-            filtered_rules = "Server Rules:\n" + "\n".join(line for line in summary.split("\n") if any(rule_id.strip() in line for rule_id in self.server_rule))
-        else:
-            filtered_rules = "Server Rules: None"
+        print(f"ip_type 0: {self.ip_type[0]}")
+        print(f"ip_type 1: {self.ip_type[1]}")
+        # added this line to work with private ip
+        self.title = ["iter-1 (MB/s)", "iter-2 (MB/s)", "iter-3 (MB/s)", "iter-4 (MB/s)", "iter-5 (MB/s)",
+                  "Average (MB/s)"]
+        self.path = machine.get_pkg_path()
 
-        if len(self.client_rules) > 0:
-            filtered_rules += "\nClient Rules:\n" + "\n".join(line for line in summary.split("\n") if any(rule_id.strip() in line for rule_id in self.client_rules))
-        else:
-            filtered_rules += "\nClient Rules: None"
+        _spwd = []
+        _cpwd = []
+        for x in range(0, len(all_instance_server)):
+            _spwd.append(PerformanceScenario.get_pwd(region, access_key, secret_key, all_instance_server[x], pem_file, "Server"))
+        for x in range(0, len(all_instance_agent)):
+            _cpwd.append(PerformanceScenario.get_pwd(region, access_key, secret_key, all_instance_agent[x], pem_file, "Client"))
 
-        if scenario == "Server_Upload" or scenario == "All":
-            self.perf_scenario_test(suser, sip, spwd, s_priv_ip, cuser, cip, cpwd, c_priv_ip, "Server Upload", filtered_rules)
-        # Testing Server Upload Scenario based on discussion with Arun and Sunil on 7-Jan-2021
-        if scenario == "Server_Download" or scenario == "All":
-            if scenario == "All":
-                # Clean Rules from DSM
-                self.dsm.clean_rules_from_dsm()
-                # Enable both agents and filter
-                self.enable_agent_filter(sip, suser, spwd, cip, cuser, cpwd)
-            self.perf_scenario_test_reverse(suser, sip, spwd, s_priv_ip, cuser, cip, cpwd, c_priv_ip, "Server Download", filtered_rules)
-        if scenario == "Client_Download" or scenario == "All":
-            if scenario == "All":
-                # Clean Rules from DSM
-                self.dsm.clean_rules_from_dsm()
-                # Enable both agents and filter
-                self.enable_agent_filter(sip, suser, spwd, cip, cuser, cpwd)
-            self.perf_scenario_test(suser, sip, spwd, s_priv_ip, cuser, cip, cpwd, c_priv_ip, "Client Download", filtered_rules)
+        print(f"_sip: {_sip} \n | _cip: {_cip} \n | _s_priv_ip: {_s_priv_ip} \n | _c_priv_ip: {_c_priv_ip}\n")
 
-    def perf_scenario_test(self, suser, sip, spwd, s_priv_ip, cuser, cip, cpwd, c_priv_ip, scenario_name, filtered_rules):
-        print("{0}\n### {1} ###\n{0}".format("#" * 50, scenario_name))
-        # Without Filter Driver
-        print("{0}{0}\n# Without Filter Driver #\n{0}{0}".format(self.header))
-        wo_filter_all_stats, wo_filter_stats, wof_avg = self.apply_rule_get_stats(suser, sip, spwd, s_priv_ip, cuser,
-                                                                                  cip, cpwd, c_priv_ip, False,
-                                                                                  scenario_name, action="wo_filter")
-        print("- Without Filter Driver Average Stats: {} MBps\n".format(wof_avg))
+        self._s_adap_name = []
+        self._c_adap_name = []
 
-        # With Filter Driver
-        print("{0}{0}\n# With Filter Driver #\n{0}{0}".format(self.header))
-        w_filter_all_stats, w_filter_stats, wf_avg = self.apply_rule_get_stats(suser, sip, spwd, s_priv_ip, cuser,
-                                                                               cip, cpwd, c_priv_ip, False,
-                                                                               scenario_name, action="filter")
-        print("- With Filter Driver Average Stats: {} MBps\n".format(wf_avg))
+        _sip, _cip = _s_priv_ip, _c_priv_ip
 
-        # With 1 Good Server Rule
-        print("{0}{0}\n# Threshold Rule with Dependency #\n{0}{0}".format(self.header))
-        rulelist_stats, iter_rulelist, rulelist_avg = self.apply_rule_get_stats(suser, sip, spwd, s_priv_ip, cuser, cip,
-                                                                                cpwd, c_priv_ip, self.grule_list,
-                                                                                scenario_name, action="rule")
-        print("- Threshold Rule with Dependency: {} MBps\n".format(rulelist_avg))
+        for x in range(0, len(all_instance_server)):
+            print("Server Machine Public IP:{}, Private IP: {}".format(_sip[x], _s_priv_ip[x]))
+            self._s_adap_name.append(self.get_adaptor_name(_sip[x], suser, _spwd[x]))
+            print("Server Machine Public IP:{}, Private IP: {}, s_adap_name: {}".format(_sip[x], _s_priv_ip[x], self._s_adap_name[x]))
 
-        # With All Server/Client side rule
-        rule_stats, iter_rule, rule_avg = self.apply_rule_get_stats(suser, sip, spwd, s_priv_ip, cuser, cip, cpwd,
-                                                                    c_priv_ip, False, scenario_name, action="rule")
-        print("- Rule with Dependency Average stats: {} MBps\n".format(rule_avg))
+        for x in range(0, len(all_instance_agent)):
+            print("Client Machine Public IP:{}, Private IP: {}".format(_cip[x], _c_priv_ip[x]))
+            self._c_adap_name.append(self.get_adaptor_name(_cip[x], cuser, _cpwd[x]))
+            print("Client Machine Public IP:{}, Private IP: {}, c_adap_name: {}".format(_cip[x], _c_priv_ip[x], self._c_adap_name[x]))
 
-        wo_filter_stats.append(wof_avg)
-        w_filter_stats.append(wf_avg)
-        iter_rulelist.append(rulelist_avg)
-        iter_rule.append(rule_avg)
 
-        # Scenrario complete
-        print("- Without filter: {}\n- With filter: {}\n- Best Case Rule: {}\n- All Server Rule: {}".format(
-              wo_filter_stats, w_filter_stats, iter_rulelist, iter_rule))
-        self.col = ['Without Filter Driver', 'With Filter Driver + No Rule', 'Best Case Rule']
-        if scenario_name == "Server Upload" or scenario_name == "Server Download":
-            self.col.append('Server Rules (No. of Rules: {} Ids: {})'.format(len(self.server_rule), self.server_rule))
-        elif scenario_name == "Client Download":
-            self.col.append('Client Rules (No. of Rules: {} Ids: {})'.format(len(self.client_rules), self.client_rules))
-        df = pd.DataFrame([wo_filter_stats, w_filter_stats, iter_rulelist, iter_rule], index=self.col,
-                          columns=self.title)
-        self.create_html_table(df, scenario_name, filtered_rules)
-        # Create Bar Diagram
-        self.create_bar_chart([wof_avg, wf_avg, rulelist_avg, rule_avg], scenario_name)
+        print(f"Lengths: _sip: {len(_sip)} | _cip: {len(_cip)} | self._s_adap_name: {len(self._s_adap_name)} | self._c_adap_name: {len(self._c_adap_name)} | self.ip_type: {len(self.ip_type)} | _spwd: {len(_spwd)} | _cpwd: {len(_cpwd)}")
 
-    def perf_scenario_test_reverse(self, suser, sip, spwd, s_priv_ip, cuser, cip, cpwd, c_priv_ip, scenario_name, filtered_rules):
-        print("{0}\n### {1} ###\n{0}".format("#" * 50, scenario_name))
-        # With All Server/Client side rule
-        rule_stats, iter_rule, rule_avg = self.apply_rule_get_stats(suser, sip, spwd, s_priv_ip, cuser, cip, cpwd,
-                                                                    c_priv_ip, False, scenario_name, action="rule")
-        print("- Rule with Dependency Average stats: {} MBps\n".format(rule_avg))
+        from perf_individual_rule import PerfIndividualRule
+        from perf_package_rule import PerfPackageRule
+        def run_parallel_tasks(rule_file):
+            print(f"Rule File: {rule_file}")
+            if isinstance(rule_file, str):
+                with open(rule_file, "r") as f:
+                    identifiers = f.read().strip().split(",")
+                print(f"Identifiers from file: {identifiers}")
+            elif isinstance(rule_file, list):
+                identifiers = rule_file
+                
+            print(f"Dynamically extracted identifiers: {identifiers}")
 
-        # With 1 Good Server Rule
-        print("{0}{0}\n# Threshold Rule with Dependency #\n{0}{0}".format(self.header))
-        rulelist_stats, iter_rulelist, rulelist_avg = self.apply_rule_get_stats(suser, sip, spwd, s_priv_ip, cuser, cip,
-                                                                                cpwd, c_priv_ip, self.grule_list,
-                                                                                scenario_name, action="rule")
-        print("- Threshold Rule with Dependency: {} MBps\n".format(rulelist_avg))
+            # Submit perfRules as a separate task
+            with ThreadPoolExecutor(max_workers=len(all_instance_server)) as executor:
+                if (rule_id != "0" and len(rule_id.split(',')) == 1) or individual_rule_test == "False":
+                    print("Running PerfPackageRule task")
+                    executor.submit(PerfPackageRule, dsm[0], scenario, path_json, grule, identifiers, suser, _sip[0], _spwd[0], _s_priv_ip[0],
+                            cuser, _cip[0], _cpwd[0], _c_priv_ip[0], summary, stats, graph,
+                            self._s_adap_name[0], self._c_adap_name[0], self.title, self.ip_type[0],
+                            self.path, self.best_iteration)
+                else:
+                    # Run PerfPackageRule and PerfIndividualRule tasks in parallel
+                    futures = []
+                    print(f"Running PerfPackageRule task on else block: {identifiers}")
+                    futures.append(executor.submit(
+                        PerfPackageRule, dsm[0], scenario, path_json, grule, identifiers, suser, _sip[0], _spwd[0], _s_priv_ip[0],
+                        cuser, _cip[0], _cpwd[0], _c_priv_ip[0], summary, stats, graph,
+                        self._s_adap_name[0], self._c_adap_name[0], self.title, self.ip_type[0],
+                        self.path, self.best_iteration
+                    ))
+                    
+                    for i in range(1, len(all_instance_server)):
+                        print(f"Iterations: {i}")
+                        if i <= len(identifiers):
+                            print(f"Running PerfIndividualRule task on else block: {identifiers[i-1]}")
+                            futures.append(executor.submit(
+                                PerfIndividualRule,
+                                dsm[i], scenario, path_json, grule, identifiers[i-1], suser, _sip[i], _spwd[i], _s_priv_ip[i],
+                                cuser, _cip[i], _cpwd[i], _c_priv_ip[i], summary, stats, graph,
+                                self._s_adap_name[i], self._c_adap_name[i], self.title, self.ip_type[i],
+                                self.path, self.best_iteration
+                            ))
+                        else:
+                            print(f"Skipping iteration {i} as no identifier is available.")
 
-        # With Filter Driver
-        print("{0}{0}\n# With Filter Driver #\n{0}{0}".format(self.header))
-        w_filter_all_stats, w_filter_stats, wf_avg = self.apply_rule_get_stats(suser, sip, spwd, s_priv_ip, cuser,
-                                                                               cip, cpwd, c_priv_ip, False,
-                                                                               scenario_name, action="filter")
-        print("- With Filter Driver Average Stats: {} MBps\n".format(wf_avg))
+                    # Wait for all futures to complete
+                    results = []
+                    for future in as_completed(futures):
+                        try:
+                            result = future.result()
+                            results.append(result)
+                            print(f"Task completed with result: {result}")
+                        except Exception as e:
+                            print(f"Task raised an exception: {e}")
+                    
+                    print(f"All tasks completed. Results: {results}")
 
-        # Without Filter Driver
-        print("{0}{0}\n# Without Filter Driver #\n{0}{0}".format(self.header))
-        wo_filter_all_stats, wo_filter_stats, wof_avg = self.apply_rule_get_stats(suser, sip, spwd, s_priv_ip, cuser,
-                                                                                  cip, cpwd, c_priv_ip, False,
-                                                                                  scenario_name, action="wo_filter")
-        print("- Without Filter Driver Average Stats: {} MBps\n".format(wof_avg))
+        # Call the function to execute tasks
+        run_parallel_tasks(rule_file)
+        
 
-        wo_filter_stats.append(wof_avg)
-        w_filter_stats.append(wf_avg)
-        iter_rulelist.append(rulelist_avg)
-        iter_rule.append(rule_avg)
-
-        # Scenrario complete
-        print("- Without filter: {}\n- With filter: {}\n- Best Case Rule: {}\n- All Server Rule: {}".format(
-            wo_filter_stats, w_filter_stats, iter_rulelist, iter_rule))
-        self.col = ['Without Filter Driver', 'With Filter Driver + No Rule', 'Best Case Rule']
-        if scenario_name == "Server Upload" or scenario_name == "Server Download":
-            self.col.append('Server Rules (No. of Rules: {} Ids: {})'.format(len(self.server_rule), self.server_rule))
-
-        elif scenario_name == "Client Download":
-            self.col.append('Client Rules (No. of Rules: {} Ids: {})'.format(len(self.client_rules), self.client_rules))
-        df = pd.DataFrame([wo_filter_stats, w_filter_stats, iter_rulelist, iter_rule], index=self.col,
-                          columns=self.title)
-        # Create Html
-        self.create_html_table(df, scenario_name, filtered_rules)
-        # Create Bar Diagram
-        self.create_bar_chart([wof_avg, wf_avg, rulelist_avg, rule_avg], scenario_name)
-
-    def apply_rule_get_stats(self, suser, sip, spwd, s_priv_ip, cuser, cip, cpwd, c_priv_ip, grule_list, scenario_name,
-                             action="reading"):
+    def apply_rule_get_stats(self, suser, sip, spwd, s_priv_ip, cuser, cip, cpwd, c_priv_ip, grule_list, scenario_name, c_adaptor=None, s_adaptor=None,
+                             action="reading", dsm=None):
         if scenario_name == "Client Download":
-            ip, user, pwd, adaptor = cip, cuser, cpwd, self.c_adap_name
+            ip, user, pwd, adaptor = cip, cuser, cpwd, c_adaptor or self._s_adap_name
         else:
-            ip, user, pwd, adaptor = sip, suser, spwd, self.s_adap_name
+            ip, user, pwd, adaptor = sip, suser, spwd, s_adaptor or self._c_adap_name
         if action == "wo_filter":
-            self.dsm.clean_rules_from_dsm()
+            dsm.clean_rules_from_dsm()
             # Disable Server Agent
             self.disable_dsa(ip, user, pwd)
             # Disable Server filter
@@ -220,7 +226,7 @@ class PerformanceScenario(PerfCommon):
             print("{0}\n{2}-{1} Agent: Disabled from DSM\n{2}-{1} Filter: Disabled from network driver\n{0}".format(
                   self.header, ip, self.ip_type[ip]))
         elif action == "filter":
-            self.dsm.clean_rules_from_dsm()
+            dsm.clean_rules_from_dsm()
             # Activate Server Agent
             self.activate_dsa(ip, user, pwd)
             # Enable Server Filter
@@ -228,8 +234,8 @@ class PerformanceScenario(PerfCommon):
             print("{0}\n{2}-{1} Agent: Enabled from DSM\n{2}-{1} Filter: Enabled from Network Driver\n{0}".format(
                                                                                 self.header, ip, self.ip_type[ip]))
         elif action == "rule":
-            self.dsm.connect()
-            identifier = self.dsm.apply_rule(scenario_name, rule_list=grule_list)
+            dsm.connect()
+            identifier = dsm.apply_rule(scenario_name, rule_list=grule_list)
             print("\n# {} Rule Applied \n".format(grule_list))
             print("{0}{0}\n# {1} Rule Applied \n{0}{0}".format(self.header, identifier))
 
@@ -242,24 +248,31 @@ class PerformanceScenario(PerfCommon):
                                                                             len(iter_stats), iter_stats, avg))
         return all_stats, iter_stats, avg
 
-    def jfrog_upload(self, jfrog_base_url, auth, fname, scenario):
-        filename = "{}_{}".format(scenario.replace(" ", "_"), fname)
-        jfrog_url = "{}/{}".format(jfrog_base_url, filename)
-        for retry in range(2):
-            print("Attempt-{} to upload {} in {}".format(retry+1, filename, jfrog_url))
-            # read the file
-            with open(filename, "rb") as fout:
-                # upload the file
-                res = requests.put(jfrog_url, data=fout.read(), auth=auth)
-
-                print("jfrog_upload status: {}".format(res.status_code))
-                if res.status_code == 201:
-                    print("PASS: {} file has benn Uploaded in Nexus Repo {}".format(filename, jfrog_url))
-                    return jfrog_url
-                time.sleep(10)
-
-        raise Exception("ERROR: while uploading {} file in Nexus repo {}".format(filename, jfrog_url))
-
+    def jfrog_upload(self, jfrog_base_url, auth):
+        uploaded_files = []
+        print("Current working directory:", os.getcwd())
+        print("All files in directory:", os.listdir())
+        for file in os.listdir("/tmp"):
+            if file.endswith(".html") or file.endswith(".png") or file.endswith(".json"):
+                #filename = "{}_{}_{}".format(scenario.replace(" ", "_"), rule_ids, file)
+                jfrog_url = "{}/{}".format(jfrog_base_url, file)
+                print("Uploading file:", file)
+                print("Target JFrog URL:", jfrog_url)
+                
+                for retry in range(2):
+                    print("Attempt-{} to upload {} to {}".format(retry + 1, file, jfrog_url))
+                    #file_path = os.path.join("/tmp", file)
+                    with open(file, "rb") as fout:
+                        res = requests.put(jfrog_url, data=fout.read(), auth=auth)
+                        print("jfrog_upload status: {}".format(res.status_code))
+                        if res.status_code == 201:
+                            print("PASS: {} file has been uploaded to JFrog Repo {}".format(file, jfrog_url))
+                            uploaded_files.append(jfrog_url)
+                            break
+                    time.sleep(10)
+                else:
+                    raise Exception("ERROR: Failed to upload {} to JFrog Repo {}".format(file, jfrog_url))
+        return uploaded_files
 
 
 if __name__ == '__main__':
@@ -275,6 +288,7 @@ if __name__ == '__main__':
     parser.add_argument('--jfrog_token', type=str, help="JFrog Token")
     parser.add_argument('--scenario', type=str, help="Scenario name to test")
     parser.add_argument('--rule_id', type=str, help="Rule Id's to be tested")
+    parser.add_argument('--individual_rule_test', type=str, help="individual_rule_test")
     args = parser.parse_args()
 
     with open(args.manifest_file) as fout:
@@ -287,11 +301,20 @@ if __name__ == '__main__':
                                    args.stats, args.graph, args.path,
                                    args.jfrog_token,
                                    args.scenario,
-                                   rule_file
+                                   rule_file, args.individual_rule_test
                                    )
     auth = BearerAuth(args.jfrog_token)
-    stats_url = scenario.jfrog_upload(args.jfrog_url, auth, args.stats, args.scenario)
-    graph_url = scenario.jfrog_upload(args.jfrog_url, auth, args.graph, args.scenario)
+    if args.rule_id != "":
+        rule_ids = args.rule_id
+    elif args.rule_id == "":
+        rule_file = os.path.join("update-info", "rule-identifiers.txt")
+        with open(rule_file, "r") as f:
+            rule_ids = f.read().strip().split(",")
+
+    print(f"Rule Id's Perform_scenario: {rule_ids}")
+
+    stats_url = scenario.jfrog_upload(args.jfrog_url, auth)
+    graph_url = scenario.jfrog_upload(args.jfrog_url, auth)
     destination = "{}_{}".format(args.scenario.replace(" ", "_"), args.manifest_file)
     shutil.copyfile(args.manifest_file, destination)
-    manifest_url = scenario.jfrog_upload(args.jfrog_url, auth, args.manifest_file, args.scenario)
+    manifest_url = scenario.jfrog_upload(args.jfrog_url, auth)

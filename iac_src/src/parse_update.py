@@ -61,6 +61,15 @@ def parse(update_package_loc):
         try:
             with open(os.path.join(package_folder, package_name + ".txt"), "w", encoding='utf-8') as f:
                 f.write(formatted)
+            rule_ids = []
+            for filter_type in changed_rules:
+                for rule in changed_rules[filter_type]["new"]:
+                    rule_id = rule.split(" - ")[0]
+                    rule_ids.append(rule_id)
+                for rule in changed_rules[filter_type]["updated"]:
+                    rule_id = rule.split(" - ")[0]
+                    rule_ids.append(rule_id)
+            print(len(rule_ids), rule_ids)
         except Exception as e:
             print("Error! {}. Failed to dump parsing data into text file".format(e))
 
@@ -68,6 +77,8 @@ def parse(update_package_loc):
 
         with open(os.path.join(package_folder, package_name + ".json"), "w") as f:
             json.dump(package_info, f, indent=2)
+
+        
 
 
 # Collects any new/updated rules in the package

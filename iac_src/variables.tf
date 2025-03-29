@@ -31,7 +31,7 @@ variable "performance_auto_machine_ami_id" {
 }
 
 variable "instance_type" {
-    default = "t2.micro"
+    default = "t3a.2xlarge"
 }
 
 variable "key_name" {
@@ -72,4 +72,8 @@ variable "random_num" {}
 
 variable "rule_id" {
   default = 0
+}
+
+variable "individual_rule_test" {
+  default = "false"
 }

@@ -54,7 +54,6 @@ variable "random_num" {
 	default = "123"
 }
 
-
-
-
-
+variable "instance_count" {
+  default = 2
+}

@@ -62,6 +62,7 @@ node('aws&&docker')
 
             def jfrog_url = "https://jfrog.trendmicro.com/artifactory/dslabs-performance-generic-test-local"
 
+            def individual_rule_test = params.INDIVIDUAL_RULE_TEST
 
             stage('Git checkout')
             {
@@ -144,6 +145,8 @@ node('aws&&docker')
                                                                         --path ${target_path}")
                     }
 
+                    individual_rule_test = individual_rule_test == "true" ? true : false
+
                     stage('Automation machine')
                     {
                             sh "ls -la ${iac_path}"
@@ -155,16 +158,24 @@ node('aws&&docker')
                             if (rule_id != null && !rule_id.isEmpty())
                             {
                                 echo "Rule ID Automation machine stage: ${rule_id}"
-                                sh "terraform -chdir=${iac_path} plan -var=\'access_key=${AWS_ACCESS_KEY}\' -var=\'secret_key=${AWS_SECRET_KEY}\' -var=\'manifest_file_path=${manifest_file_path}\' -var=\'manifest_file=${manifest}\' -var=\'dsmVersion=${dsmVersion}\' -var=\'stats=${stats}\' -var=\'graph=${graph}\' -var=\'dsru_path=${dsru_folder}\' -var=\'jfrog_url=${jfrog_url}\' -var=\'jfrog_token=${LABS_JFROG_TOKEN}\' -var=\'scenario=${scenario}\' -var=\'random_num=${env.BUILD_NUMBER}\' -var=\'rule_id=${rule_id}\' -out ${plan}"
+                                sh "terraform -chdir=${iac_path} plan -var=\'access_key=${AWS_ACCESS_KEY}\' -var=\'secret_key=${AWS_SECRET_KEY}\' -var=\'manifest_file_path=${manifest_file_path}\' -var=\'manifest_file=${manifest}\' -var=\'dsmVersion=${dsmVersion}\' -var=\'stats=${stats}\' -var=\'graph=${graph}\' -var=\'dsru_path=${dsru_folder}\' -var=\'jfrog_url=${jfrog_url}\' -var=\'jfrog_token=${LABS_JFROG_TOKEN}\' -var=\'scenario=${scenario}\' -var=\'random_num=${env.BUILD_NUMBER}\' -var=\'rule_id=${rule_id}\' -var=\'individual_rule_test=${individual_rule_test}\' -out ${plan}"
                                 sh "terraform -chdir=${iac_path} apply -auto-approve ${plan}"   
                             }
                             else{
                                 echo "Executing plan without rule ID"
-                                sh "terraform -chdir=${iac_path} plan -var=\'access_key=${AWS_ACCESS_KEY}\' -var=\'secret_key=${AWS_SECRET_KEY}\' -var=\'manifest_file_path=${manifest_file_path}\' -var=\'manifest_file=${manifest}\' -var=\'dsmVersion=${dsmVersion}\' -var=\'stats=${stats}\' -var=\'graph=${graph}\' -var=\'dsru_path=${dsru_folder}\' -var=\'jfrog_url=${jfrog_url}\' -var=\'jfrog_token=${LABS_JFROG_TOKEN}\' -var=\'scenario=${scenario}\' -var=\'random_num=${env.BUILD_NUMBER}\' -out ${plan}"
+                                sh "terraform -chdir=${iac_path} plan -var=\'access_key=${AWS_ACCESS_KEY}\' -var=\'secret_key=${AWS_SECRET_KEY}\' -var=\'manifest_file_path=${manifest_file_path}\' -var=\'manifest_file=${manifest}\' -var=\'dsmVersion=${dsmVersion}\' -var=\'stats=${stats}\' -var=\'graph=${graph}\' -var=\'dsru_path=${dsru_folder}\' -var=\'jfrog_url=${jfrog_url}\' -var=\'jfrog_token=${LABS_JFROG_TOKEN}\' -var=\'scenario=${scenario}\' -var=\'random_num=${env.BUILD_NUMBER}\' -var=\'individual_rule_test=${individual_rule_test}\' -out ${plan}"
                                 sh "terraform -chdir=${iac_path} apply -auto-approve ${plan}"
                             }
                     }
-
+                }
+                catch (e)
+                {
+                    currentBuild.result = 'FAILURE'
+                    println(e)
+                    throw e
+                }
+                finally
+                {
                     stage('Automation machine information')
                     {
                         dir("${iac_path}")
@@ -201,16 +212,8 @@ node('aws&&docker')
 
                             archiveArtifacts allowEmptyArchive: true, artifacts: '**/tear_down_params_automation.txt'
                     }
-                }
-                catch (e)
-                {
-                    currentBuild.result = 'FAILURE'
-                    println(e)
-                    throw e
-                }
-                finally
-                {
-                    stage('Send Teams Message')
+
+                    /*stage('Send Teams Message')
                     {
                         sh("python3 ${iac_working_dir}/team_msg.py --scenario ${scenario}   \
 		                                    --pipeline_name \'${env.JOB_BASE_NAME}\'              \
@@ -223,7 +226,7 @@ node('aws&&docker')
                                                     --manifest_file \'${manifest_file}\'        \
                                                     --jfrog_url \'${jfrog_url}\'                \
                                                     --build_number ${pipeline_num}")
-                    }
+                    }*/
                 }
             }
     }
