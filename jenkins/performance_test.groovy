@@ -213,7 +213,7 @@ node('aws&&docker')
                             archiveArtifacts allowEmptyArchive: true, artifacts: '**/tear_down_params_automation.txt'
                     }
 
-                    /*stage('Send Teams Message')
+                    stage('Send Teams Message')
                     {
                         sh("python3 ${iac_working_dir}/team_msg.py --scenario ${scenario}   \
 		                                    --pipeline_name \'${env.JOB_BASE_NAME}\'              \
@@ -226,7 +226,7 @@ node('aws&&docker')
                                                     --manifest_file \'${manifest_file}\'        \
                                                     --jfrog_url \'${jfrog_url}\'                \
                                                     --build_number ${pipeline_num}")
-                    }*/
+                    }
                 }
             }
     }
