@@ -164,7 +164,7 @@ class PerformanceScenario(PerfCommon):
 
             # Submit perfRules as a separate task
             with ThreadPoolExecutor(max_workers=len(all_instance_server)) as executor:
-                if (rule_id != "0" and len(rule_id.split(',')) == 1) or individual_rule_test == "False":
+                if individual_rule_test == "False" or len(rule_id) == 1:
                     print("Running PerfPackageRule task")
                     executor.submit(PerfPackageRule, dsm[0], scenario, path_json, grule, identifiers, suser, _sip[0], _spwd[0], _s_priv_ip[0],
                             cuser, _cip[0], _cpwd[0], _c_priv_ip[0], summary, stats, graph,
