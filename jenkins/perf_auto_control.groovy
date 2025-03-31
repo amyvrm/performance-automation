@@ -143,7 +143,13 @@ node('aws&&docker') {
                             booleanParam(name: 'INDIVIDUAL_RULE_TEST', value: individual_rule_test)
                         ]
                 }
-
+            }
+        } catch (e) {
+            currentBuild.result = 'FAILURE'
+            println(e)
+            throw e
+        } finally {
+            if (!pipelineShouldExit) {
                 stage('Collect Automation Machine Tear Down infrastructure') {
                     sleep(time: 15, unit: "SECONDS")
                     perf_test_number = perf_test.getNumber().toString()
@@ -153,13 +159,7 @@ node('aws&&docker') {
                     all_ids = tearDown.drop(16)
                     echo "All IDs: ${all_ids}"
                 }
-            }
-        } catch (e) {
-            currentBuild.result = 'FAILURE'
-            println(e)
-            throw e
-        } finally {
-            if (!pipelineShouldExit) {
+
                 stage('Collect Tear Down infrastructure') {
                     def tearDown = readFile("tear_down_params.txt")
                     echo "Tear Down Params: ${tearDown}"
