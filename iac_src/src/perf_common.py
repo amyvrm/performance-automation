@@ -31,7 +31,8 @@ class PerfCommon(object):
         # Check if file exists
         if not os.path.exists(fname):
             with open(fname, "w") as fin:
-                fin.write('<html>\n<head>\n<title>Performance Report</title>\n</head>\n<body>\n')
+                fin.write(self.create_html_header())
+                fin.write('\n<title>Performance Report</title>\n')
                 fin.write('<h2 style="text-align: center; padding: 10px;">Scenario Name: {}</h2>'.format(scenario_name))
                 fin.write('<div class="container">\n')
     
