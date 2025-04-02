@@ -25,22 +25,45 @@ class PerfCommon(object):
         self.portlist_file = os.path.join("update-info", "port_list.txt")
 
     def create_html_table(self, df, scenario_name, filtered_rules):
-        print(df)
         fname = "{}_{}".format(scenario_name.replace(" ", "_"), self.stats)
-        if os.path.exists(fname):
-            os.remove(fname)
-        # create table
-        with open(fname, "a") as fin:
-            fin.write(self.create_html_header())
-            fin.write('<h4 style="text-align: center; padding: 10px;">Scenario Name: {}</h4>'.format(scenario_name))
-            fin.write("<div class=\"container\"><div class=\"row\">")
-            fin.write(df.to_html(classes='table table-striped', justify='center', border=1))
-            fin.write("<h2 style=\"text-align: center; padding: 10px;\">Performance Tested Rules:</h2><br>")
-            fin.write("</div><div><br><pre>{}</pre>".format(filtered_rules.strip()))
-            fin.write("</div>")
-            fin.write("</body>\n</html>\n")
+        print(f"fname: {fname}")
+        
+        # Check if file exists
+        if not os.path.exists(fname):
+            with open(fname, "w") as fin:
+                fin.write(self.create_html_header())
+                fin.write('\n<title>Performance Report</title>\n')
+                fin.write('<h2 style="text-align: center; padding: 10px;">Scenario Name: {}</h2>'.format(scenario_name))
+                fin.write('<div class="container">\n')
+    
+        # Read existing content (avoiding memory overload)
+        with open(fname, "r") as fin:
+            content = fin.read()
+            print(f"Content: {content}")
 
-    def create_bar_chart(self, avg, scenario_name):
+        # Ensure the closing tags exist for proper replacement
+        if "</body>" not in content or "</html>" not in content:
+            content += "</div>\n</body>\n</html>\n"
+
+        # Remove the closing tags to append new content correctly
+        content = content.replace("</body>\n</html>\n", "")
+
+        # Append the new content
+        with open(fname, "w") as fout:
+            fout.write(content)
+            fout.write('<div class="row">\n')
+            fout.write(df.to_html(classes="table table-striped", justify="center", border=1))
+            fout.write("</div>\n")
+            fout.write('<h4 style="padding: 10px;">Performance Tested Rules:</h4>\n')
+            fout.write("<div><pre>{}</pre></div>\n".format(filtered_rules.strip()))
+            fout.write("</div>\n</body>\n</html>\n")
+        
+         # Read existing content (avoiding memory overload)
+        with open(fname, "r") as fin:
+            content = fin.read()
+            print(f"Content: {content}")
+
+    def create_bar_chart(self, avg, scenario_name, identifier):
         rule_msg = "Client Rules" if scenario_name == "Client Download" else "Server Rules"
         scenario_sort = ["Without FD", "With FD", "Best Case Rule", rule_msg]
 
@@ -54,7 +77,7 @@ class PerfCommon(object):
         colors = sns.color_palette('pastel', n_colors=len(df))
         plt.figure(figsize=(16, 10))
         sns.set_style('ticks')
-        ax = sns.barplot(data=df, x="sce_sort", y="avg", palette=colors)
+        ax = sns.barplot(data=df, x="sce_sort", y="avg", hue="sce_sort", palette=colors, legend=False)
         for index, row in df.iterrows():
             ax.text(row.ind, row.avg, row.avg, color='black', ha="center", fontsize=16)
 
@@ -73,7 +96,8 @@ class PerfCommon(object):
         ax.grid('on')
         sns.despine()
         # plt.show()
-        fname = "{}_{}".format(scenario_name.replace(" ", "_"), self.graph)
+        fname = "{}_{}_{}".format(scenario_name.replace(" ", "_"), str(identifier), self.graph)
+        print(f"fname_image: {fname}")
         if os.path.exists(fname):
             os.remove(fname)
         plt.savefig(fname, bbox_extra_artists=(lgd, text), bbox_inches='tight')
@@ -88,6 +112,8 @@ class PerfCommon(object):
         return html_header
 
     def run_band_test(self, suser, sip, spwd, s_priv_ip, cuser, cip, cpwd, c_priv_ip, scenario_name):
+        print("c_priv_ip: {}".format(c_priv_ip))
+        print("s_priv_ip: {}".format(s_priv_ip))
         if scenario_name == "Server Download" or scenario_name == "Client Download":
             # Run Nginx
             self.run_nginx(sip, suser, spwd)
@@ -154,20 +180,26 @@ class PerfCommon(object):
                     print("- Taking Bandwidth Reading...")
                     all_through_put = []
                     for i in range(iteration):
-                        stdout, stderr, rc = machine.run_executable(tool, arguments=cmd, asynchronous=asynchronous)
-                        # print("Tool: {}, Output: [{}], Error: {}".format(tool, stdout, stderr))
-                        PerfCommon.get_bandwidth(cmd, stdout, stderr, all_through_put, i)
-                        time.sleep(30)
+                        try:
+                            stdout, stderr, rc = machine.run_executable(tool, arguments=cmd, asynchronous=asynchronous)
+                            PerfCommon.get_bandwidth(cmd, stdout, stderr, all_through_put, i)
+                            time.sleep(30)
+                        except SCMRException as exc:
+                            if "STATUS_SHARING_VIOLATION" in str(exc):
+                                print(f"Retrying due to sharing violation: {exc}")
+                                time.sleep(10)  # Wait before retrying
+                                continue
+                            else:
+                                raise
                     all_through_put.sort(reverse=True)
                     return all_through_put
                 else:
-                    print("- Running Remote Command...")
                     stdout, stderr, rc = machine.run_executable(tool, arguments=cmd, asynchronous=asynchronous)
                     print("Tool: {}, Output: [{}], Error: {}".format(tool, stdout, stderr))
-                if stdout:
-                    value = stdout.decode("utf-8").split("\r")[0]
-                    print("Value = {}".format(value))
-                    return value
+                    if stdout:
+                        value = stdout.decode("utf-8").split("\r")[0]
+                        print("Value = {}".format(value))
+                        return value
             else:
                 stdout, stderr, rc = machine.run_executable(tool, arguments=cmd, asynchronous=asynchronous)
                 print("{} Output: [{}], pid: {}, Error: {}".format(tool, stdout, rc, stderr))
@@ -239,31 +271,42 @@ class PerfCommon(object):
 
     @staticmethod
     def get_pwd(region, access_key, secret_key, instance_id, pem_file_loc, mtype):
+
         print("- get_pwd")
+    
+        # Connect to EC2
         ec2_conn = boto.ec2.connect_to_region(region, aws_access_key_id=access_key, aws_secret_access_key=secret_key)
-        # Get all instance
-        reservations = ec2_conn.get_all_reservations()
-        # Get all the instances and search for the instance based on the provided Tag - Name
-        for reservation in reservations:
-            for instance in reservation.instances:
-                if instance.id == instance_id:
-                    print("Found instance id: {}".format(instance_id))
-                    priv_ip = instance.private_ip_address
-                    print("Private IP: {}".format(priv_ip))
-                    # Get the encrypted password and decrypt
-                    try:
-                        print("Public IP: {}".format(instance.ip_address))
-                    except Exception as e:
-                        print("Failed to get public ip: {}".format(e))
-                    pwd = base64.b64decode(ec2_conn.get_password_data(instance.id).strip())
-                    if pwd:
-                        with open(pem_file_loc, 'r') as priv_key:
-                            priv = rsa.PrivateKey.load_pkcs1(priv_key.read())
-                        key = rsa.decrypt(pwd, priv)
-                    else:
-                        key = 'Wait at least 4 minutes after creation before the admin password is available'
-                    print("* {}-{} Machine Password: {}".format(mtype, instance.ip_address, key.decode("utf-8")))
-                    return key.decode("utf-8")
+    
+        # Fetch instance details
+        instances = ec2_conn.get_only_instances(instance_ids=[instance_id])
+        if not instances:
+            raise Exception(f"Instance {instance_id} not found in region {region}")
+        
+        instance = instances[0]
+        print(f"Found instance id: {instance_id}")
+        print(f"Private IP: {instance.private_ip_address}")
+    
+        # Try to get public IP
+        try:
+            print(f"Public IP: {instance.ip_address}")
+        except AttributeError:
+            print("Failed to get public IP")
+    
+        # Get the encrypted password
+        password_data = ec2_conn.get_password_data(instance.id).strip()
+        if not password_data:
+            print("Password is not available yet. Wait at least 4 minutes after instance creation.")
+            return "Password not available yet"
+    
+        # Decrypt password
+        try:
+            with open(pem_file_loc, 'r') as priv_key_file:
+                private_key = rsa.PrivateKey.load_pkcs1(priv_key_file.read())
+            decrypted_pwd = rsa.decrypt(base64.b64decode(password_data), private_key).decode("utf-8")
+            print(f"* {mtype}-{instance.ip_address} Machine Password: {decrypted_pwd}")
+            return decrypted_pwd
+        except Exception as e:
+            raise Exception(f"Failed to decrypt password: {e}")
 
     def get_adaptor_name(self, ip, user, pwd):
         print("- get_adaptor_name")
@@ -287,129 +330,138 @@ class PerfCommon(object):
         self.execute_cmd(cmd, ip, user, pwd, tool=tool)
 
     def clean(self, ip, user, pwd, pid=False):
-        print("- clean pid: {}".format(pid))
+        print(f"- clean pid: {pid}")
         tool = 'taskkill.exe'
-        if not pid:
-            cmd = '/IM PCATTCP.exe /F'
-        else:
-            cmd = '/F /PID {}'.format(pid)
+        cmd = f'/F /PID {pid}' if pid else '/IM PCATTCP.exe /F'
         return self.execute_cmd(cmd, ip, user, pwd, tool=tool)
 
     def clean_ab(self, ip, user, pwd):
-        print("- Clean Apache Bench in {}-{}".format(self.ip_type[ip], ip))
-        tool = 'taskkill.exe'
-        cmd = '/IM ab.exe /F'
-        return self.execute_cmd(cmd, ip, user, pwd, tool=tool)
+        print(f"- Clean Apache Bench in {self.ip_type[ip]}-{ip}")
+        return self.clean(ip, user, pwd, pid=False)
 
     def clean_nginx(self, ip, user, pwd):
-        print("- Clean Nginx in {}-{}".format(self.ip_type[ip], ip))
-        tool = 'taskkill.exe'
-        cmd = '/IM nginx.exe /F'
-        return self.execute_cmd(cmd, ip, user, pwd, tool=tool)
+        print(f"- Clean Nginx in {self.ip_type[ip]}-{ip}")
+        return self.clean(ip, user, pwd, pid=False)
 
     def run_pcattcp_rec(self, ip, user, pwd, target_ip, asynchronous=False):
-        print("{0}\n+ Run PCATTCP on {1}-{2} +\n{0}".format("+" * 50, self.ip_type[ip], ip))
+        print(f"run_pcattcp_rec: {ip}, {user}, {pwd}, {target_ip}")
+        print(f"{'+' * 50}\n+ Run PCATTCP on {self.ip_type[ip]}-{ip} +\n{'+' * 50}")
         self.clean(ip, user, pwd)
         tool = "Powershell.exe"
-        cmd = '{}PCATTCP\PCATTCP.exe -r -l 490000 {} -c'.format(self.path, target_ip)
-        return self.execute_cmd(cmd, ip, user, pwd, tool=tool, bandwidth=False, asynchronous=asynchronous)
+        cmd = f'{self.path}PCATTCP\\PCATTCP.exe -r -l 490000 {target_ip} -c'
+        return self.execute_cmd(cmd, ip, user, pwd, tool=tool, asynchronous=asynchronous)
 
     def run_pcattcp_tran(self, ip, user, pwd, target_ip, bandwidth=False, asynchronous=False):
-        print("{0}\n+ Run PCATTCP on {1}-{2} and take Reading +\n{0}".format("+" * 50, self.ip_type[ip], ip))
+        print(f"{'+' * 50}\n+ Run PCATTCP on {self.ip_type[ip]}-{ip} and take Reading +\n{'+' * 50}")
         self.clean(ip, user, pwd)
         tool = "Powershell.exe"
-        cmd = '{}PCATTCP\PCATTCP.exe -t -l 490000 {}'.format(self.path, target_ip)
+        cmd = f'{self.path}PCATTCP\\PCATTCP.exe -t -l 490000 {target_ip}'
         return self.execute_cmd(cmd, ip, user, pwd, tool=tool, bandwidth=bandwidth, asynchronous=asynchronous)
 
     def run_nginx(self, ip, user, pwd):
-        print("{0}\n+ Run nginx on {1}-{2} +\n{0}".format("+" * 50, self.ip_type[ip], ip))
+        print(f"{'+' * 50}\n+ Run nginx on {self.ip_type[ip]}-{ip} +\n{'+' * 50}")
         self.clean_nginx(ip, user, pwd)
         tool = "Powershell.exe"
-        cmd = "cd {0}nginx-1.19.2; start {0}nginx-1.19.2\\nginx.exe".format(self.path)
-        self.execute_cmd(cmd, ip, user, pwd, tool=tool, bandwidth=False, asynchronous=True)
+        cmd = f"cd {self.path}nginx-1.19.2; start {self.path}nginx-1.19.2\\nginx.exe"
+        self.execute_cmd(cmd, ip, user, pwd, tool=tool, asynchronous=True)
 
     def run_ab(self, ip, user, pwd, target_ip):
-        print("{0}\n+ Run Apache Bench {1}-{2} +\n{0}".format("+" * 50, self.ip_type[ip], ip))
+        print(f"{'+' * 50}\n+ Run Apache Bench {self.ip_type[ip]}-{ip} +\n{'+' * 50}")
         self.clean_ab(ip, user, pwd)
         tool = "Powershell.exe"
-        # print("{0}\n+ Status of URL: {1} +\n{0}".format("+" * 50, self.check_test_page(ip, user, pwd, target_ip)))
-        # cmd = "{}ab.exe -k -n 100 -c 10 http://{}/test.htm".format(self.path, target_ip)
-        # cmd = "{}ab.exe -k -c 10 -t 60 -n 100 http://{}/test.htm".format(self.path, target_ip)
-        cmd = "{}ab.exe -c 10 -n 100 http://{}/test.htm".format(self.path, target_ip)
-        # cmd = "{}ab.exe -c 10 -t 60 -n 100 http://{}/test.htm".format(self.path, target_ip)
-        return self.execute_cmd(cmd, ip, user, pwd, tool=tool, bandwidth=True, asynchronous=False)
+        cmd = f"{self.path}ab.exe -c 10 -n 100 http://{target_ip}/test.htm"
+        return self.execute_cmd(cmd, ip, user, pwd, tool=tool, bandwidth=True)
 
     def run_hey(self, ip, user, pwd, target_ip):
-        print("{0}\n+ Run Hey.exe {1}-{2} +\n{0}".format("+" * 50, self.ip_type[ip], ip))
+        print(f"{'+' * 50}\n+ Run Hey.exe {self.ip_type[ip]}-{ip} +\n{'+' * 50}")
         tool = "Powershell.exe"
-        cmd = "{}hey.exe -c 10 -n 100 http://{}/test.htm".format(self.path, target_ip)
-        return self.execute_cmd(cmd, ip, user, pwd, tool=tool, bandwidth=True, asynchronous=False, iteration=20)
+        # Clean up any existing Hey.exe processes
+        self.clean(ip, user, pwd, pid=False)
+        cmd = f"{self.path}hey.exe -c 10 -n 100 http://{target_ip}/test.htm"
+        return self.execute_cmd(cmd, ip, user, pwd, tool=tool, bandwidth=True, iteration=20)
 
     def check_test_page(self, ip, user, pwd, target_ip):
-        print("{0}\n+ Run Wget {1}-{2} +\n{0}".format("+" * 50, self.ip_type[ip], ip))
+        print(f"{'+' * 50}\n+ Check Test Page {self.ip_type[ip]}-{ip} +\n{'+' * 50}")
         tool = "Powershell.exe"
-        cmd = "wget http://{}/test.htm | ".format(target_ip) + "% {$_.StatusCode}"
-        return self.execute_cmd(cmd, ip, user, pwd, tool=tool)
+        cmd = f"wget http://{target_ip}/test.htm | % {{$_.StatusCode}}"
+        status_code = self.execute_cmd(cmd, ip, user, pwd, tool=tool)
+        if status_code != "200":
+            raise Exception(f"Test page is not accessible. Status code: {status_code}")
 
     def disable_dsa(self, ip, user, pwd):
-        print("{0}\n # {2}-{1} Disable DSA #\n{0}".format("+" * 50, ip, self.ip_type[ip]))
+        print(f"{'+' * 50}\n # {self.ip_type[ip]}-{ip} Disable DSA #\n{'+' * 50}")
         tool = "Powershell.exe"
         cmd = "Stop-Service -Name \"Trend` Micro` Deep` Security` Agent\""
         self.execute_cmd(cmd, ip, user, pwd, tool=tool)
 
     def activate_dsa(self, ip, user, pwd):
-        print("{0}\n # {2}-{1} Activate DSA #\n{0}".format("+" * 50, ip, self.ip_type[ip]))
+        print(f"{'+' * 50}\n # {self.ip_type[ip]}-{ip} Activate DSA #\n{'+' * 50}")
         tool = "Powershell.exe"
         cmd = "Start-Service -Name \"Trend` Micro` Deep` Security` Agent\""
         self.execute_cmd(cmd, ip, user, pwd, tool=tool)
 
     def reboot_instance(self, instance_id, access_key, secret_key, region):
-        print("{0}\n # Reboot {1} Instance #\n{0}".format(self.header, instance_id))
-        ec2_conn = boto.ec2.connect_to_region(region, aws_access_key_id=access_key, aws_secret_access_key=secret_key)
-        # Get all instance
-        reservations = ec2_conn.get_all_reservations()
-        # Get all the instances and search for the instance based on the provided Tag - Name
-        for reservation in reservations:
-            for instance in reservation.instances:
-                if instance.id == instance_id:
-                    print("Found instance id: {}".format(instance_id))
-                    ec2_conn.stop_instances(instance_ids=[instance_id, ])
-                    print("{} instance has been stoped and waiting for 2 min".format(instance_id))
-                    time.sleep(120)
-                    ec2_conn.start_instances(instance_ids=[instance_id, ])
-                    print("{} instance has been started and waiting for 2 min".format(instance_id))
-                    time.sleep(120)
+        print(f"{self.header}\n # Reboot {instance_id} Instance #\n{self.header}")
 
+        # Connect to EC2
         ec2_conn = boto.ec2.connect_to_region(region, aws_access_key_id=access_key, aws_secret_access_key=secret_key)
-        # Get all instance
-        reservations = ec2_conn.get_all_reservations()
-        # Get all the instances and search for the instance based on the provided Tag - Name
-        for reservation in reservations:
-            for instance in reservation.instances:
-                if instance.id == instance_id:
-                    print("Found instance id: {}".format(instance_id))
-                    return instance.ip_address, instance.private_ip_address
-        raise Exception("{} Instance is not running...".format(instance_id))
 
-    def get_dependency_portlist(self, path, grule):
-        server_rules = []
-        client_rules = []
-        non_dpi_rules = []
-        all_dep_rules = set()
-        client_dep_rules = set()
-        portlist_set = set()
+        # Fetch instance details
+        instances = ec2_conn.get_only_instances(instance_ids=[instance_id])
+        if not instances:
+            raise Exception(f"Instance {instance_id} not found in region {region}")
+
+        instance = instances[0]
+        print(f"Found instance id: {instance_id}")
+
+        # Stop the instance
+        instance.stop()
+        print(f"Stopping {instance_id} ...")
+
+        # Wait for the instance to stop
+        while instance.update() != 'stopped':
+            print("Waiting for instance to stop...")
+            time.sleep(10)
+
+        # Start the instance
+        instance.start()
+        print(f"Starting {instance_id} ...")
+
+        # Wait for the instance to start
+        while instance.update() != 'running':
+            print("Waiting for instance to start...")
+            time.sleep(10)
+
+        # Refresh instance info and return IPs
+        instance.update()
+        print(f"{instance_id} is running with Public IP: {instance.ip_address}, Private IP: {instance.private_ip_address}")
+
+        return instance.ip_address, instance.private_ip_address
+
+    def get_dependency_portlist(self, path, grule, identifiers):
+        server_rules, client_rules, non_dpi_rules = [], [], []
+        all_dep_rules, client_dep_rules, portlist_set = set(), set(), set()
         grule_list = [grule]
 
-        with open(self.rule_file, "r") as f:
-            all_identifier = f.read().split(",")
-        print("Rules: {}".format(all_identifier))
+        all_identifier = []
+        print(f"Identifiers get_dependency_portlist: {identifiers}")
+        print(f"Length Identifiers get_dependency_portlist: {len(identifiers)}")
+
+        if len(identifiers) == 1:
+            all_identifier = identifiers
+        elif os.path.exists(self.rule_file):
+            with open(self.rule_file, "r") as f:
+                all_identifier = f.read().split(",")
+        elif not os.path.exists(self.server_rule_file):
+            all_identifier = identifiers
+        
+        print(f"Rules get dependency portlist: {all_identifier}")
 
         json_file = [pos_json for pos_json in os.listdir(path) if pos_json.endswith('.json')]
-        print("Json File: {}".format(json_file))
+        print(f"Json File: {json_file}")
         with open(os.path.join(path, json_file[0]), "r") as fout:
             self.src_pkg_json = json.load(fout)
 
-        # Get all server Rule with dependency and portlist
         for identifier in all_identifier:
             rule = self.check_dpi_server_rule(identifier)
             if rule:
@@ -429,7 +481,7 @@ class PerfCommon(object):
                 self.get_port_info(rule, portlist_set)
             else:
                 non_dpi_rules.append(identifier)
-        # Get Good Rule dependency
+
         for identifier in grule_list:
             rule = self.check_dpi_server_rule(identifier)
             if rule:
@@ -441,35 +493,46 @@ class PerfCommon(object):
 
         port_list = [dict(port) for port in portlist_set if port]
         identifiers = server_rules[:]
-        print("{}\nAll Rules: {}\nServer Rules: {}\nDependency of Server Rules: {}".format("*" * 100, all_identifier,
-                                                                                           server_rules, all_dep_rules))
+        print(f"{'*' * 100}\nAll Rules: {all_identifier}\nServer Rules: {server_rules}\nDependency of Server Rules: {all_dep_rules}")
         client_rules_iden = client_rules[:]
-        print("{}\nClient Rules: {}\nDependency of Client Rules: {}".format("*" * 100, client_rules, client_dep_rules))
-        print("Good Rule with Dependency: {}\nNon DPI Rule: {}\n".format(grule_list, non_dpi_rules))
-        print("PortList: {}\n{}".format(port_list, "*" * 100))
+        print(f"{'*' * 100}\nClient Rules: {client_rules}\nDependency of Client Rules: {client_dep_rules}")
+        print(f"Good Rule with Dependency: {grule_list}\nNon DPI Rule: {non_dpi_rules}\n")
+        print(f"PortList: {port_list}\n{'*' * 100}")
 
-        if len(all_dep_rules) > 0:
+        if all_dep_rules:
             server_rules.extend(list(all_dep_rules))
 
-        if len(client_dep_rules) > 0:
+        if client_dep_rules:
             client_rules.extend(list(client_dep_rules))
 
         server_rules.extend(non_dpi_rules)
+        # Ensure the directory exists
+        directory = os.path.dirname(self.server_rule_file)
+        if directory and not os.path.exists(directory):
+            os.makedirs(directory, exist_ok=True)
+        
+        # Safely handle file creation and removal
         if os.path.exists(self.server_rule_file):
             os.remove(self.server_rule_file)
         with open(self.server_rule_file, "w") as f:
             f.write(",".join(server_rules))
         with open(self.server_rule_file, "r") as f:
-            print("Server Rule: {}".format(f.read()))
+            print(f"Server Rule get_dependency_portlist: {f.read()}")
         with open(self.portlist_file, "w") as f:
             json.dump(port_list, f)
         client_rules.extend(non_dpi_rules)
+        
+        directory = os.path.dirname(self.client_rule_file)
+        if directory and not os.path.exists(directory):
+            os.makedirs(directory, exist_ok=True)
+        
         if os.path.exists(self.client_rule_file):
             os.remove(self.client_rule_file)
         with open(self.client_rule_file, "w") as f:
             f.write(",".join(client_rules))
         with open(self.client_rule_file, "r") as f:
-            print("Client Rule: {}".format(f.read()))
+            print(f"Client Rule get_dependency_portlist: {f.read()}")
+        print(f"grule_list get_dependency_portlist: {grule_list} | identifers get_dependency_portlist: {identifiers} | client_rules_iden get_dependency_portlist: {client_rules_iden}")
         return grule_list, identifiers, client_rules_iden
 
     def check_dpi_server_rule(self, identifier):
@@ -483,33 +546,25 @@ class PerfCommon(object):
         iden1, iden2 = "PayloadFilter2s", "PayloadFilter2"
         for dep_rule in self.src_pkg_json[iden1][iden2]:
             if dep_rule["TBUID"] in rule["RequiresTBUIDs"].split(","):
-                print("{} Dependency Found of {} Rule".format(dep_rule["Identifier"], rule["Identifier"]))
+                print(f"{dep_rule['Identifier']} Dependency Found of {rule['Identifier']} Rule")
                 return dep_rule
 
     def get_port_info(self, rule, portlist_set):
         port1, port2 = "PortLists", "PortList"
         con1, con2 = "ConnectionTypes", "ConnectionType"
-        port_id = "PortListTBUID"
-        con_tbuid = "ConnectionTypeTBUID"
+        port_id, con_tbuid = "PortListTBUID", "ConnectionTypeTBUID"
 
         for con in self.src_pkg_json[con1][con2]:
             if rule[con_tbuid] in con["TBUID"].split(","):
                 if con[port_id]:
                     for port in self.src_pkg_json[port1][port2]:
                         if con[port_id] in port["TBUID"].split(","):
-                            print("- {} Rule PortList, {}".format(rule["Identifier"], port))
+                            print(f"- {rule['Identifier']} Rule PortList, {port}")
                             try:
-                                sani_port = {}
-                                for k, v in port.items():
-                                    if v is None:
-                                        sani_port[k] = ""
-                                    elif k == "Issued":
-                                        pass
-                                    else:
-                                        sani_port[k] = v
+                                sani_port = {k: (v if v is not None else "") for k, v in port.items() if k != "Issued"}
                                 return portlist_set.add(tuple(sani_port.items()))
                             except Exception as exc:
-                                print("Exception: {} at Port List: {}".format(exc, port))
+                                print(f"Exception: {exc} at Port List: {port}")
                 else:
                     break
 
@@ -527,7 +582,7 @@ class PerfCommon(object):
                     return False
 
     def enable_agent_filter(self, sip, suser, spwd, cip, cuser, cpwd, scenario):
-        if scenario == "Server_Download" or scenario == "Server_Upload":
+        if scenario in ["Server_Download", "Server_Upload"]:
             self.activate_dsa(sip, suser, spwd)
             self.enable_filter(sip, suser, spwd, self.s_adap_name)
         if scenario == "Client_Download":

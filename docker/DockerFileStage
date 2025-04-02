@@ -1,0 +1,31 @@
+# Use the official Python image from the Docker Hub
+FROM python:3.9-slim
+
+# Set the MPLCONFIGDIR to a writable directory
+ENV MPLCONFIGDIR=/tmp/matplotlib
+
+# Clear the pip cache
+RUN pip cache purge
+
+# Install Terraform
+RUN apt-get update && \
+    apt-get install -y gnupg software-properties-common curl && \
+    curl -fsSL https://apt.releases.hashicorp.com/gpg | gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg && \
+    echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | tee /etc/apt/sources.list.d/hashicorp.list && \
+    apt-get update && \
+    apt-get install -y terraform
+
+# Install the required packages
+RUN pip install requests==2.27.1
+RUN pip install boto3==1.26.70
+RUN pip install rsa
+RUN pip install boto
+RUN pip install simplejson
+RUN pip install pandas
+RUN pip install matplotlib
+RUN pip install seaborn
+RUN pip install numpy
+RUN pip install paramiko
+
+# Install a specific version of pypsexec
+RUN pip install pypsexec==0.2.0

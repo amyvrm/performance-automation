@@ -1,6 +1,13 @@
 #!groovy
 //final TERRAFORM_DIR ="terraformHC"
 
+// Helper method to parse JSON
+@NonCPS
+def parseJson(String jsonString) {
+    def jsonSlurper = new groovy.json.JsonSlurper()
+    return jsonSlurper.parseText(jsonString)
+}
+
 node('aws&&docker')
 {
     // SEC
@@ -14,7 +21,7 @@ node('aws&&docker')
     {
         deleteDir()
         def scenario = params.SCENARIO
-        if (!(Scenario in ["Server_Upload", "Server_Download", "Client_Download"])) {
+        if (!(scenario in ["Server_Upload", "Server_Download", "Client_Download"])) {
     	    error ("Scenario unknown")
 	    }
         if (params.PARENT_PIPELINE_NUMBER == "0")
@@ -31,7 +38,7 @@ node('aws&&docker')
             def dsm_license_key = params.DSM_LICENSE_KEY
             def agents = params.AGENTS
             def agents_download_urls = params.AGENT_DOWNLOAD_URL
-            def dsru_url = ""
+            def dsru_url = params.PACKAGE_URL
 
         // Terraform related Pipeline Variables
             def iac_path = "iac_src"
@@ -51,8 +58,6 @@ node('aws&&docker')
             def manifest_file =  "${scenario}_${manifest}"
             def manifest_file_path = "${iac_path}/${manifest_file}"
             def manifest_file_pattern = "${iac_path}/**.json"
-            //def manifest_file_path = "${WORKSPACE}/${iac_path}/${manifest_file}"
-            //def manifest_file_pattern = "${WORKSPACE}/${iac_path}/**.json"
             def image_name = "perf-auto:${env.BUILD_NUMBER}"
             def dockerfile = 'docker/DockerfileSign'
             def destroy_param = ""
@@ -75,6 +80,15 @@ node('aws&&docker')
             def graph_file =  "${scenario}_band.png"
             def all_ids = ""
 
+            def server_rules
+            def client_rules
+
+            def rule_id_length = params.NO_OF_RULES
+
+
+            def individual_rule_test = params.INDIVIDUAL_RULE_TEST
+
+
             def jfrog_url = "https://jfrog.trendmicro.com/artifactory/dslabs-performance-generic-test-local"
 
         try 
@@ -86,19 +100,99 @@ node('aws&&docker')
                     withCredentials([file(credentialsId: 'perf_dslabs_automation_pem', variable: 'PEM_FILE_PATH')]){
 	            	sh "cat ${PEM_FILE_PATH} > processzone/dslabs_automation.pem"
 	                }
-                    withCredentials([file(credentialsId: 'perf_TerraformDemo_pem', variable: 'PEM_FILE_PATH')]){
-	            	sh "cat ${PEM_FILE_PATH} > processzone/TerraformDemo.pem"
-	                }
+                    dir('dsrusigning')
+                    {
+                        git branch: 'master', credentialsId: 'su-dslabs-automation-token',
+                        url: 'https://git@dsgithub.trendmicro.com/dslabs/dsrusigning.git'
+                    }
             }
 
            wrap([$class: 'BuildUser']) { user_name = "${env.BUILD_USER}" }
 
 
-            def infraImage = docker.build("infra-image", "-f docker/Dockerfile .")
+           sign_image = docker.build("${image_name}", "-f ${dockerfile} .")
+
+            sign_image.inside
+            {
+                stage('Download DSRU Package')
+                {
+                    sh "python ${iac_working_dir}/download_jfrog.py --url ${dsru_url} --path ${dsru_path} --jfrog_token ${LABS_JFROG_TOKEN}"
+                }
+
+                stage('Decrypt DSRU Package')
+                {
+                    dsru_file = sh(script: "ls -1 ${WORKSPACE}/${dsru_path}/*.dsru", returnStdout: true).trim()
+	        	    sh "java -jar dsrusigning/DSRUCrypt.jar decrypt ${dsru_file}/"
+	        	    env.pkg_name = sh(script: "basename ${dsru_file}", returnStdout: true).trim()
+                    echo "${env.pkg_name}"
+                    sh "ls -la ${WORKSPACE}/${dsru_path}"
+                }
+            }
+
+            def infraImage = docker.build("infra-image", "-f docker/DockerFileStage .")
             
                 infraImage.inside
                 {
-                        
+
+                    stage('Extract DSRU Rules')
+                    {
+                        script {
+                            def output = sh(script: "python ${iac_working_dir}/parse_update.py ${dsru_path}", returnStdout: true).trim()
+                            echo "Output: ${output}"
+                            def outputList = output.split(' ', 2)
+                            def count = outputList[0]
+                            def ids = outputList[1]
+                            echo "Count: ${count}"
+                            echo "IDs: ${ids}"
+                            env.count = count
+                            echo "Count: ${env.count}"
+                            env.ruleids = ids
+                            sh "ls -la ${dsru_path}"
+                        }
+                    }
+
+                    echo "rule_id_length ${rule_id_length}"
+
+                    if (rule_id_length != "" && (individual_rule_test == true || individual_rule_test == false))
+                    {
+                        env.count = rule_id_length
+                        echo "Count_: ${env.count}"
+                    }
+                    else if (rule_id_length == "" && individual_rule_test == false)
+                    {
+                        env.count = 1
+                        echo "Count_2: ${env.count}"
+                    }
+                    else
+                    {
+                        env.count = env.count
+                        echo "Count_3: ${env.count}"
+                    }
+
+                    stage('Validate Scenario with Rules')
+                    {
+                        script {
+                            def output = sh(script: "python3 ${iac_working_dir}/extract_Dsrurules.py --stats ${stats} --graph ${graph} --path ${dsru_path} --scenario ${scenario} --identifiers '${env.ruleids}'", returnStdout: true).trim()
+                            echo "Output: ${output}"
+                            // Parse the output to get the server and client rules counts
+                            server_rules = output.find(/server_rules=\d+/)?.split('=')[1]
+                            client_rules = output.find(/client_rules=\d+/)?.split('=')[1]
+
+                            echo "server_rules: ${server_rules}"
+                            echo "client_rules: ${client_rules}"
+                        }
+                    }
+
+                    if (scenario == "Client_Download" && client_rules == "0") {
+                        echo "No Client_Download rules available"
+                        currentBuild.result = "SUCCESS"
+                        return
+                    } else if ((scenario == "Server_Upload" || scenario == "Server_Download") && server_rules == "0") {
+                        echo "No Server rules available"
+                        currentBuild.result = "SUCCESS"
+                        return 
+                    }
+
                     stage('Get Tools')
                     {
                         sh ("python ${iac_working_dir}/get_pkg_frm_s3.py --access_key ${S3_ACCESS_KEY}    \
@@ -120,11 +214,13 @@ node('aws&&docker')
 
                     stage('Infra Plan and Apply - DSM, DSA and Test')
                     {
+                            echo "Count: ${env.count}"
+
                             sh "ls -la ${iac_path_dsm_dsa}"
                             
                             echo "Terraform Plan"
                             
-                            sh "terraform -chdir=${iac_path_dsm_dsa} plan -var=\'access_key=${AWS_ACCESS_KEY}\' -var=\'secret_key=${AWS_SECRET_KEY}\' -var=\'all_agent_urls=${agents_download_urls}\' -var=\'dsm_redhat_url=${dsm_package_url}\' -var=\'dsm_license=${dsm_key}\' -var=\'random_num=${env.BUILD_NUMBER}\' -out ${plan_dsm_dsa}"
+                            sh "terraform -chdir=${iac_path_dsm_dsa} plan -var=\'access_key=${AWS_ACCESS_KEY}\' -var=\'secret_key=${AWS_SECRET_KEY}\' -var=\'all_agent_urls=${agents_download_urls}\' -var=\'dsm_redhat_url=${dsm_package_url}\' -var=\'dsm_license=${dsm_key}\' -var=\'random_num=${env.BUILD_NUMBER}\' -var=\'instance_count=${env.count}\' -out ${plan_dsm_dsa}"
                             
                             echo "Terraform Apply"
 
@@ -145,46 +241,49 @@ node('aws&&docker')
 
                     stage('Tear Down Infrastructure - IDs')
                     {
-                            script
-                            {
-                                echo "Reading the manifest file"
-
-                                def manifestFile = readFile("${iac_path_dsm_dsa}/${manifest_file}")
-
-                                echo "Manifest File : ${manifestFile}"
-
-                                def jsonSlurper = new groovy.json.JsonSlurper()
-                                def jsonText = jsonSlurper.parseText(manifestFile)
-
-                                echo "Tear Down IDs : ${jsonText}"
-
-                                def keysToExtract = ['dsa-windows-id', 'dsa-windows-id-2', 'dsm-rhel-id']
-
-                                all_ids = keysToExtract.collect { key -> jsonText[key]?.value }.findAll { it != null }.join(', ')
-
-                                destroy_param = 'AWS_RESOURCES = ' + all_ids
-                            
-                                echo "Destroy Manifest File : ${destroy_param}"
-
-                            }
+                        script
+                        {
+                            echo "Reading the manifest file"
+                            def manifestFile = readFile("${iac_path_dsm_dsa}/${manifest_file}")
+                            echo "Manifest File : ${manifestFile}"
+                            //def jsonSlurper = new groovy.json.JsonSlurper()
+                            def jsonText = parseJson(manifestFile)
+                            echo "Tear Down IDs : ${jsonText}"
+                            def keysToExtract = jsonText.keySet().findAll { key -> 
+                                key.startsWith('dsa-windows-id') || 
+                                key.startsWith('dsa-windows_agent-id') || 
+                                key.startsWith('dsm-rhel-id')
+                            }                                  
+                            // Collect the values from matched keys
+                            all_ids = keysToExtract.collect { key -> jsonText[key]?.value }
+                                                      .findAll { it != null } // Remove nulls
+                                                      .join(', ')
+                            echo "All IDs: ${all_ids}"
+                            // Extract only the instance IDs
+                            def instanceIds = all_ids.tokenize(',').collect { id -> id.trim().find(/i-[a-zA-Z0-9]+/)}.findAll { it != null } // Remove nulls
+                    
+                            destroy_param = 'AWS_RESOURCES = ' + instanceIds.join(', ')
+                        
+                            echo "Destroy Manifest File : ${destroy_param}"
+                        }
                     }
 
                     stage('Tear Down Infrastructure - Manifest')
                     {
 
-                            writeFile file: 'tear_down_params.txt', text: destroy_param
-                            
-                            archiveArtifacts allowEmptyArchive: true, artifacts: '**/tear_down_params.txt'
+                        writeFile file: 'tear_down_params.txt', text: destroy_param
+                        
+                        archiveArtifacts allowEmptyArchive: true, artifacts: '**/tear_down_params.txt'
 
                     }
                 }
 
-            }
-            catch(e)
-            {
-                currentBuild.result = "FAILURE"
-                println(e)
-		    	throw e
-            }
+        }
+        catch(e)
+        {
+            currentBuild.result = "FAILURE"
+            println(e)
+			throw e
+        }
     }
 }

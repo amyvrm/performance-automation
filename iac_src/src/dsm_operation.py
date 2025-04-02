@@ -21,9 +21,9 @@ class BearerAuth(requests.auth.AuthBase):
 
 
 class DsmPolicy(object):
-    def __init__(self, dsm_ver, jfrog_token, machine, path, policy_name, port, server_rule, client_rule):
+    def __init__(self, dsm_ver, jfrog_token, machine, path, policy_name, port, server_rule, client_rule, portlist_file, dsm_server):
         # dsm_ip = machine.get_dsm_public_ip()
-        dsm_ip = machine.get_dsm_private_ip()
+        dsm_ip = dsm_server
         print("+ DSM IP: {} +".format(dsm_ip))
         self.header = "-" * 50
         self.policy_name = policy_name
@@ -40,6 +40,7 @@ class DsmPolicy(object):
         self.cred = BearerAuth(jfrog_token)
         self.server_rule_file = server_rule
         self.client_rule_file = client_rule
+        self.port_list_file = portlist_file
         self.connect()
 
     def connect(self):
@@ -132,7 +133,7 @@ class DsmPolicy(object):
     def override_portlist(self, source_fname, dest_fname):
         print("{0}\n# Updating policy to override rule port list with port {1} #\n{0}".format("#" * 50, self.port))
         port1, port2 = "PortLists", "PortList"
-        with open(os.path.join("update-info", "port_list.txt"), "r") as f:
+        with open(os.path.join(self.port_list_file), "r") as f:
             port_list = json.load(f)
         print("Length of port list: {}".format(len(port_list)))
 
@@ -211,7 +212,7 @@ class DsmPolicy(object):
         print("Update package applied successfully")
         print(f"Details saved to update-info.txt\n")
         print("No problems uploading or applying update package, all tests passed")
-        return contentSummary
+        return contentSummary, identifiers
 
     def upload_package(self):
         # pkg_name = [filename for filename in os.listdir("update-packages")
@@ -337,7 +338,12 @@ class DsmPolicy(object):
         print("{0}\n# Updating policy to override rule port with {1} port #\n{0}".format("#" * 50, self.port))
         con1, con2 = "ConnectionTypes", "ConnectionType"
         policy_xml_str = self.export_policy_xml(policy_id)
-        root = ET.fromstring(policy_xml_str)
+        try:
+            root = ET.fromstring(policy_xml_str)
+        except ET.ParseError as e:
+            print(f"Error parsing XML: {e}")
+            print("Ensure the XML is well-formed and properly encoded.")
+            raise
 
         count = 0
         for index, con in enumerate(root.iter(con2), 1):

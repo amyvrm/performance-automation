@@ -37,12 +37,16 @@ node(nodeLabel) {
 						
 						stage('Destroying resources') {
 							dir(MAIN_DIR){
+								// sh """
+								//     python ${terraform_dir}/destroy_infra.py \
+								//     --access_key "${AWS_ACCESS_KEY_ID}" \
+								//     --secret_key "${AWS_SECRET_ACCESS_KEY}" \
+								//     --resource_list "${aws_resources}" \
+								//     --terraform_dir "${terraform_dir}"
+								// """
+
 								sh """
-								    python ${terraform_dir}/destroy_infra.py \
-								    --access_key "${AWS_ACCESS_KEY_ID}" \
-								    --secret_key "${AWS_SECRET_ACCESS_KEY}" \
-								    --resource_list "${aws_resources}" \
-								    --terraform_dir "${terraform_dir}"
+									python ${terraform_dir}/destroy_ec2.py --ids "${aws_resources}" \
 								"""
 							}
 						}
@@ -58,4 +62,3 @@ node(nodeLabel) {
 		}
 	}
 }
-	
