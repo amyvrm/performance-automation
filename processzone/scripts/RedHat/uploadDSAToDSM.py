@@ -262,10 +262,10 @@ if __name__ == '__main__':
 	dsmAPIinstance.createAPIKey()
 
 	for i in agentFile:
-                strAgentFile = str(i)
-                print(strAgentFile)
-                dsmAPIinstance.uploadPackage(strAgentFile)
-                time.sleep(8)
+		strAgentFile = str(i)
+		print(strAgentFile)
+		dsmAPIinstance.uploadPackage(strAgentFile)
+		time.sleep(8)
 
 	#dsmAPIinstance.deleteCurrentSession()
 	dsmAPIinstance.deleteAPIKey(keyname=None)

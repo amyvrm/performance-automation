@@ -52,7 +52,7 @@ class PerfCommon(object):
         with open(fname, "w") as fout:
             fout.write(content)
             fout.write('<div class="row">\n')
-            fout.write(df.to_html(classes="table table-bordered table-hover table-sm", justify="center", border=1))
+            fout.write(df.to_html(classes="table table-striped", justify="center", border=1))
             fout.write("</div>\n")
             fout.write('<h4 style="padding: 10px;">Performance Tested Rules:</h4>\n')
             fout.write("<div><pre>{}</pre></div>\n".format(filtered_rules.strip()))
