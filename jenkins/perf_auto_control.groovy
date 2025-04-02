@@ -87,6 +87,7 @@ node('aws&&docker') {
                         credentials(description: 'DSM License Key for Automation', name: 'DSM_LICENSE_KEY', value: 'AUTOMATION_DSM_LICENSE_KEY'),
                         string(name: 'AGENTS', value: agents),
                         string(name: 'AGENT_DOWNLOAD_URL', value: agents_download_urls),
+                        string(name: 'PACKAGE_URL', value: package_url),
                         string(name: 'SCENARIO', value: scenario),
                         string(name: 'NO_OF_RULES', value: rule_id_length),
                         booleanParam(name: 'INDIVIDUAL_RULE_TEST', value: individual_rule_test)
