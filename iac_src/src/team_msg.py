@@ -3,7 +3,7 @@ import requests
 import json
 import re
 
-def send_teams_notification(webhook, pipeline_name,  status, build_url, build_user, scenario, stats_url, graph_url, manifest_file_url, build_number):
+def send_teams_notification(webhook, pipeline_name,  status, build_url, build_user, scenario, stats_url, jfrog_url, manifest_file_url, build_number):
     parent_url = build_url
     if "parent_" in build_number:
         updated_url = build_url.replace("parent_", "")
@@ -22,7 +22,7 @@ def send_teams_notification(webhook, pipeline_name,  status, build_url, build_us
         # Results load 
         text += "<hr>"
         text += "<b><a href={} style='background-color: #c0c0c0; color: black; font-weight: bold; font-size: 16px; padding: 10px 20px; border: 2px solid white; border-radius: 15px; text-align: center; text-decoration: none; display: inline-block;'>&nbsp;&nbsp;Bandwidth Stats in Table&nbsp;&nbsp;</a></b>".format(stats_url)   
-        text += "&nbsp;&nbsp;&nbsp;&nbsp;<b><a href={} style='background-color: #c0c0c0; color: black; font-weight: bold; font-size: 16px; padding: 10px 20px; border: 2px solid white; border-radius: 15px; text-align: center; text-decoration: none; display: inline-block;'>&nbsp;&nbsp;Bandwidth Stats in Bar Chart&nbsp;&nbsp;</a></b>".format(graph_url)   
+        text += "&nbsp;&nbsp;&nbsp;&nbsp;<b><a href={} style='background-color: #c0c0c0; color: black; font-weight: bold; font-size: 16px; padding: 10px 20px; border: 2px solid white; border-radius: 15px; text-align: center; text-decoration: none; display: inline-block;'>&nbsp;&nbsp;All Artifacts&nbsp;&nbsp;</a></b>".format(jfrog_url)   
         text += "&nbsp;&nbsp;&nbsp;&nbsp;<b><a href={} style='background-color: #c0c0c0; color: black; font-weight: bold; font-size: 16px; padding: 10px 20px; border: 2px solid white; border-radius: 15px; text-align: center; text-decoration: none; display: inline-block;'>&nbsp;&nbsp;Infra Access Detail&nbsp;&nbsp;</a></b>".format(manifest_file_url)   
         text += "&nbsp;&nbsp;&nbsp;&nbsp;<b><a href={} style='background-color: #c0c0c0; color: black; font-weight: bold; font-size: 16px; padding: 10px 20px; border: 2px solid white; border-radius: 15px; text-align: center; text-decoration: none; display: inline-block;'>&nbsp;&nbsp;View Jenkins Build&nbsp;&nbsp;</a></b>".format(build_url)   
     message = {"text": text}
@@ -56,5 +56,5 @@ if __name__ == "__main__":
     stats_url = "{}/{}".format(args.jfrog_url, stats_file)
     graph_url = "{}/{}".format(args.jfrog_url, graph_file)
     manifest_file_url = "{}/{}".format(args.jfrog_url, args.manifest_file)
-    send_teams_notification(args.webhook, args.pipeline_name, args.status, args.jenkins_url, args.build_user, args.scenario, stats_url, graph_url,
+    send_teams_notification(args.webhook, args.pipeline_name, args.status, args.jenkins_url, args.build_user, args.scenario, stats_url, args.jfrog_url,
                             manifest_file_url, args.build_number)
