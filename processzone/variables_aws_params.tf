@@ -24,7 +24,8 @@ variable "terraform-vpc" {
 #}
 
 variable "subnet_id" {
-	default = "subnet-0e56fc43911a8e78d"
+	# default = "subnet-0e56fc43911a8e78d"
+	default = "subnet-01d54fb8a303904f7"
 }
 
 variable "vpc_id" {

@@ -21,7 +21,8 @@ cd /tmp
 
 #python3.7 -m pip install zeep
 
-sudo yum install -y libxml2-devel libxslt-devel python3.6-devel gcc
+#sudo yum install -y libxml2-devel libxslt-devel python3.6-devel gcc
+sudo yum install -y libxml2-devel libxslt-devel python3.11-devel gcc
 sudo pip3 install --upgrade pip setuptools
 sudo pip3 install lxml
 sudo pip3 install zeep

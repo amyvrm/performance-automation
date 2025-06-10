@@ -15,8 +15,11 @@ variable "vpc_id" {
 }
 
 variable "subnet_id" {
-  default = "subnet-0e56fc43911a8e78d"
+  # default = "subnet-0e56fc43911a8e78d"
+	default = "subnet-01d54fb8a303904f7"
 }
+
+
 
 variable "security_grp_id" {
   default = "sg-002386483ee32b11f"
