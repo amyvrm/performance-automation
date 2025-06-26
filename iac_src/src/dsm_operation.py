@@ -567,6 +567,7 @@ class DsmPolicy(object):
         time.sleep(30)
 
     def disconnect(self):
+        print("Disconnecting DSM")
         self.client.service.endSession(sID=self.sID)
         self.client.transport.session.close()
 
