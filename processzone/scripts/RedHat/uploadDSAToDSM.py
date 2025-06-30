@@ -10,16 +10,16 @@ import uuid
 import zeep
 from zeep.transports import Transport
 from zeep import exceptions
+from zeep.exceptions import Fault
 from requests import Session
+from requests.exceptions import ConnectionError, Timeout
 from glob import glob
-
 
 class DSMConfig:
 	context = ssl._create_unverified_context()
 	headers = {
 		'Content-Type': 'application/json'
 	}
-
 	def __init__(self, dsm_public, dsm_admin_user, dsm_admin_passwd, dsm_port='4119'):
 		self.dsm_public = dsm_public
 		self.dsm_port = dsm_port
@@ -27,15 +27,16 @@ class DSMConfig:
 		self.dsm_admin_passwd = dsm_admin_passwd
 		self.DSAF_API_KEY_NAME = "MTTR_API_Key"
 		self.DSM_BASE_URL = "https://{}:{}".format(dsm_public, dsm_port)
+		self.rID = None  
+		self.cookies = None  
+		self.sID = None
 		self.get_cookie()
 		self.apiAdminKey = ""
 		self.wsdl = '{}/webservice/Manager?WSDL'.format(self.DSM_BASE_URL)
 		self.session = Session()
 		self.session.verify = False
 		self.transport = Transport(session=self.session)
-		
 		self.client = zeep.Client(wsdl=self.wsdl, transport=self.transport)
-
 	def get_cookie(self):
 		# ================
 		# Get cookies
@@ -63,13 +64,14 @@ class DSMConfig:
 		except Exception:
 			import traceback
 			print('generic exception: ' + traceback.format_exc())
-			
-		self.rID = json.loads(authResponse.read().decode("utf-8"))["RID"]
-		self.cookies = authResponse.info()['Set-Cookie']
-		allCookies = self.cookies.split(';')
-		for cookie in allCookies:
-			if 'sID' in cookie:
-				self.sID = cookie.split('=')[1]
+		
+		if authResponse:
+			self.rID = json.loads(authResponse.read().decode("utf-8"))["RID"]
+			self.cookies = authResponse.info()['Set-Cookie']
+			allCookies = self.cookies.split(';')
+			for cookie in allCookies:
+				if 'sID' in cookie:
+					self.sID = cookie.split('=')[1]
 
 	def deleteAPIKey(self, keyname):
 		deleteAPIKeyHeaders = copy.copy(self.headers)
@@ -140,7 +142,7 @@ class DSMConfig:
 		except Exception:
 			import traceback
 			print('generic exception: ' + traceback.format_exc())
-		# print(deleteCurrentResponse.code)
+		print(f"deleteCurrentResponse.code: {deleteCurrentResponse.code}")
 		return deleteCurrentResponse.code
 
 	def createAPIKey(self):
@@ -224,28 +226,41 @@ class DSMConfig:
 		return setSettingsResponse.code
 
 	def uploadPackage(self, filePath):
-		#wsdl = '{}/webservice/Manager?WSDL'.format(self.DSM_BASE_URL)
-		
-		#session = Session()
-		#session.verify = False
-		#transport = Transport(session=session)
-		
-		#client = zeep.Client(wsdl=wsdl, transport=transport)
+		uploadResp = None
 		try:
 			with open(filePath, "rb") as f_in:
-				print(os.path.basename(f_in.name))
-				uploadResp = self.client.service.softwareStore(software=f_in.read(), fileName=os.path.basename(f_in.name), notes=os.path.basename(f_in.name), sID=self.sID)
-		except zeep.exceptions.Fault as zeepErr:
+				file_name = os.path.basename(f_in.name)
+				print(f"Uploading file: {file_name}")
+				uploadResp = self.client.service.softwareStore(
+					software=f_in.read(),
+					fileName=file_name,
+					notes=file_name,
+					sID=self.sID
+				)
+		except FileNotFoundError:
+			print(f"File not found: {filePath}")
+			return
+		except IOError as io_err:
+			print(f"IO error occurred: {io_err}")
+			return
+		except Fault as zeepErr:
 			if "The selected software name already exists" in zeepErr.message:
-				print(zeepErr.message)
+				print(f"Warning: {zeepErr.message}")
 				return
 			else:
-				print(zeepErr.message)
+				print(f"Error: {zeepErr.message}")
 				exit(1)
-		print(uploadResp)
-		
-		#self.deleteAPIKey(keyname=self.DSAF_API_KEY_NAME)
-		return uploadResp
+		except Exception as err:
+			print(f"An unexpected error occurred: {err}")
+			exit(1)
+		else:
+			print("Upload response: %s", uploadResp)
+			print(uploadResp)
+			self.deleteAPIKey(keyname=self.DSAF_API_KEY_NAME)
+			return uploadResp
+		finally:
+			self.client.transport.session.close()
+
 
 if __name__ == '__main__':
 	parser = argparse.ArgumentParser(description='Optional app description')
@@ -267,5 +282,5 @@ if __name__ == '__main__':
 		dsmAPIinstance.uploadPackage(strAgentFile)
 		time.sleep(8)
 
-	#dsmAPIinstance.deleteCurrentSession()
-	dsmAPIinstance.deleteAPIKey(keyname=None)
+	dsmAPIinstance.deleteCurrentSession()
+	#dsmAPIinstance.deleteAPIKey(keyname=None)
