@@ -1,13 +1,14 @@
 FROM python:3
-RUN apt-get update
-#RUN useradd -s /bin/bash -u 501 -U -d /build -m build && groupmod -g 501 build
 
-# terraform https://learn.hashicorp.com/tutorials/terraform/install-cli
-RUN apt-get install -y gnupg software-properties-common curl
-RUN wget -O- https://apt.releases.hashicorp.com/gpg | gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
-RUN echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | tee /etc/apt/sources.list.d/hashicorp.list
-RUN apt-get update
-RUN apt-get install terraform=1.1.7
+# Install system dependencies
+RUN apt-get update && \
+    apt-get install -y gnupg curl unzip && \
+    rm -rf /var/lib/apt/lists/*
+
+# Install Terraform
+RUN curl -sSL https://releases.hashicorp.com/terraform/1.2.6/terraform_1.2.6_linux_amd64.zip -o terraform.zip && \
+    unzip terraform.zip -d /usr/local/bin && \
+    rm terraform.zip
 
 RUN apt-get install python3-pip -y
 RUN pip install requests==2.27.1
