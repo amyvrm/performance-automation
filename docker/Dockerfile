@@ -10,7 +10,6 @@ RUN curl -sSL https://releases.hashicorp.com/terraform/1.2.6/terraform_1.2.6_lin
     unzip terraform.zip -d /usr/local/bin && \
     rm terraform.zip
 
-RUN apt-get install python3-pip -y
 RUN pip install requests==2.27.1
 RUN pip install boto3==1.26.70
 #RUN pip install lxml
