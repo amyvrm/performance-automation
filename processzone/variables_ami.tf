@@ -13,29 +13,29 @@ variable "dsa_windows_ami"{
 	default = "ami-051a0421f3df4c021"
 }
 
-data "aws_ami" "rhel8_ami" {
-  most_recent      = true
-  owners           = ["amazon"]
+# data "aws_ami" "rhel8_ami" {
+#   most_recent      = true
+#   owners           = ["amazon"]
 
-  filter {
-    name   = "name"
-    values = ["RHEL-8.6.0_HVM*x86_64*GP2"]
-  }
+#   filter {
+#     name   = "name"
+#     values = ["RHEL-8.6.0_HVM*x86_64*GP2"]
+#   }
 
-  filter {
-    name   = "root-device-type"
-    values = ["ebs"]
-  }
+#   filter {
+#     name   = "root-device-type"
+#     values = ["ebs"]
+#   }
 
-  filter {
-    name   = "virtualization-type"
-    values = ["hvm"]
-  }
-  filter {
-    name   = "architecture"
-    values = ["x86_64"]
-  }
-}
+#   filter {
+#     name   = "virtualization-type"
+#     values = ["hvm"]
+#   }
+#   filter {
+#     name   = "architecture"
+#     values = ["x86_64"]
+#   }
+# }
 
 data "aws_ami" "windows_server2019_ami" {
   most_recent      = true
