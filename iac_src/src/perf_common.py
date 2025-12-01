@@ -11,6 +11,8 @@ import seaborn as sns
 import numpy as np
 import time
 from backoff_utils import wait_for_nginx_ready
+from backoff_utils import exponential_backoff_sleep
+import socket
 import os
 import re
 
@@ -116,9 +118,20 @@ class PerfCommon(object):
                       "</head>\n<body>\n"
         return html_header
 
-    def run_band_test(self, suser, sip, spwd, s_priv_ip, cuser, cip, cpwd, c_priv_ip, scenario_name):
+    def run_band_test(self, suser, sip, spwd, s_priv_ip, cuser, cip, cpwd, c_priv_ip, scenario_name, use_iperf3=True):
+        """
+        Run bandwidth test with optional iperf3 support.
+        
+        Args:
+            use_iperf3: If True, use iperf3 for Server Upload scenarios (default: True for backward compatibility)
+        """
         print("c_priv_ip: {}".format(c_priv_ip))
         print("s_priv_ip: {}".format(s_priv_ip))
+        
+        # For Server Upload, offer iperf3 option
+        if scenario_name == "Server Upload" and use_iperf3:
+            print("⚡ Using iperf3 for Server Upload scenario")
+            return self.run_band_test_iperf3(suser, sip, spwd, s_priv_ip, cuser, cip, cpwd, c_priv_ip, scenario_name)
         if scenario_name == "Server Download" or scenario_name == "Client Download":
             # Run Nginx
             self.run_nginx(sip, suser, spwd)
@@ -151,8 +164,32 @@ class PerfCommon(object):
         elif scenario_name == "Server Upload":
             # receiver
             pid = self.run_pcattcp_rec(sip, suser, spwd, c_priv_ip, asynchronous=True)
-            print("Waiting 3 min, to flow the traffic")
-            time.sleep(180)
+            print("Waiting for traffic readiness (adaptive wait)...")
+            # Adaptive wait: probe the receiver port for readiness with exponential backoff
+            def is_port_open(ip, port, timeout=2):
+                try:
+                    with socket.create_connection((ip, port), timeout=timeout):
+                        return True
+                except Exception:
+                    return False
+
+            # PCATTCP default port is 5001 unless overridden
+            pcattcp_port = 5001
+            max_wait = 180  # seconds, fallback to old max
+            waited = 0
+            for attempt in range(1, 10):
+                if is_port_open(s_priv_ip, pcattcp_port):
+                    print(f"✓ PCATTCP receiver ready on {s_priv_ip}:{pcattcp_port} after {waited}s")
+                    break
+                sleep_time = min(2 ** attempt, 30)
+                print(f"  Waiting for PCATTCP receiver... (attempt {attempt}, sleeping {sleep_time}s)")
+                exponential_backoff_sleep(attempt, base=2, max_sleep=30)
+                waited += sleep_time
+                if waited >= max_wait:
+                    print(f"⚠ Timed out after {waited}s waiting for PCATTCP receiver, proceeding anyway.")
+                    break
+            else:
+                print(f"⚠ PCATTCP receiver not detected after {waited}s, proceeding with test.")
             # transmitter
             through_put = self.run_pcattcp_tran(cip, cuser, cpwd, s_priv_ip, bandwidth=True)
             print("Through put: {}".format(through_put))
@@ -166,8 +203,30 @@ class PerfCommon(object):
                     print("Exception: Attempt-{} to get the stats...Found stats=[{}]".format(retry, through_put))
                     # receiver
                     pid = self.run_pcattcp_rec(sip, suser, spwd, c_priv_ip, asynchronous=True)
-                    print("Waiting 3 min, to flow the traffic")
-                    time.sleep(180)
+                    print("Waiting for traffic readiness (adaptive wait)...")
+                    def is_port_open(ip, port, timeout=2):
+                        try:
+                            with socket.create_connection((ip, port), timeout=timeout):
+                                return True
+                        except Exception:
+                            return False
+
+                    pcattcp_port = 5001
+                    max_wait = 180  # seconds
+                    waited = 0
+                    for attempt in range(1, 10):
+                        if is_port_open(s_priv_ip, pcattcp_port):
+                            print(f"✓ PCATTCP receiver ready on {s_priv_ip}:{pcattcp_port} after {waited}s")
+                            break
+                        sleep_time = min(2 ** attempt, 30)
+                        print(f"  Waiting for PCATTCP receiver... (attempt {attempt}, sleeping {sleep_time}s)")
+                        exponential_backoff_sleep(attempt, base=2, max_sleep=30)
+                        waited += sleep_time
+                        if waited >= max_wait:
+                            print(f"⚠ Timed out after {waited}s waiting for PCATTCP receiver, proceeding anyway.")
+                            break
+                    else:
+                        print(f"⚠ PCATTCP receiver not detected after {waited}s, proceeding with test.")
                     # transmitter
                     through_put = self.run_pcattcp_tran(cip, cuser, cpwd, s_priv_ip, bandwidth=True)
                     print("Through put: {}".format(through_put))
@@ -404,6 +463,13 @@ class PerfCommon(object):
         cmd = f'/F /PID {pid}' if pid else '/IM PCATTCP.exe /F'
         return self.execute_cmd(cmd, ip, user, pwd, tool=tool)
 
+    def clean_iperf3(self, ip, user, pwd):
+        """Clean up iperf3 processes."""
+        print(f"- Clean iperf3 in {self.ip_type[ip]}-{ip}")
+        tool = 'taskkill.exe'
+        cmd = '/IM iperf3.exe /F'
+        return self.execute_cmd(cmd, ip, user, pwd, tool=tool)
+
     def clean_ab(self, ip, user, pwd):
         print(f"- Clean Apache Bench in {self.ip_type[ip]}-{ip}")
         return self.clean(ip, user, pwd, pid=False)
@@ -426,6 +492,126 @@ class PerfCommon(object):
         tool = "Powershell.exe"
         cmd = f'{self.path}PCATTCP\\PCATTCP.exe -t -l 490000 {target_ip}'
         return self.execute_cmd(cmd, ip, user, pwd, tool=tool, bandwidth=bandwidth, asynchronous=asynchronous)
+
+    def run_iperf3_server(self, ip, user, pwd, port=5001):
+        """Start iperf3 server in background."""
+        print(f"{'+' * 50}\n+ Start iperf3 server on {self.ip_type[ip]}-{ip}:{port} +\n{'+' * 50}")
+        self.clean_iperf3(ip, user, pwd)
+        tool = "Powershell.exe"
+        cmd = f"Start-Process {self.path}iperf3.exe -ArgumentList '-s -p {port}' -WindowStyle Hidden"
+        self.execute_cmd(cmd, ip, user, pwd, tool=tool, asynchronous=True)
+        time.sleep(2)  # Allow server to start
+        print(f"iperf3 server started on {ip}:{port}")
+
+    def run_iperf3_client(self, ip, user, pwd, server_ip, duration=60, parallel=10):
+        """Run iperf3 client and return metrics in Mbps."""
+        print(f"{'+' * 50}\n+ Run iperf3 client on {self.ip_type[ip]}-{ip} +\n{'+' * 50}")
+        tool = "Powershell.exe"
+        cmd = f"{self.path}iperf3.exe -c {server_ip} -t {duration} -P {parallel} -J"
+        
+        output = self.execute_cmd(cmd, ip, user, pwd, tool=tool)
+        
+        try:
+            import json
+            result = json.loads(output)
+            mbps = round(result['end']['sum_received']['bits_per_second'] / 1e6, 2)
+            print(f"✓ iperf3 result: {mbps} Mbps")
+            return mbps
+        except Exception as e:
+            print(f"Failed to parse iperf3 JSON output: {e}, falling back to regex")
+            return self._parse_iperf3_fallback(output)
+
+    def _parse_iperf3_fallback(self, output):
+        """Fallback parser for iperf3 output when JSON parsing fails."""
+        import re
+        try:
+            # Look for patterns like "X.XX Gbits/sec" or "X.XX Mbits/sec"
+            # Example: "[ ID] Interval           Transfer     Bitrate"
+            #          "[SUM]   0.00-60.00  sec  1.50 GBytes   215 Mbits/sec"
+            
+            # Try to find the summary line with SUM
+            sum_match = re.search(r'\[SUM\].*?\s+([\d.]+)\s+(G|M)bits/sec', output, re.IGNORECASE)
+            if sum_match:
+                value = float(sum_match.group(1))
+                unit = sum_match.group(2).upper()
+                mbps = value * 1000 if unit == 'G' else value
+                print(f"✓ iperf3 fallback parse: {mbps} Mbps")
+                return round(mbps, 2)
+            
+            # Fallback to last line with bitrate
+            bitrate_matches = re.findall(r'([\d.]+)\s+(G|M)bits/sec', output, re.IGNORECASE)
+            if bitrate_matches:
+                value, unit = bitrate_matches[-1]
+                mbps = float(value) * 1000 if unit.upper() == 'G' else float(value)
+                print(f"✓ iperf3 fallback parse: {mbps} Mbps")
+                return round(mbps, 2)
+            
+            print("⚠ Could not parse iperf3 output")
+            return 0.0
+        except Exception as e:
+            print(f"✗ iperf3 fallback parsing error: {e}")
+            return 0.0
+
+    def run_band_test_iperf3(self, suser, sip, spwd, s_priv_ip, cuser, cip, cpwd, c_priv_ip, scenario_name):
+        """Enhanced bandwidth test using iperf3 (replaces PCATTCP for Server Upload)."""
+        print(f"{'=' * 60}\nScenario: {scenario_name} (iperf3)\n{'=' * 60}")
+        
+        if scenario_name == "Server Upload":
+            # Server receives
+            self.run_iperf3_server(sip, suser, spwd)
+            
+            # Client transmits - run multiple iterations
+            throughput = []
+            for i in range(10):
+                print(f"\n--- Iteration {i+1}/10 ---")
+                mbps = self.run_iperf3_client(cip, cuser, cpwd, s_priv_ip, duration=60, parallel=10)
+                if mbps > 0:
+                    throughput.append(mbps)
+                    print(f"✓ Iteration {i+1}: {mbps} Mbps")
+                else:
+                    print(f"⚠ Iteration {i+1}: Failed to get valid throughput")
+                
+                # Brief pause between iterations
+                if i < 9:
+                    time.sleep(5)
+            
+            # Cleanup
+            self.clean_iperf3(sip, suser, spwd)
+            self.clean_iperf3(cip, cuser, cpwd)
+            
+            if len(throughput) >= 10:
+                throughput.sort(reverse=True)
+                print(f"\n{'=' * 60}\niperf3 Results: {throughput}\n{'=' * 60}")
+                return throughput
+            else:
+                # Retry if we didn't get enough samples
+                print(f"⚠ Only got {len(throughput)} valid samples, retrying...")
+                for retry in range(2):
+                    print(f"\n=== Retry Attempt {retry+1}/2 ===")
+                    self.run_iperf3_server(sip, suser, spwd)
+                    
+                    retry_throughput = []
+                    for i in range(10):
+                        print(f"\n--- Retry {retry+1}, Iteration {i+1}/10 ---")
+                        mbps = self.run_iperf3_client(cip, cuser, cpwd, s_priv_ip, duration=60, parallel=10)
+                        if mbps > 0:
+                            retry_throughput.append(mbps)
+                            print(f"✓ Iteration {i+1}: {mbps} Mbps")
+                        
+                        if i < 9:
+                            time.sleep(5)
+                    
+                    self.clean_iperf3(sip, suser, spwd)
+                    self.clean_iperf3(cip, cuser, cpwd)
+                    
+                    if len(retry_throughput) >= 10:
+                        retry_throughput.sort(reverse=True)
+                        print(f"\n{'=' * 60}\niperf3 Results (retry): {retry_throughput}\n{'=' * 60}")
+                        return retry_throughput
+                
+                raise Exception(f"Failed to collect 10 valid iperf3 measurements after retries. Got {len(throughput)} samples.")
+        else:
+            raise NotImplementedError(f"iperf3 not yet implemented for scenario: {scenario_name}")
 
     def run_nginx(self, ip, user, pwd):
         print(f"{'+' * 50}\n+ Run nginx on {self.ip_type[ip]}-{ip} +\n{'+' * 50}")

@@ -282,6 +282,7 @@ class PerformanceScenario(PerfCommon):
                 print("{0}{0}\n# {1} Rule Applied \n{0}{0}".format(self.header, identifier))
             # print("Waiting 3 min")
             # time.sleep(180)
+            # To use iperf3 for Server Upload scenarios, add: use_iperf3=True
             all_stats = self.run_band_test(suser, sip, spwd, s_priv_ip, cuser, cip, cpwd, c_priv_ip, scenario_name)
             iter_stats = all_stats[:self.best_iteration]
             avg = round(sum(map(float, iter_stats)) / len(iter_stats), 2)
