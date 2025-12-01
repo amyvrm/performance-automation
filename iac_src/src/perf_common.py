@@ -24,6 +24,10 @@ class PerfCommon(object):
         self.server_rule_file = os.path.join("update-info", "server-rule-identifiers.txt")
         self.client_rule_file = os.path.join("update-info", "client-rule-identifiers.txt")
         self.portlist_file = os.path.join("update-info", "port_list.txt")
+        # Adapter name cache
+        self._adapter_cache = {}  # {ip: adapter_name}
+        self._adapter_cache_ttl = 3600  # Cache for 1 hour
+        self._adapter_cache_timestamp = {}  # {ip: timestamp}
 
     def create_html_table(self, df, scenario_name, filtered_rules):
         fname = "{}_{}".format(scenario_name.replace(" ", "_"), self.stats)
@@ -311,12 +315,74 @@ class PerfCommon(object):
         except Exception as e:
             raise Exception(f"Failed to decrypt password: {e}")
 
-    def get_adaptor_name(self, ip, user, pwd):
-        print("- get_adaptor_name")
+    def get_adaptor_name(self, ip, user, pwd, force_refresh=False):
+        """
+        Get network adapter name with caching.
+        Args:
+            ip: Target machine IP
+            user: Username
+            pwd: Password
+            force_refresh: Bypass cache and fetch fresh value
+        Returns:
+            Adapter name string
+        """
+        # Check cache first
+        if not force_refresh and ip in self._adapter_cache:
+            cached_time = self._adapter_cache_timestamp.get(ip, 0)
+            age = time.time() - cached_time
+            if age < self._adapter_cache_ttl:
+                print(f"✓ Using cached adapter name for {ip} (age: {age:.0f}s)")
+                return self._adapter_cache[ip]
+            else:
+                print(f"⚠ Cache expired for {ip} (age: {age:.0f}s), refreshing...")
+        # Fetch from remote
+        print(f"→ Fetching adapter name for {ip} via remote call...")
         tool = "Powershell.exe"
         cmd = "Get-NetAdapter -Name *|select Name|%{$_.Name}"
         name = self.execute_cmd(cmd, ip, user, pwd, tool=tool)
-        return name.replace(" ", "` ") if " " in name else name
+        normalized_name = name.replace(" ", "` ") if " " in name else name
+        self._adapter_cache[ip] = normalized_name
+        self._adapter_cache_timestamp[ip] = time.time()
+        print(f"✓ Cached adapter name '{normalized_name}' for {ip}")
+        return normalized_name
+
+    def clear_adapter_cache(self, ip=None):
+        """Clear adapter cache for specific IP or all IPs."""
+        if ip:
+            self._adapter_cache.pop(ip, None)
+            self._adapter_cache_timestamp.pop(ip, None)
+            print(f"Cleared adapter cache for {ip}")
+        else:
+            self._adapter_cache.clear()
+            self._adapter_cache_timestamp.clear()
+            print("Cleared all adapter cache")
+
+    def preload_adapter_names(self, machines):
+        """
+        Preload adapter names for multiple machines in parallel.
+        Args:
+            machines: List of dicts with keys: ip, user, pwd
+        Returns:
+            dict mapping ip -> adapter_name
+        """
+        from concurrent.futures import ThreadPoolExecutor, as_completed
+        print(f"Preloading adapter names for {len(machines)} machines...")
+        results = {}
+        with ThreadPoolExecutor(max_workers=min(len(machines), 10)) as executor:
+            future_to_ip = {
+                executor.submit(self.get_adaptor_name, m['ip'], m['user'], m['pwd']): m['ip']
+                for m in machines
+            }
+            for future in as_completed(future_to_ip):
+                ip = future_to_ip[future]
+                try:
+                    adapter_name = future.result()
+                    results[ip] = adapter_name
+                    print(f"  ✓ {ip}: {adapter_name}")
+                except Exception as e:
+                    print(f"  ✗ {ip}: Failed - {e}")
+                    results[ip] = None
+        return results
 
     def enable_filter(self, ip, user, pwd, adaptor_name):
         print("{0}\n # {2}-{1} Enable Filter #\n{0}".format("+" * 50, ip, self.ip_type[ip]))

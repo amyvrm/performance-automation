@@ -161,26 +161,27 @@ class PerformanceScenario(PerfCommon):
 
             print(f"_sip: {_sip} \n | _cip: {_cip} \n | _s_priv_ip: {_s_priv_ip} \n | _c_priv_ip: {_c_priv_ip}\n")
 
+
             self._s_adap_name = []
             self._c_adap_name = []
 
             _sip, _cip = _s_priv_ip, _c_priv_ip
 
-            for x in range(0, len(all_instance_server)):
-                try:
-                    print("Server Machine Public IP:{}, Private IP: {}".format(_sip[x], _s_priv_ip[x]))
-                    self._s_adap_name.append(self.get_adaptor_name(_sip[x], suser, _spwd[x]))
-                    print("Server Machine Public IP:{}, Private IP: {}, s_adap_name: {}".format(_sip[x], _s_priv_ip[x], self._s_adap_name[x]))
-                except Exception as e:
-                    print(f"Error getting server adaptor name for {x}: {e}")
-
-            for x in range(0, len(all_instance_agent)):
-                try:
-                    print("Client Machine Public IP:{}, Private IP: {}".format(_cip[x], _c_priv_ip[x]))
-                    self._c_adap_name.append(self.get_adaptor_name(_cip[x], cuser, _cpwd[x]))
-                    print("Client Machine Public IP:{}, Private IP: {}, c_adap_name: {}".format(_cip[x], _c_priv_ip[x], self._c_adap_name[x]))
-                except Exception as e:
-                    print(f"Error getting client adaptor name for {x}: {e}")
+            # Prepare machine dicts for parallel preload
+            server_machines = [
+                {'ip': _sip[x], 'user': suser, 'pwd': _spwd[x]}
+                for x in range(len(all_instance_server))
+            ]
+            client_machines = [
+                {'ip': _cip[x], 'user': cuser, 'pwd': _cpwd[x]}
+                for x in range(len(all_instance_agent))
+            ]
+            all_machines = server_machines + client_machines
+            # Preload all adapters in parallel
+            adapter_map = self.preload_adapter_names(all_machines)
+            # Extract results
+            self._s_adap_name = [adapter_map.get(_sip[x]) for x in range(len(all_instance_server))]
+            self._c_adap_name = [adapter_map.get(_cip[x]) for x in range(len(all_instance_agent))]
 
             print(f"Lengths: _sip: {len(_sip)} | _cip: {len(_cip)} | self._s_adap_name: {len(self._s_adap_name)} | self._c_adap_name: {len(self._c_adap_name)} | self.ip_type: {len(self.ip_type)} | _spwd: {len(_spwd)} | _cpwd: {len(_cpwd)}")
 
