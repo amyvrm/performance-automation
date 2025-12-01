@@ -4,6 +4,7 @@ import os
 import re
 import zipfile
 import time
+from backoff_utils import exponential_backoff_sleep
 import requests
 import urllib3
 import zeep
@@ -53,7 +54,7 @@ class DsmPolicy(object):
                 break
             except Exception as ex:
                 print("Exception!!! {}".format(ex))
-                time.sleep(10)
+                exponential_backoff_sleep(retry, base_delay=5, max_delay=20)
 
         self.session = requests.Session()
         self.session.verify = False
@@ -98,10 +99,10 @@ class DsmPolicy(object):
         policy_id = self.client.service.securityProfileRetrieveByName(name=self.policy_name, sID=self.sID)["ID"]
         get_all_host = self.client.service.hostRetrieveAll(sID=self.sID)
 
-        for host in get_all_host:
+        for idx, host in enumerate(get_all_host):
             host_id = host['ID']
             self.client.service.securityProfileAssignToHost(securityProfileID=policy_id, hostIDs=host_id, sID=self.sID)
-            time.sleep(20)
+            exponential_backoff_sleep(idx, base_delay=10, max_delay=20)
 
         print("No problems applying policy {}, to all hosts".format(self.policy_name))
 
@@ -118,17 +119,17 @@ class DsmPolicy(object):
                 "parentProfileID_tree_selected": (None, "0"), "certificatePurpose": (None, "2"),
                 "finish": (None, "Next >")}
         self.session.post(self.import_policy_url, files=data)
-        time.sleep(10)  # Waiting for the policy to be parsed
+        exponential_backoff_sleep(0, base_delay=10, max_delay=15)
 
         del data["file"]
         del data["finish"]
         data["step"] = (None, "1")
         self.session.post(self.import_policy_url, data=data)
-        time.sleep(5)
+        exponential_backoff_sleep(0, base_delay=5, max_delay=10)
 
         data["step"] = (None, "2")
         self.session.post(self.import_policy_url, data=data)
-        time.sleep(20)
+        exponential_backoff_sleep(0, base_delay=15, max_delay=20)
 
     def override_portlist(self, source_fname, dest_fname):
         print("{0}\n# Updating policy to override rule port list with port {1} #\n{0}".format("#" * 50, self.port))
@@ -252,8 +253,8 @@ class DsmPolicy(object):
         self.upload_policy(policy_id, dpi_rule_ids, integrity_rule_ids, log_inspection_rule_ids)
         response = self.client.service.securityProfileRetrieveByName(name=self.policy_name, sID=self.sID)
         print("Appled Rule info: {}".format(response))
-        print("Waiting 60 secs, for policies to apply", flush=True)
-        time.sleep(60)
+        print("Waiting for policies to apply", flush=True)
+        exponential_backoff_sleep(1, base_delay=30, max_delay=60)
         self.update_ports(policy_id)
 
         response = self.client.service.hostRetrieveAll(sID=self.sID)
@@ -276,8 +277,8 @@ class DsmPolicy(object):
             self.upload_custom_policy(new_policy_xml)
 
         # It only takes about 5 seconds to apply, but better safe than sorry
-        print("Waiting 60 sec for policies to apply completely to all hosts..")
-        time.sleep(60)
+        print("Waiting for policies to apply completely to all hosts...")
+        exponential_backoff_sleep(1, base_delay=30, max_delay=60)
 
         # Finally, once the policy has been uploaded and applied, we check all the computers with the policy applied
         #   to see what their status is
@@ -358,8 +359,8 @@ class DsmPolicy(object):
 
         policy_xml = ET.tostring(root, encoding='utf8', method='xml')
         self.upload_custom_policy(policy_xml)
-        print("Waiting 30 sec, after changing perf port {}".format(self.port))
-        time.sleep(30)
+        print(f"Waiting after changing perf port {self.port}...")
+        exponential_backoff_sleep(1, base_delay=15, max_delay=30)
 
     def export_policy_xml(self, policy_id):
         data = {"rID": self.rID, "cmdArguments": policy_id, "command": "EXPORT"}

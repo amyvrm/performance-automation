@@ -10,6 +10,7 @@ from matplotlib.patches import Patch
 import seaborn as sns
 import numpy as np
 import time
+from backoff_utils import wait_for_nginx_ready
 import os
 import re
 
@@ -117,8 +118,9 @@ class PerfCommon(object):
         if scenario_name == "Server Download" or scenario_name == "Client Download":
             # Run Nginx
             self.run_nginx(sip, suser, spwd)
-            print("Waiting 3 min, to flow the traffic")
-            time.sleep(180)
+            print("Probing nginx readiness with adaptive wait...")
+            probe_result = wait_for_nginx_ready(s_priv_ip)
+            print(f"Nginx readiness probe: attempts={probe_result['attempts']}, avg_latency_ms={probe_result['avg_latency_ms']:.2f}, avg_ttfb_ms={probe_result['avg_ttfb_ms']:.2f}")
             # Run Apache Bench
             #through_put = self.run_ab(cip, cuser, cpwd, s_priv_ip)
             through_put = self.run_hey(cip, cuser, cpwd, s_priv_ip)
@@ -133,8 +135,9 @@ class PerfCommon(object):
                     print("Exception: Attempt-{} to get the stats...Found stats=[{}]".format(retry, through_put))
                     # Run Nginx
                     self.run_nginx(sip, suser, spwd)
-                    print("Waiting 3 min, to flow the traffic")
-                    time.sleep(180)
+                    print("Probing nginx readiness with adaptive wait...")
+                    probe_result = wait_for_nginx_ready(s_priv_ip)
+                    print(f"Nginx readiness probe: attempts={probe_result['attempts']}, avg_latency_ms={probe_result['avg_latency_ms']:.2f}, avg_ttfb_ms={probe_result['avg_ttfb_ms']:.2f}")
                     # Run Apache Bench
                     #through_put = self.run_ab(cip, cuser, cpwd, s_priv_ip)
                     through_put = self.run_hey(cip, cuser, cpwd, s_priv_ip)

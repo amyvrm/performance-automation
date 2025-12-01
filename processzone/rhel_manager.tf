@@ -12,7 +12,7 @@ resource "aws_instance" "rhel_dsm" {
     Name           = "${var.tag_dsm_name}_${var.random_num}_${count.index}"
     "Trender"      = var.tag_trender
     "Automation"   = var.tag_automation
-    "ValidUntil"   = formatdate("YYYY-MM-DD", timeadd(timestamp(), "48h"))
+    "ValidUntil"   = formatdate("YYYY-MM-DD", timeadd(timestamp(), "24h"))
     "workingHours" = "IGNORE"
   }
 
