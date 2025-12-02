@@ -279,8 +279,16 @@ if __name__ == '__main__':
 	for i in agentFile:
 		strAgentFile = str(i)
 		print(strAgentFile)
-		dsmAPIinstance.uploadPackage(strAgentFile)
-		time.sleep(8)
+		# Upload with simple retry to avoid unnecessary delays
+		max_retries = 3
+		for attempt in range(1, max_retries + 1):
+			try:
+				dsmAPIinstance.uploadPackage(strAgentFile)
+				break
+			except Exception as e:
+				print(f"Upload attempt {attempt} failed for {strAgentFile}: {e}")
+				if attempt == max_retries:
+					raise
 
 	dsmAPIinstance.deleteCurrentSession()
 	#dsmAPIinstance.deleteAPIKey(keyname=None)

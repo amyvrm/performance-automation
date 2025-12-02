@@ -32,14 +32,10 @@ resource "aws_instance" "rhel_dsm" {
 
   provisioner "remote-exec" {
     inline = [
-      "chmod +x /tmp/setupDSMInstall.sh",
-      "chmod +x /tmp/generatePropertiesDSM.sh",
-      "chmod +x /tmp/restartDSM.sh",
-      "chmod +x /tmp/setupPython3.6.sh",
-      "chmod +x /tmp/downloadAgents.sh",
-      "chmod +x /tmp/uploadDSAToDSM.py",
-      "sudo sh /tmp/setupDSMInstall.sh ${var.dsm_redhat_url} ${var.dsm_license}",
-      "sh /tmp/downloadAgents.sh ${var.all_agent_urls}"
+      # Fast chmod for all scripts in one go
+      "chmod +x /tmp/setupDSMInstall.sh /tmp/generatePropertiesDSM.sh /tmp/restartDSM.sh /tmp/setupPython3.6.sh /tmp/downloadAgents.sh /tmp/uploadDSAToDSM.py",
+       # Run DSM install and agent downloads in parallel; wait for both
+       "bash -lc 'nohup sh /tmp/downloadAgents.sh ${var.all_agent_urls} > /tmp/downloadAgents.log 2>&1 & DA_PID=$!; sudo sh /tmp/setupDSMInstall.sh ${var.dsm_redhat_url} ${var.dsm_license} > /tmp/setupDSMInstall.log 2>&1; wait $DA_PID'"
     ]
   }
 
