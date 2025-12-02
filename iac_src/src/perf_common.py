@@ -118,44 +118,14 @@ class PerfCommon(object):
                       "</head>\n<body>\n"
         return html_header
 
-    def run_band_test(self, suser, sip, spwd, s_priv_ip, cuser, cip, cpwd, c_priv_ip, scenario_name, use_iperf3=True):
+    def run_band_test(self, suser, sip, spwd, s_priv_ip, cuser, cip, cpwd, c_priv_ip, scenario_name):
         """
-        Run bandwidth test with optional iperf3 support.
+        Run bandwidth test using legacy tools (PCATTCP/nginx/hey).
         
-        Args:
-            use_iperf3: If True, use iperf3 for Server Upload scenarios (default: True for backward compatibility)
         """
         print("c_priv_ip: {}".format(c_priv_ip))
         print("s_priv_ip: {}".format(s_priv_ip))
-
-        # Pre-test readiness report (DSA service, filter binding, iperf3 presence)
-        try:
-            s_adapter = self.get_adaptor_name(sip, suser, spwd)
-        except Exception:
-            s_adapter = None
-        try:
-            c_adapter = self.get_adaptor_name(cip, cuser, cpwd)
-        except Exception:
-            c_adapter = None
-        self.print_readiness_report(
-            host_label="Server",
-            ip=sip,
-            user=suser,
-            pwd=spwd,
-            adapter_name=s_adapter
-        )
-        self.print_readiness_report(
-            host_label="Client",
-            ip=cip,
-            user=cuser,
-            pwd=cpwd,
-            adapter_name=c_adapter
-        )
         
-        # For Server Upload, offer iperf3 option
-        if scenario_name == "Server Upload" and use_iperf3:
-            print("⚡ Using iperf3 for Server Upload scenario")
-            return self.run_band_test_iperf3(suser, sip, spwd, s_priv_ip, cuser, cip, cpwd, c_priv_ip, scenario_name)
         if scenario_name == "Server Download" or scenario_name == "Client Download":
             # Run Nginx
             self.run_nginx(sip, suser, spwd)
@@ -333,8 +303,7 @@ class PerfCommon(object):
                         if "Transfer rate" in line:
                             through_put = re.findall("\d+\.\d+", line)[0]
                             t_mbps = round(float(through_put) / 1024.0, 2)
-                            print("{0}\n+ {1}: {2} KBps, {3} MBps +\n{0}".format("+" * 50, index + 1, through_put,
-                                                                                 t_mbps))
+                            print("{0}\n+ {1}: {2} KBps, {3} MBps +\n{0}".format("+" * 50, index + 1, through_put, t_mbps))
                             all_through_put.append(t_mbps)
                             return True
             elif "hey" in cmd:
@@ -440,60 +409,47 @@ class PerfCommon(object):
             self._adapter_cache_timestamp.clear()
             print("Cleared all adapter cache")
 
-        def _check_dsa_service_present(self, ip, user, pwd):
-            """Return tuple(status_bool, message) for DSA service presence."""
-            tool = "Powershell.exe"
-            ps = (
-                "$svc = Get-Service | Where-Object { $_.Name -like '*Deep*Security*Agent*' -or $_.DisplayName -like '*Deep*Security*Agent*' };"
-                "if ($null -ne $svc) { Write-Output ('Present:' + $svc.Name) } else { Write-Output 'Absent' }"
-            )
-            try:
-                out = self.execute_cmd(ps, ip, user, pwd, tool=tool)
-                if out and out.startswith("Present:"):
-                    return True, out.replace("Present:", "")
-                return False, "DSA service not found"
-            except Exception as e:
-                return False, f"Error checking DSA: {e}"
-
-        def _check_filter_binding_exists(self, ip, user, pwd, adapter_name):
-            """Return tuple(status_bool, message) for TM Lightweight Filter binding."""
-            if not adapter_name:
-                return False, "Adapter name unavailable"
-            tool = "Powershell.exe"
-            ps = (
-                f"$name=\"{adapter_name}\"; $disp=\"Trend Micro LightWeight Filter Driver\";"
-                "$binding = Get-NetAdapterBinding -Name $name -ErrorAction SilentlyContinue | Where-Object { $_.DisplayName -eq $disp };"
-                "if ($binding) { 'Present' } else { 'Absent' }"
-            )
-            try:
-                out = self.execute_cmd(ps, ip, user, pwd, tool=tool)
-                return (out == 'Present'), ("Filter binding present" if out == 'Present' else "Filter binding absent")
-            except Exception as e:
-                return False, f"Error checking filter: {e}"
-
-        def _check_iperf3_present(self, ip, user, pwd):
-            """Return tuple(status_bool, message) for iperf3.exe presence at self.path."""
-            tool = "Powershell.exe"
-            ps = f"if (Test-Path '{self.path}iperf3.exe') {{ 'Present' }} else {{ 'Absent' }}"
-            try:
-                out = self.execute_cmd(ps, ip, user, pwd, tool=tool)
-                return (out == 'Present'), ("iperf3.exe present" if out == 'Present' else f"iperf3.exe missing at {self.path}")
-            except Exception as e:
-                return False, f"Error checking iperf3: {e}"
-
-        def print_readiness_report(self, host_label, ip, user, pwd, adapter_name):
-            """Print a concise readiness report for a host."""
-            dsa_ok, dsa_msg = self._check_dsa_service_present(ip, user, pwd)
-            filt_ok, filt_msg = self._check_filter_binding_exists(ip, user, pwd, adapter_name)
-            iperf_ok, iperf_msg = self._check_iperf3_present(ip, user, pwd)
-            status = (
-                f"{host_label} {self.ip_type.get(ip, '')}-{ip} | DSA: {'OK' if dsa_ok else 'Missing'}"
-                f" | Filter: {'Present' if filt_ok else 'Absent'}"
-                f" | iperf3: {'OK' if iperf_ok else 'Missing'}"
-            )
-            print(status)
-            # Also print brief details to aid debugging
-            print(f"  Details → Adapter: {adapter_name or 'N/A'} | {dsa_msg} | {filt_msg} | {iperf_msg}")
+    def _check_dsa_service_present(self, ip, user, pwd):
+        """Return tuple(status_bool, message) for DSA service presence."""
+        tool = "Powershell.exe"
+        ps = (
+            "$svc = Get-Service | Where-Object { $_.Name -like '*Deep*Security*Agent*' -or $_.DisplayName -like '*Deep*Security*Agent*' };"
+            "if ($null -ne $svc) { Write-Output ('Present:' + $svc.Name) } else { Write-Output 'Absent' }"
+        )
+        try:
+            out = self.execute_cmd(ps, ip, user, pwd, tool=tool)
+            if out and out.startswith("Present:"):
+                return True, out.replace("Present:", "")
+            return False, "DSA service not found"
+        except Exception as e:
+            return False, f"Error checking DSA: {e}"
+    
+    def _check_filter_binding_exists(self, ip, user, pwd, adapter_name):
+        """Return tuple(status_bool, message) for TM Lightweight Filter binding."""
+        if not adapter_name:
+            return False, "Adapter name unavailable"
+        tool = "Powershell.exe"
+        ps = (
+            f"$name=\"{adapter_name}\"; $disp=\"Trend Micro LightWeight Filter Driver\";"
+            "$binding = Get-NetAdapterBinding -Name $name -ErrorAction SilentlyContinue | Where-Object { $_.DisplayName -eq $disp };"
+            "if ($binding) { 'Present' } else { 'Absent' }"
+        )
+        try:
+            out = self.execute_cmd(ps, ip, user, pwd, tool=tool)
+            return (out == 'Present'), ("Filter binding present" if out == 'Present' else "Filter binding absent")
+        except Exception as e:
+            return False, f"Error checking filter: {e}"
+    
+    def print_readiness_report(self, host_label, ip, user, pwd, adapter_name):
+        """Print a concise readiness report for a host (DSA + filter only)."""
+        dsa_ok, dsa_msg = self._check_dsa_service_present(ip, user, pwd)
+        filt_ok, filt_msg = self._check_filter_binding_exists(ip, user, pwd, adapter_name)
+        status = (
+            f"{host_label} {self.ip_type.get(ip, '')}-{ip} | DSA: {'OK' if dsa_ok else 'Missing'}"
+            f" | Filter: {'Present' if filt_ok else 'Absent'}"
+        )
+        print(status)
+        print(f"  Details → Adapter: {adapter_name or 'N/A'} | {dsa_msg} | {filt_msg}")
 
     def preload_adapter_names(self, machines):
         """
@@ -551,13 +507,6 @@ class PerfCommon(object):
         cmd = f'/F /PID {pid}' if pid else '/IM PCATTCP.exe /F'
         return self.execute_cmd(cmd, ip, user, pwd, tool=tool)
 
-    def clean_iperf3(self, ip, user, pwd):
-        """Clean up iperf3 processes."""
-        print(f"- Clean iperf3 in {self.ip_type[ip]}-{ip}")
-        tool = 'taskkill.exe'
-        cmd = '/IM iperf3.exe /F'
-        return self.execute_cmd(cmd, ip, user, pwd, tool=tool)
-
     def clean_ab(self, ip, user, pwd):
         print(f"- Clean Apache Bench in {self.ip_type[ip]}-{ip}")
         return self.clean(ip, user, pwd, pid=False)
@@ -581,137 +530,7 @@ class PerfCommon(object):
         cmd = f'{self.path}PCATTCP\\PCATTCP.exe -t -l 490000 {target_ip}'
         return self.execute_cmd(cmd, ip, user, pwd, tool=tool, bandwidth=bandwidth, asynchronous=asynchronous)
 
-    def run_iperf3_server(self, ip, user, pwd, port=5001):
-        """Start iperf3 server in background."""
-        print(f"{'+' * 50}\n+ Start iperf3 server on {self.ip_type[ip]}-{ip}:{port} +\n{'+' * 50}")
-        self.clean_iperf3(ip, user, pwd)
-        tool = "Powershell.exe"
-        # Verify binary exists before starting
-        verify_cmd = f"if (Test-Path '{self.path}iperf3.exe') {{ 'OK' }} else {{ 'MISSING' }}"
-        check = self.execute_cmd(verify_cmd, ip, user, pwd, tool=tool)
-        if check != 'OK':
-            print(f"iperf3.exe not found at {self.path} on {ip}")
-            raise FileNotFoundError(f"iperf3.exe missing at {self.path} on {ip}")
-        cmd = f"Start-Process {self.path}iperf3.exe -ArgumentList '-s -p {port}' -WindowStyle Hidden"
-        self.execute_cmd(cmd, ip, user, pwd, tool=tool, asynchronous=True)
-        time.sleep(2)  # Allow server to start
-        print(f"iperf3 server started on {ip}:{port}")
-
-    def run_iperf3_client(self, ip, user, pwd, server_ip, duration=60, parallel=10):
-        """Run iperf3 client and return metrics in Mbps."""
-        print(f"{'+' * 50}\n+ Run iperf3 client on {self.ip_type[ip]}-{ip} +\n{'+' * 50}")
-        tool = "Powershell.exe"
-        # Verify client binary exists
-        verify_cmd = f"if (Test-Path '{self.path}iperf3.exe') {{ 'OK' }} else {{ 'MISSING' }}"
-        check = self.execute_cmd(verify_cmd, ip, user, pwd, tool=tool)
-        if check != 'OK':
-            print(f"iperf3.exe not found at {self.path} on {ip}")
-            return 0.0
-        cmd = f"{self.path}iperf3.exe -c {server_ip} -t {duration} -P {parallel} -J"
-        
-        output = self.execute_cmd(cmd, ip, user, pwd, tool=tool)
-        
-        try:
-            import json
-            result = json.loads(output)
-            mbps = round(result['end']['sum_received']['bits_per_second'] / 1e6, 2)
-            print(f"✓ iperf3 result: {mbps} Mbps")
-            return mbps
-        except Exception as e:
-            print(f"Failed to parse iperf3 JSON output: {e}, falling back to regex")
-            return self._parse_iperf3_fallback(output)
-
-    def _parse_iperf3_fallback(self, output):
-        """Fallback parser for iperf3 output when JSON parsing fails."""
-        import re
-        try:
-            # Look for patterns like "X.XX Gbits/sec" or "X.XX Mbits/sec"
-            # Example: "[ ID] Interval           Transfer     Bitrate"
-            #          "[SUM]   0.00-60.00  sec  1.50 GBytes   215 Mbits/sec"
-            
-            # Try to find the summary line with SUM
-            sum_match = re.search(r'\[SUM\].*?\s+([\d.]+)\s+(G|M)bits/sec', output, re.IGNORECASE)
-            if sum_match:
-                value = float(sum_match.group(1))
-                unit = sum_match.group(2).upper()
-                mbps = value * 1000 if unit == 'G' else value
-                print(f"✓ iperf3 fallback parse: {mbps} Mbps")
-                return round(mbps, 2)
-            
-            # Fallback to last line with bitrate
-            bitrate_matches = re.findall(r'([\d.]+)\s+(G|M)bits/sec', output, re.IGNORECASE)
-            if bitrate_matches:
-                value, unit = bitrate_matches[-1]
-                mbps = float(value) * 1000 if unit.upper() == 'G' else float(value)
-                print(f"✓ iperf3 fallback parse: {mbps} Mbps")
-                return round(mbps, 2)
-            
-            print("⚠ Could not parse iperf3 output")
-            return 0.0
-        except Exception as e:
-            print(f"✗ iperf3 fallback parsing error: {e}")
-            return 0.0
-
-    def run_band_test_iperf3(self, suser, sip, spwd, s_priv_ip, cuser, cip, cpwd, c_priv_ip, scenario_name):
-        """Enhanced bandwidth test using iperf3 (replaces PCATTCP for Server Upload)."""
-        print(f"{'=' * 60}\nScenario: {scenario_name} (iperf3)\n{'=' * 60}")
-        
-        if scenario_name == "Server Upload":
-            # Server receives
-            self.run_iperf3_server(sip, suser, spwd)
-            
-            # Client transmits - run multiple iterations
-            throughput = []
-            for i in range(10):
-                print(f"\n--- Iteration {i+1}/10 ---")
-                mbps = self.run_iperf3_client(cip, cuser, cpwd, s_priv_ip, duration=60, parallel=10)
-                if mbps > 0:
-                    throughput.append(mbps)
-                    print(f"✓ Iteration {i+1}: {mbps} Mbps")
-                else:
-                    print(f"⚠ Iteration {i+1}: Failed to get valid throughput")
-                
-                # Brief pause between iterations
-                if i < 9:
-                    time.sleep(5)
-            
-            # Cleanup
-            self.clean_iperf3(sip, suser, spwd)
-            self.clean_iperf3(cip, cuser, cpwd)
-            
-            if len(throughput) >= 10:
-                throughput.sort(reverse=True)
-                print(f"\n{'=' * 60}\niperf3 Results: {throughput}\n{'=' * 60}")
-                return throughput
-            else:
-                # Retry if we didn't get enough samples
-                print(f"⚠ Only got {len(throughput)} valid samples, retrying...")
-                for retry in range(2):
-                    print(f"\n=== Retry Attempt {retry+1}/2 ===")
-                    self.run_iperf3_server(sip, suser, spwd)
-                    
-                    retry_throughput = []
-                    for i in range(10):
-                        print(f"\n--- Retry {retry+1}, Iteration {i+1}/10 ---")
-                        mbps = self.run_iperf3_client(cip, cuser, cpwd, s_priv_ip, duration=60, parallel=10)
-                        if mbps > 0:
-                            retry_throughput.append(mbps)
-                            print(f"✓ Iteration {i+1}: {mbps} Mbps")
-                        
-                        if i < 9:
-                            time.sleep(5)
-                    
-                    self.clean_iperf3(sip, suser, spwd)
-                    self.clean_iperf3(cip, cuser, cpwd)
-                    
-                    if len(retry_throughput) >= 10:
-                        retry_throughput.sort(reverse=True)
-                        print(f"\n{'=' * 60}\niperf3 Results (retry): {retry_throughput}\n{'=' * 60}")
-                        return retry_throughput
-                
-                raise Exception(f"Failed to collect 10 valid iperf3 measurements after retries. Got {len(throughput)} samples.")
-        else:
-            raise NotImplementedError(f"iperf3 not yet implemented for scenario: {scenario_name}")
+    
 
     def run_nginx(self, ip, user, pwd):
         print(f"{'+' * 50}\n+ Run nginx on {self.ip_type[ip]}-{ip} +\n{'+' * 50}")
