@@ -127,6 +127,30 @@ class PerfCommon(object):
         """
         print("c_priv_ip: {}".format(c_priv_ip))
         print("s_priv_ip: {}".format(s_priv_ip))
+
+        # Pre-test readiness report (DSA service, filter binding, iperf3 presence)
+        try:
+            s_adapter = self.get_adaptor_name(sip, suser, spwd)
+        except Exception:
+            s_adapter = None
+        try:
+            c_adapter = self.get_adaptor_name(cip, cuser, cpwd)
+        except Exception:
+            c_adapter = None
+        self.print_readiness_report(
+            host_label="Server",
+            ip=sip,
+            user=suser,
+            pwd=spwd,
+            adapter_name=s_adapter
+        )
+        self.print_readiness_report(
+            host_label="Client",
+            ip=cip,
+            user=cuser,
+            pwd=cpwd,
+            adapter_name=c_adapter
+        )
         
         # For Server Upload, offer iperf3 option
         if scenario_name == "Server Upload" and use_iperf3:
@@ -416,6 +440,61 @@ class PerfCommon(object):
             self._adapter_cache_timestamp.clear()
             print("Cleared all adapter cache")
 
+        def _check_dsa_service_present(self, ip, user, pwd):
+            """Return tuple(status_bool, message) for DSA service presence."""
+            tool = "Powershell.exe"
+            ps = (
+                "$svc = Get-Service | Where-Object { $_.Name -like '*Deep*Security*Agent*' -or $_.DisplayName -like '*Deep*Security*Agent*' };"
+                "if ($null -ne $svc) { Write-Output ('Present:' + $svc.Name) } else { Write-Output 'Absent' }"
+            )
+            try:
+                out = self.execute_cmd(ps, ip, user, pwd, tool=tool)
+                if out and out.startswith("Present:"):
+                    return True, out.replace("Present:", "")
+                return False, "DSA service not found"
+            except Exception as e:
+                return False, f"Error checking DSA: {e}"
+
+        def _check_filter_binding_exists(self, ip, user, pwd, adapter_name):
+            """Return tuple(status_bool, message) for TM Lightweight Filter binding."""
+            if not adapter_name:
+                return False, "Adapter name unavailable"
+            tool = "Powershell.exe"
+            ps = (
+                f"$name=\"{adapter_name}\"; $disp=\"Trend Micro LightWeight Filter Driver\";"
+                "$binding = Get-NetAdapterBinding -Name $name -ErrorAction SilentlyContinue | Where-Object { $_.DisplayName -eq $disp };"
+                "if ($binding) { 'Present' } else { 'Absent' }"
+            )
+            try:
+                out = self.execute_cmd(ps, ip, user, pwd, tool=tool)
+                return (out == 'Present'), ("Filter binding present" if out == 'Present' else "Filter binding absent")
+            except Exception as e:
+                return False, f"Error checking filter: {e}"
+
+        def _check_iperf3_present(self, ip, user, pwd):
+            """Return tuple(status_bool, message) for iperf3.exe presence at self.path."""
+            tool = "Powershell.exe"
+            ps = f"if (Test-Path '{self.path}iperf3.exe') {{ 'Present' }} else {{ 'Absent' }}"
+            try:
+                out = self.execute_cmd(ps, ip, user, pwd, tool=tool)
+                return (out == 'Present'), ("iperf3.exe present" if out == 'Present' else f"iperf3.exe missing at {self.path}")
+            except Exception as e:
+                return False, f"Error checking iperf3: {e}"
+
+        def print_readiness_report(self, host_label, ip, user, pwd, adapter_name):
+            """Print a concise readiness report for a host."""
+            dsa_ok, dsa_msg = self._check_dsa_service_present(ip, user, pwd)
+            filt_ok, filt_msg = self._check_filter_binding_exists(ip, user, pwd, adapter_name)
+            iperf_ok, iperf_msg = self._check_iperf3_present(ip, user, pwd)
+            status = (
+                f"{host_label} {self.ip_type.get(ip, '')}-{ip} | DSA: {'OK' if dsa_ok else 'Missing'}"
+                f" | Filter: {'Present' if filt_ok else 'Absent'}"
+                f" | iperf3: {'OK' if iperf_ok else 'Missing'}"
+            )
+            print(status)
+            # Also print brief details to aid debugging
+            print(f"  Details → Adapter: {adapter_name or 'N/A'} | {dsa_msg} | {filt_msg} | {iperf_msg}")
+
     def preload_adapter_names(self, machines):
         """
         Preload adapter names for multiple machines in parallel.
@@ -446,16 +525,25 @@ class PerfCommon(object):
     def enable_filter(self, ip, user, pwd, adaptor_name):
         print("{0}\n # {2}-{1} Enable Filter #\n{0}".format("+" * 50, ip, self.ip_type[ip]))
         tool = "Powershell.exe"
-        cmd = 'Enable-NetAdapterBinding -Name "{}" -DisplayName "Trend` Micro` LightWeight` Filter` Driver"'.format(
-            adaptor_name)
-        self.execute_cmd(cmd, ip, user, pwd, tool=tool)
+        # Guard: enable binding only if present
+        ps = (
+            f"$name=\"{adaptor_name}\"; $disp=\"Trend Micro LightWeight Filter Driver\";"
+            "$binding = Get-NetAdapterBinding -Name $name -ErrorAction SilentlyContinue | Where-Object { $_.DisplayName -eq $disp };"
+            "if ($binding) { Enable-NetAdapterBinding -Name $name -DisplayName $disp -ErrorAction SilentlyContinue; Write-Output 'Filter enabled' }"
+            " else { Write-Output 'Filter binding not found' }"
+        )
+        self.execute_cmd(ps, ip, user, pwd, tool=tool)
 
     def disable_filter(self, ip, user, pwd, adaptor_name):
         print("{0}\n # {2}-{1} Disable Filter #\n{0}".format("+" * 50, ip, self.ip_type[ip]))
         tool = "Powershell.exe"
-        cmd = 'Disable-NetAdapterBinding -Name "{}" -DisplayName "Trend` Micro` LightWeight` Filter` Driver"'.format(
-            adaptor_name)
-        self.execute_cmd(cmd, ip, user, pwd, tool=tool)
+        ps = (
+            f"$name=\"{adaptor_name}\"; $disp=\"Trend Micro LightWeight Filter Driver\";"
+            "$binding = Get-NetAdapterBinding -Name $name -ErrorAction SilentlyContinue | Where-Object { $_.DisplayName -eq $disp };"
+            "if ($binding) { Disable-NetAdapterBinding -Name $name -DisplayName $disp -ErrorAction SilentlyContinue; Write-Output 'Filter disabled' }"
+            " else { Write-Output 'Filter binding not found' }"
+        )
+        self.execute_cmd(ps, ip, user, pwd, tool=tool)
 
     def clean(self, ip, user, pwd, pid=False):
         print(f"- clean pid: {pid}")
@@ -498,6 +586,12 @@ class PerfCommon(object):
         print(f"{'+' * 50}\n+ Start iperf3 server on {self.ip_type[ip]}-{ip}:{port} +\n{'+' * 50}")
         self.clean_iperf3(ip, user, pwd)
         tool = "Powershell.exe"
+        # Verify binary exists before starting
+        verify_cmd = f"if (Test-Path '{self.path}iperf3.exe') {{ 'OK' }} else {{ 'MISSING' }}"
+        check = self.execute_cmd(verify_cmd, ip, user, pwd, tool=tool)
+        if check != 'OK':
+            print(f"iperf3.exe not found at {self.path} on {ip}")
+            raise FileNotFoundError(f"iperf3.exe missing at {self.path} on {ip}")
         cmd = f"Start-Process {self.path}iperf3.exe -ArgumentList '-s -p {port}' -WindowStyle Hidden"
         self.execute_cmd(cmd, ip, user, pwd, tool=tool, asynchronous=True)
         time.sleep(2)  # Allow server to start
@@ -507,6 +601,12 @@ class PerfCommon(object):
         """Run iperf3 client and return metrics in Mbps."""
         print(f"{'+' * 50}\n+ Run iperf3 client on {self.ip_type[ip]}-{ip} +\n{'+' * 50}")
         tool = "Powershell.exe"
+        # Verify client binary exists
+        verify_cmd = f"if (Test-Path '{self.path}iperf3.exe') {{ 'OK' }} else {{ 'MISSING' }}"
+        check = self.execute_cmd(verify_cmd, ip, user, pwd, tool=tool)
+        if check != 'OK':
+            print(f"iperf3.exe not found at {self.path} on {ip}")
+            return 0.0
         cmd = f"{self.path}iperf3.exe -c {server_ip} -t {duration} -P {parallel} -J"
         
         output = self.execute_cmd(cmd, ip, user, pwd, tool=tool)
@@ -646,14 +746,22 @@ class PerfCommon(object):
     def disable_dsa(self, ip, user, pwd):
         print(f"{'+' * 50}\n # {self.ip_type[ip]}-{ip} Disable DSA #\n{'+' * 50}")
         tool = "Powershell.exe"
-        cmd = "Stop-Service -Name \"Trend` Micro` Deep` Security` Agent\""
-        self.execute_cmd(cmd, ip, user, pwd, tool=tool)
+        ps = (
+            "$svc = Get-Service | Where-Object { $_.Name -like '*Deep*Security*Agent*' -or $_.DisplayName -like '*Deep*Security*Agent*' };"
+            "if ($null -ne $svc) { Stop-Service -Name $svc.Name -ErrorAction SilentlyContinue; Write-Output ('Stopped ' + $svc.Name) }"
+            " else { Write-Output 'DSA service not found' }"
+        )
+        self.execute_cmd(ps, ip, user, pwd, tool=tool)
 
     def activate_dsa(self, ip, user, pwd):
         print(f"{'+' * 50}\n # {self.ip_type[ip]}-{ip} Activate DSA #\n{'+' * 50}")
         tool = "Powershell.exe"
-        cmd = "Start-Service -Name \"Trend` Micro` Deep` Security` Agent\""
-        self.execute_cmd(cmd, ip, user, pwd, tool=tool)
+        ps = (
+            "$svc = Get-Service | Where-Object { $_.Name -like '*Deep*Security*Agent*' -or $_.DisplayName -like '*Deep*Security*Agent*' };"
+            "if ($null -ne $svc) { Start-Service -Name $svc.Name -ErrorAction SilentlyContinue; Write-Output ('Started ' + $svc.Name) }"
+            " else { Write-Output 'DSA service not found' }"
+        )
+        self.execute_cmd(ps, ip, user, pwd, tool=tool)
 
     def reboot_instance(self, instance_id, access_key, secret_key, region):
         print(f"{self.header}\n # Reboot {instance_id} Instance #\n{self.header}")
