@@ -213,6 +213,7 @@ class DsmPolicy(object):
         print("Update package applied successfully")
         print(f"Details saved to update-info.txt\n")
         print("No problems uploading or applying update package, all tests passed")
+        print(response["detailedSummary"])
         return contentSummary, identifiers
 
     def upload_package(self):
