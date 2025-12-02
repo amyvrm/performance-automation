@@ -11,8 +11,6 @@ import seaborn as sns
 import numpy as np
 import time
 from backoff_utils import wait_for_nginx_ready
-from backoff_utils import exponential_backoff_sleep
-import socket
 import os
 import re
 
@@ -119,13 +117,8 @@ class PerfCommon(object):
         return html_header
 
     def run_band_test(self, suser, sip, spwd, s_priv_ip, cuser, cip, cpwd, c_priv_ip, scenario_name):
-        """
-        Run bandwidth test using legacy tools (PCATTCP/nginx/hey).
-        
-        """
         print("c_priv_ip: {}".format(c_priv_ip))
         print("s_priv_ip: {}".format(s_priv_ip))
-        
         if scenario_name == "Server Download" or scenario_name == "Client Download":
             # Run Nginx
             self.run_nginx(sip, suser, spwd)
@@ -158,32 +151,8 @@ class PerfCommon(object):
         elif scenario_name == "Server Upload":
             # receiver
             pid = self.run_pcattcp_rec(sip, suser, spwd, c_priv_ip, asynchronous=True)
-            print("Waiting for traffic readiness (adaptive wait)...")
-            # Adaptive wait: probe the receiver port for readiness with exponential backoff
-            def is_port_open(ip, port, timeout=2):
-                try:
-                    with socket.create_connection((ip, port), timeout=timeout):
-                        return True
-                except Exception:
-                    return False
-
-            # PCATTCP default port is 5001 unless overridden
-            pcattcp_port = 5001
-            max_wait = 180  # seconds, fallback to old max
-            waited = 0
-            for attempt in range(1, 10):
-                if is_port_open(s_priv_ip, pcattcp_port):
-                    print(f"✓ PCATTCP receiver ready on {s_priv_ip}:{pcattcp_port} after {waited}s")
-                    break
-                sleep_time = min(2 ** attempt, 30)
-                print(f"  Waiting for PCATTCP receiver... (attempt {attempt}, sleeping {sleep_time}s)")
-                exponential_backoff_sleep(attempt, base=2, max_sleep=30)
-                waited += sleep_time
-                if waited >= max_wait:
-                    print(f"⚠ Timed out after {waited}s waiting for PCATTCP receiver, proceeding anyway.")
-                    break
-            else:
-                print(f"⚠ PCATTCP receiver not detected after {waited}s, proceeding with test.")
+            print("Waiting 3 min, to flow the traffic")
+            time.sleep(180)
             # transmitter
             through_put = self.run_pcattcp_tran(cip, cuser, cpwd, s_priv_ip, bandwidth=True)
             print("Through put: {}".format(through_put))
@@ -197,30 +166,8 @@ class PerfCommon(object):
                     print("Exception: Attempt-{} to get the stats...Found stats=[{}]".format(retry, through_put))
                     # receiver
                     pid = self.run_pcattcp_rec(sip, suser, spwd, c_priv_ip, asynchronous=True)
-                    print("Waiting for traffic readiness (adaptive wait)...")
-                    def is_port_open(ip, port, timeout=2):
-                        try:
-                            with socket.create_connection((ip, port), timeout=timeout):
-                                return True
-                        except Exception:
-                            return False
-
-                    pcattcp_port = 5001
-                    max_wait = 180  # seconds
-                    waited = 0
-                    for attempt in range(1, 10):
-                        if is_port_open(s_priv_ip, pcattcp_port):
-                            print(f"✓ PCATTCP receiver ready on {s_priv_ip}:{pcattcp_port} after {waited}s")
-                            break
-                        sleep_time = min(2 ** attempt, 30)
-                        print(f"  Waiting for PCATTCP receiver... (attempt {attempt}, sleeping {sleep_time}s)")
-                        exponential_backoff_sleep(attempt, base=2, max_sleep=30)
-                        waited += sleep_time
-                        if waited >= max_wait:
-                            print(f"⚠ Timed out after {waited}s waiting for PCATTCP receiver, proceeding anyway.")
-                            break
-                    else:
-                        print(f"⚠ PCATTCP receiver not detected after {waited}s, proceeding with test.")
+                    print("Waiting 3 min, to flow the traffic")
+                    time.sleep(180)
                     # transmitter
                     through_put = self.run_pcattcp_tran(cip, cuser, cpwd, s_priv_ip, bandwidth=True)
                     print("Through put: {}".format(through_put))
@@ -529,8 +476,6 @@ class PerfCommon(object):
         tool = "Powershell.exe"
         cmd = f'{self.path}PCATTCP\\PCATTCP.exe -t -l 490000 {target_ip}'
         return self.execute_cmd(cmd, ip, user, pwd, tool=tool, bandwidth=bandwidth, asynchronous=asynchronous)
-
-    
 
     def run_nginx(self, ip, user, pwd):
         print(f"{'+' * 50}\n+ Run nginx on {self.ip_type[ip]}-{ip} +\n{'+' * 50}")
