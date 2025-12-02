@@ -215,17 +215,17 @@ node('aws&&docker')
 
                     stage('Send Teams Message')
                     {
-                        sh("python3 ${iac_working_dir}/team_msg.py --scenario ${scenario}   \
-		                                    --pipeline_name \'${env.JOB_BASE_NAME}\'              \
-                                                    --webhook \'${teams_webhook}\'              \
-		                                    --status \'${currentBuild.currentResult}\'              \
-                                                    --jenkins_url ${env.BUILD_URL}          \
-                                                    --build_user \'${user_name}\'           \
-                                                    --stats \'${stats}\'                        \
-                                                    --graph \'${graph}\'                        \
-                                                    --manifest_file \'${manifest_file}\'        \
-                                                    --jfrog_url \'${jfrog_url}\'                \
-                                                    --build_number ${pipeline_num}")
+                        // sh("python3 ${iac_working_dir}/team_msg.py --scenario ${scenario}   \
+		                //                     --pipeline_name \'${env.JOB_BASE_NAME}\'              \
+                        //                             --webhook \'${teams_webhook}\'              \
+		                //                     --status \'${currentBuild.currentResult}\'              \
+                        //                             --jenkins_url ${env.BUILD_URL}          \
+                        //                             --build_user \'${user_name}\'           \
+                        //                             --stats \'${stats}\'                        \
+                        //                             --graph \'${graph}\'                        \
+                        //                             --manifest_file \'${manifest_file}\'        \
+                        //                             --jfrog_url \'${jfrog_url}\'                \
+                        //                             --build_number ${pipeline_num}")
                     }
                 }
             }
