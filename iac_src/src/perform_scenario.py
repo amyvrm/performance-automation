@@ -274,10 +274,13 @@ class PerformanceScenario(PerfCommon):
     def apply_rule_get_stats(self, suser, sip, spwd, s_priv_ip, cuser, cip, cpwd, c_priv_ip, grule_list, scenario_name, c_adaptor=None, s_adaptor=None,
                              action="reading", dsm=None):
         try:
+            # Choose target host and adapter strictly from provided args to avoid cross-class attribute access
             if scenario_name == "Client Download":
-                ip, user, pwd, adaptor = cip, cuser, cpwd, c_adaptor or self._s_adap_name
+                ip, user, pwd, adaptor = cip, cuser, cpwd, c_adaptor
             else:
-                ip, user, pwd, adaptor = sip, suser, spwd, s_adaptor or self._c_adap_name
+                ip, user, pwd, adaptor = sip, suser, spwd, s_adaptor
+            if adaptor is None:
+                raise Exception("Adapter name not provided for selected scenario")
             if action == "wo_filter":
                 dsm.clean_rules_from_dsm()
                 # Disable Server Agent
