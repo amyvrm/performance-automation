@@ -45,15 +45,17 @@ class DsmPolicy(object):
         self.connect()
 
     def connect(self):
-        transport = zeep.Transport()
+        # Configure transport with timeouts to prevent indefinite hangs
+        transport = zeep.Transport(timeout=300, operation_timeout=600)  # 5 min connect, 10 min operation
         transport.session.verify = False  # Bypass self-signed certificate errors
         for retry in range(3):
-            print("Attempt-{} to Create DSM Connection...".format(retry+1))
+            print("Attempt-{} to Create DSM Connection...".format(retry+1), flush=True)
             try:
                 self.client = zeep.Client(wsdl=self.wsdl_url, transport=transport)
+                print("✓ DSM connection established", flush=True)
                 break
             except Exception as ex:
-                print("Exception!!! {}".format(ex))
+                print("Exception!!! {}".format(ex), flush=True)
                 exponential_backoff_sleep(retry, base_delay=5, max_delay=20)
 
         self.session = requests.Session()
@@ -85,26 +87,37 @@ class DsmPolicy(object):
             raise Exception("Error!!! Not able to get DSM version")
 
     def upload_basic_policy(self, change_policy=False):
+        print("→ upload_basic_policy: Getting policy...", flush=True)
         fname = self.get_policy()
         if change_policy:
             dest_fname = os.path.join("templates", "perf_policy_changed.xml")
             fname = self.override_portlist(fname, dest_fname)
 
+        print("→ upload_basic_policy: Parsing XML...", flush=True)
         xml_root = ET.parse(fname)
         xml_root = xml_root.getroot()
         policy_xml = ET.tostring(xml_root, encoding='utf8', method='xml')
+        
+        print("→ upload_basic_policy: Uploading custom policy...", flush=True)
         self.upload_custom_policy(policy_xml)
-        print("No problems uploading policy {}, all tests passed".format(self.policy_name))
+        print("No problems uploading policy {}, all tests passed".format(self.policy_name), flush=True)
 
+        print("→ upload_basic_policy: Retrieving policy ID...", flush=True)
         policy_id = self.client.service.securityProfileRetrieveByName(name=self.policy_name, sID=self.sID)["ID"]
+        print(f"✓ Policy ID: {policy_id}", flush=True)
+        
+        print("→ upload_basic_policy: Retrieving all hosts...", flush=True)
         get_all_host = self.client.service.hostRetrieveAll(sID=self.sID)
+        print(f"✓ Found {len(get_all_host)} hosts", flush=True)
 
+        print("→ upload_basic_policy: Assigning policy to hosts...", flush=True)
         for idx, host in enumerate(get_all_host):
             host_id = host['ID']
+            print(f"  → Assigning policy to host {idx+1}/{len(get_all_host)} (ID: {host_id})...", flush=True)
             self.client.service.securityProfileAssignToHost(securityProfileID=policy_id, hostIDs=host_id, sID=self.sID)
             exponential_backoff_sleep(idx, base_delay=10, max_delay=20)
 
-        print("No problems applying policy {}, to all hosts".format(self.policy_name))
+        print("✓ No problems applying policy {}, to all hosts".format(self.policy_name), flush=True)
 
     def upload_custom_policy(self, policy_xml_data):
         print("Uploading {} xml file".format(self.policy_name))
@@ -207,14 +220,23 @@ class DsmPolicy(object):
                 f.write(",".join(identifiers))
 
         print("Attempting to apply update package", flush=True)
-        response = self.client.service.securityUpdateApply(ID=update_id, detectOnly=False, sID=self.sID)
-        with open(os.path.join("update-info", f"dsm-assigned_rules.txt"), "w") as f:
-            f.write(response["detailedSummary"])
-        print("Update package applied successfully")
-        print(f"Details saved to update-info.txt\n")
-        print("No problems uploading or applying update package, all tests passed")
-        print(response["detailedSummary"])
-        return contentSummary, identifiers
+        try:
+            response = self.client.service.securityUpdateApply(ID=update_id, detectOnly=False, sID=self.sID)
+            print("✓ securityUpdateApply call completed", flush=True)
+            
+            with open(os.path.join("update-info", f"dsm-assigned_rules.txt"), "w") as f:
+                f.write(response["detailedSummary"])
+            print("Update package applied successfully", flush=True)
+            print(f"Details saved to update-info.txt\n", flush=True)
+            print("No problems uploading or applying update package, all tests passed", flush=True)
+            print(response["detailedSummary"], flush=True)
+            print("✓ Returning from apply_pkg_create_applied_rule_list", flush=True)
+            return contentSummary, identifiers
+        except Exception as e:
+            print(f"✗ Error in securityUpdateApply: {e}", flush=True)
+            import traceback
+            traceback.print_exc()
+            raise
 
     def upload_package(self):
         # pkg_name = [filename for filename in os.listdir("update-packages")

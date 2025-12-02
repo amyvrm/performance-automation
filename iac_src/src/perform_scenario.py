@@ -67,11 +67,20 @@ class PerformanceScenario(PerfCommon):
 
             def sequential_dsm_tasks(dsm, rule_file):
                 try:
+                    print(f"→ Starting sequential_dsm_tasks for rule_file: {rule_file}", flush=True)
+                    print("→ Calling dsm.upload_basic_policy()...", flush=True)
                     dsm.upload_basic_policy()
+                    print("✓ upload_basic_policy completed", flush=True)
+                    
+                    print("→ Calling dsm.apply_pkg_create_applied_rule_list()...", flush=True)
                     summary, identifiers = dsm.apply_pkg_create_applied_rule_list(rule_file)
+                    print("✓ apply_pkg_create_applied_rule_list completed", flush=True)
+                    print(f"✓ sequential_dsm_tasks completed successfully", flush=True)
                     return summary, identifiers
                 except Exception as e:
-                    print(f"Error in sequential_dsm_tasks: {e}")
+                    print(f"✗ Error in sequential_dsm_tasks: {e}", flush=True)
+                    import traceback
+                    traceback.print_exc()
                     return None, None
 
             def reboot_instance(instance):
@@ -83,20 +92,30 @@ class PerformanceScenario(PerfCommon):
 
             with ThreadPoolExecutor(max_workers=len(all_instance)) as executor:
                 try:
+                    # Submit DSM tasks
                     future_dsm_tasks = [executor.submit(
                             sequential_dsm_tasks, dsm[x], rule_file) for x in range(len(dsm))]
 
+                    # Submit reboot tasks
                     future_to_instance = {
                     executor.submit(reboot_instance, instance): instance for instance in all_instance
                     }
+                    
+                    # Collect reboot results
                     results = {future_to_instance[future]: future.result() for future in future_to_instance}
+                    print(f"✓ Reboot tasks completed for {len(results)} instances")
 
-                    print("Results: {}".format([future.result() for future in future_dsm_tasks]))
-
+                    # Collect DSM task results (only call result() once per future)
+                    print("Waiting for DSM tasks to complete...", flush=True)
                     summaries_and_identifiers = [future.result() for future in future_dsm_tasks]
+                    print(f"✓ DSM tasks completed: {summaries_and_identifiers}", flush=True)
+                    
+                    # Unzip results
                     summary, identifiers = zip(*summaries_and_identifiers)
                 except Exception as e:
                     print(f"Error in ThreadPoolExecutor block: {e}")
+                    import traceback
+                    traceback.print_exc()
                     summary, identifiers, results = [], [], []
 
             _sip = [] 
