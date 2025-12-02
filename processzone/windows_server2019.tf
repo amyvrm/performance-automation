@@ -43,6 +43,11 @@ resource "null_resource" "provision-agent-server" {
 		destination = "C:/temp/"
 	}
 
+	provisioner "file" {
+		source      = "scripts/AgentDeploymentScript/WindowsAgentDeploymentScript.ps1"
+		destination = "C:/temp/WindowsAgentDeploymentScript.ps1"
+	}
+
 	provisioner "remote-exec"  {
 		inline = [
 					"powershell.exe -File C:\\temp\\WindowsAgentDeploymentScript.ps1 ${aws_instance.windows_server2019[count.index].private_ip}",

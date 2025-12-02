@@ -23,7 +23,6 @@ resource "null_resource" "provision-agent" {
 	triggers = {
     	always_run = "${timestamp()}"
   	}
-	
 	count = var.instance_count + 1
 	connection {
 			type     = "winrm"
