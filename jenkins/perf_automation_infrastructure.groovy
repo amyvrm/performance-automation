@@ -228,23 +228,16 @@ node('aws&&docker')
                             def applyResult = sh(script: "terraform -chdir=${iac_path_dsm_dsa} apply -auto-approve ${plan_dsm_dsa}", returnStatus: true)
                             
                             // Always capture instance IDs from state, even on partial failure
-                            echo "Capturing instance IDs from terraform state..."
-                            sh """
-                                cd ${iac_path_dsm_dsa}
-                                terraform state list | grep 'aws_instance' | while read resource; do
-                                    # Fallback-compatible parsing for older Terraform (no -json) and no jq
-                                    terraform state show "\$resource" \
-                                        | awk '/^\s*id\s*=\s*i-/ {print $3}' \
-                                        | sed -n '1p' \
-                                        || true
-                                done > created_instance_ids.txt
-                                # Ensure file exists even if empty
-                                [ -f created_instance_ids.txt ] || : > created_instance_ids.txt
-                                cat created_instance_ids.txt || echo 'No instances found in state'
-                            """
                             
                             // Fail the stage if apply failed, but after capturing IDs
                             if (applyResult != 0) {
+                                dir("${iac_path_dsm_dsa}")
+                                {
+                                    // Use || true to ensure we continue even if output fails
+                                    sh "terraform output -json || echo '{}'"
+                                    sh "terraform output -json > ${manifest_file} || echo '{}' > ${manifest_file}"
+                                    archiveArtifacts allowEmptyArchive: true, artifacts: "${manifest_file}"
+                                }
                                 error("Terraform apply failed with exit code ${applyResult}, but instance IDs have been captured")
                             }
                     }
@@ -253,8 +246,6 @@ node('aws&&docker')
                     {
                         dir("${iac_path_dsm_dsa}")
                         {
-                            sh "ls -la"
-                            sh "pwd"
                             // Use || true to ensure we continue even if output fails
                             sh "terraform output -json || echo '{}'"
                             sh "terraform output -json > ${manifest_file} || echo '{}' > ${manifest_file}"

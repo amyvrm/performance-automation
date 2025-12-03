@@ -21,9 +21,18 @@ Ensure-FileExists -Path 'C:/temp/PCATTCP.zip' -Description 'PCATTCP zip'
 Ensure-FileExists -Path 'C:/temp/ab.exe' -Description 'Apache Bench'
 Ensure-FileExists -Path 'C:/temp/hey.exe' -Description 'hey.exe'
 
-# Kick off lightweight tools (non-blocking)
-if (Test-Path 'C:/temp/ab.exe') { Start-Process -FilePath 'C:/temp/ab.exe' -NoNewWindow }
-if (Test-Path 'C:/temp/hey.exe') { Start-Process -FilePath 'C:/temp/hey.exe' -NoNewWindow }
+# Kick off lightweight tools (non-blocking) with safe help/version flags to avoid errors
+try {
+	if (Test-Path 'C:/temp/ab.exe') {
+		Start-Process -FilePath 'C:/temp/ab.exe' -ArgumentList '-V' -NoNewWindow -WindowStyle Hidden -ErrorAction SilentlyContinue
+	}
+} catch { Write-Verbose "ab.exe check failed: $($_.Exception.Message)" }
+
+try {
+	if (Test-Path 'C:/temp/hey.exe') {
+		Start-Process -FilePath 'C:/temp/hey.exe' -ArgumentList '--help' -NoNewWindow -WindowStyle Hidden -ErrorAction SilentlyContinue
+	}
+} catch { Write-Verbose "hey.exe check failed: $($_.Exception.Message)" }
 
 # Parallel tasks: nginx extract, OpenSSH install, PCATTCP extract
 $jobs = @()
@@ -69,9 +78,17 @@ if ($jobs.Count -gt 0) {
 	Remove-Job -Job $jobs | Out-Null
 }
 
-# Start nginx only if binary exists; do not block the script
+# Start nginx only if binary exists; ensure working directory and logs path
 if (Test-Path 'C:/temp/nginx-1.19.2/nginx.exe') {
-	Start-Process -FilePath 'C:/temp/nginx-1.19.2/nginx.exe' -NoNewWindow
+	try {
+		if (-not (Test-Path 'C:/temp/nginx-1.19.2/logs')) {
+			New-Item -ItemType Directory -Path 'C:/temp/nginx-1.19.2/logs' -Force | Out-Null
+		}
+		Start-Process -FilePath 'C:/temp/nginx-1.19.2/nginx.exe' -WorkingDirectory 'C:/temp/nginx-1.19.2' -ArgumentList '-t' -NoNewWindow -WindowStyle Hidden -ErrorAction SilentlyContinue
+		Start-Process -FilePath 'C:/temp/nginx-1.19.2/nginx.exe' -WorkingDirectory 'C:/temp/nginx-1.19.2' -NoNewWindow -WindowStyle Hidden -ErrorAction SilentlyContinue
+	} catch {
+		Write-Warning "nginx start encountered an issue: $($_.Exception.Message)"
+	}
 }
 
 # Optionally start PCATTCP receiver quickly to validate presence (non-blocking)
