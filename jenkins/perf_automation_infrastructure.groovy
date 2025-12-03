@@ -232,8 +232,14 @@ node('aws&&docker')
                             sh """
                                 cd ${iac_path_dsm_dsa}
                                 terraform state list | grep 'aws_instance' | while read resource; do
-                                    terraform state show -json "\$resource" | jq -r '.values.id' || true
+                                    # Fallback-compatible parsing for older Terraform (no -json) and no jq
+                                    terraform state show "\$resource" \
+                                        | awk '/^\s*id\s*=\s*i-/ {print $3}' \
+                                        | sed -n '1p' \
+                                        || true
                                 done > created_instance_ids.txt
+                                # Ensure file exists even if empty
+                                [ -f created_instance_ids.txt ] || : > created_instance_ids.txt
                                 cat created_instance_ids.txt || echo 'No instances found in state'
                             """
                             
