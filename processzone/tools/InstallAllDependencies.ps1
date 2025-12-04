@@ -17,7 +17,6 @@ function Ensure-FileExists {
 
 # Preflight expected artifacts
 Ensure-FileExists -Path 'C:/temp/nginx-1.19.2ready.zip' -Description 'nginx zip'
-Ensure-FileExists -Path 'C:/temp/PCATTCP.zip' -Description 'PCATTCP zip'
 Ensure-FileExists -Path 'C:/temp/ab.exe' -Description 'Apache Bench'
 Ensure-FileExists -Path 'C:/temp/hey.exe' -Description 'hey.exe'
 
@@ -34,7 +33,7 @@ try {
 	}
 } catch { Write-Verbose "hey.exe check failed: $($_.Exception.Message)" }
 
-# Parallel tasks: nginx extract, OpenSSH install, PCATTCP extract
+# Parallel tasks: nginx extract, OpenSSH and iperf3 install
 $jobs = @()
 
 # NGINX extract (idempotent)
@@ -44,7 +43,7 @@ if (-not (Test-Path 'C:/temp/nginx-1.19.2/nginx.exe')) {
 	}
 }
 
-# OpenSSH via Chocolatey (install if missing)
+# OpenSSH and iperf3 via Chocolatey (install if missing)
 $jobs += Start-Job -ScriptBlock {
 	try {
 		Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope LocalMachine -Force
@@ -55,12 +54,23 @@ $jobs += Start-Job -ScriptBlock {
 		if (-not $opensshInstalled) {
 			choco install openssh -y -f
 		}
+		$iperf3Installed = choco list --local-only | Select-String -Pattern '^iperf3'
+		if (-not $iperf3Installed) {
+			choco install iperf3 -y -f
+		}
 		Set-Service -Name ssh-agent -StartupType Automatic -ErrorAction SilentlyContinue
 		Set-Service -Name sshd -StartupType Automatic -ErrorAction SilentlyContinue
 		Start-Service ssh-agent -ErrorAction SilentlyContinue
 		Start-Service sshd -ErrorAction SilentlyContinue
 	} catch {
-		Write-Warning "OpenSSH installation encountered an issue: $($_.Exception.Message)"
+		Write-Warning "Chocolatey package installation encountered an issue: $($_.Exception.Message)"
+	}
+}
+
+# PCATTCP extract (idempotent)
+if (-not (Test-Path 'C:/temp/PCATTCP/PCATTCP.exe')) {
+	$jobs += Start-Job -ScriptBlock {
+		Expand-Archive -Path 'C:/temp/PCATTCP.zip' -DestinationPath 'C:/temp/' -Force
 	}
 }
 
@@ -91,9 +101,5 @@ if (Test-Path 'C:/temp/nginx-1.19.2/nginx.exe') {
 	}
 }
 
-# Optionally start PCATTCP receiver quickly to validate presence (non-blocking)
-if (Test-Path 'C:/temp/PCATTCP/PCATTCP.exe') {
-	Start-Process -FilePath 'C:/temp/PCATTCP/PCATTCP.exe' -ArgumentList '-h' -NoNewWindow
-}
-
 Write-Output 'Dependencies setup completed (parallel, idempotent).'
+Write-Output 'iperf3 is installed and ready for network throughput testing.'
