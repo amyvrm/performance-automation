@@ -221,7 +221,28 @@ class DsmPolicy(object):
 
         print("Attempting to apply update package", flush=True)
         try:
-            response = self.client.service.securityUpdateApply(ID=update_id, detectOnly=False, sID=self.sID)
+            # Retry with exponential backoff for timeout errors
+            from backoff_utils import retry_with_backoff
+            
+            def apply_security_update():
+                """Wrapper function for retry logic"""
+                response = self.client.service.securityUpdateApply(ID=update_id, detectOnly=False, sID=self.sID)
+                return response
+            
+            # Retry on timeout/connection errors with exponential backoff
+            response = retry_with_backoff(
+                func=apply_security_update,
+                max_attempts=3,
+                base_delay=30,  # Start with 30s delay
+                max_delay=120,  # Cap at 2 minutes
+                exceptions=(
+                    requests.exceptions.ReadTimeout,
+                    requests.exceptions.ConnectionError,
+                    requests.exceptions.Timeout,
+                    Exception  # Catch zeep transport errors too
+                )
+            )
+            
             print("✓ securityUpdateApply call completed", flush=True)
             
             with open(os.path.join("update-info", f"dsm-assigned_rules.txt"), "w") as f:
