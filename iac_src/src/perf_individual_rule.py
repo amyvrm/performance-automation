@@ -85,6 +85,14 @@ class PerfIndividualRule(PerfCommon, DsmPolicy):
         print(f"### Perf Rule Individual perf_scenario_test_individual### {self.identifiers}")
 
         print("{0}\n### {1} ###\n{0}".format("#" * 50, scenario_name))
+        
+        # System warm-up: eliminate cold-start bias (DNS, ARP, TCP window, routing cache)
+        print(f"{self.header}\n→ Running lightweight warm-up (3 iterations) to eliminate cold-start effects...\n{self.header}")
+        warmup_stats = PerformanceScenario.run_warmup_test(self, self.suser, self.sip, self.spwd, self.s_priv_ip, 
+                                                           self.cuser, self.cip, self.cpwd, self.c_priv_ip, scenario_name)
+        print(f"✓ Warm-up complete: System caches primed (DNS/ARP/TCP)")
+        print(f"→ All subsequent measurements will use warm system state\n")
+        
         # Without Filter Driver
         print("{0}{0}\n# Without Filter Driver #\n{0}{0}".format(self.header))
         wo_filter_all_stats, wo_filter_stats, wof_avg = PerformanceScenario.apply_rule_get_stats(self, self.suser, self.sip, self.spwd, self.s_priv_ip, self.cuser, self.cip, self.cpwd, self.c_priv_ip, False, scenario_name, self.s_adap_name, self.c_adap_name, action="wo_filter", dsm=self.dsm)

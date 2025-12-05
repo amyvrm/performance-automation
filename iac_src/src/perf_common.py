@@ -589,13 +589,35 @@ class PerfCommon(object):
         cmd = f"{self.path}ab.exe -c 10 -n 100 http://{target_ip}/test.htm"
         return self.execute_cmd(cmd, ip, user, pwd, tool=tool, bandwidth=True)
 
-    def run_hey(self, ip, user, pwd, target_ip):
+    def run_hey(self, ip, user, pwd, target_ip, iteration=20):
         print(f"{'+' * 50}\n+ Run Hey.exe {self.ip_type[ip]}-{ip} +\n{'+' * 50}")
         tool = "Powershell.exe"
         # Clean up any existing Hey.exe processes
         self.clean(ip, user, pwd, pid=False)
         cmd = f"{self.path}hey.exe -c 10 -n 100 http://{target_ip}/test.htm"
-        return self.execute_cmd(cmd, ip, user, pwd, tool=tool, bandwidth=True, iteration=20)
+        return self.execute_cmd(cmd, ip, user, pwd, tool=tool, bandwidth=True, iteration=iteration)
+    
+    def run_warmup_test(self, suser, sip, spwd, s_priv_ip, cuser, cip, cpwd, c_priv_ip, scenario_name):
+        """Lightweight warm-up: 3 iterations to prime DNS/ARP/TCP caches (~1-2 min)"""
+        if scenario_name == "Server Download" or scenario_name == "Client Download":
+            self.run_nginx(sip, suser, spwd)
+            probe_result = wait_for_nginx_ready(s_priv_ip)
+            print(f"Nginx warm-up ready: {probe_result['attempts']} attempts")
+            # Only 3 iterations for warm-up
+            warmup_stats = self.run_hey(cip, cuser, cpwd, s_priv_ip, iteration=3)
+            self.clean_nginx(sip, suser, spwd)
+            self.clean_ab(cip, cuser, cpwd)
+            return warmup_stats
+        elif scenario_name == "Server Upload":
+            # Quick warm-up for Server Upload: single 30s flow
+            pid = self.run_pcattcp_rec(sip, suser, spwd, c_priv_ip, asynchronous=True)
+            print("Waiting 30s for warm-up traffic flow...")
+            time.sleep(30)  # Minimal warm-up
+            self.run_pcattcp_tran(cip, cuser, cpwd, s_priv_ip, bandwidth=False)
+            self.clean(cip, cuser, cpwd, pid=pid)
+            self.clean(sip, suser, spwd)
+            return [0]  # Placeholder
+        return []
 
     def check_test_page(self, ip, user, pwd, target_ip):
         print(f"{'+' * 50}\n+ Check Test Page {self.ip_type[ip]}-{ip} +\n{'+' * 50}")
