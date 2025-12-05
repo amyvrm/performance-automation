@@ -285,16 +285,28 @@ class PerformanceScenario(PerfCommon):
                 dsm.clean_rules_from_dsm()
                 # Disable Server Agent
                 self.disable_dsa(ip, user, pwd)
-                # Disable Server filter
-                self.disable_filter(ip, user, pwd, adaptor)
+                # Disable Server filter (using parallel for consistency)
+                machines_to_disable = [{
+                    'ip': ip,
+                    'user': user,
+                    'pwd': pwd,
+                    'adaptor_name': adaptor
+                }]
+                self.disable_filters_parallel(machines_to_disable)
                 print("{0}\n{2}-{1} Agent: Disabled from DSM\n{2}-{1} Filter: Disabled from network driver\n{0}".format(
                       self.header, ip, self.ip_type[ip]))
             elif action == "filter":
                 dsm.clean_rules_from_dsm()
                 # Activate Server Agent
                 self.activate_dsa(ip, user, pwd)
-                # Enable Server Filter
-                self.enable_filter(ip, user, pwd, adaptor)
+                # Enable Server Filter (using parallel for consistency)
+                machines_to_enable = [{
+                    'ip': ip,
+                    'user': user,
+                    'pwd': pwd,
+                    'adaptor_name': adaptor
+                }]
+                self.enable_filters_parallel(machines_to_enable)
                 print("{0}\n{2}-{1} Agent: Enabled from DSM\n{2}-{1} Filter: Enabled from Network Driver\n{0}".format(
                                                                                     self.header, ip, self.ip_type[ip]))
             elif action == "rule":

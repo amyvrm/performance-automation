@@ -448,6 +448,104 @@ class PerfCommon(object):
         )
         self.execute_cmd(ps, ip, user, pwd, tool=tool)
 
+    def enable_filters_parallel(self, machines, max_workers=None):
+        """
+        Enable filter drivers in parallel across multiple machines.
+        
+        Args:
+            machines: List of dicts with keys: ip, user, pwd, adaptor_name
+            max_workers: Max parallel workers (default: min(len(machines), 10))
+        
+        Returns:
+            dict mapping ip -> result (True=success, False=failed)
+        """
+        from concurrent.futures import ThreadPoolExecutor, as_completed
+        import time
+        
+        if not machines:
+            print("No machines provided for parallel filter enablement")
+            return {}
+        
+        max_workers = max_workers or min(len(machines), 10)
+        print(f"Enabling filters in parallel on {len(machines)} machines (max_workers={max_workers})...")
+        
+        results = {}
+        start_time = time.time()
+        
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            future_to_ip = {
+                executor.submit(
+                    self.enable_filter,
+                    m['ip'], m['user'], m['pwd'], m['adaptor_name']
+                ): m['ip']
+                for m in machines
+            }
+            
+            for future in as_completed(future_to_ip):
+                ip = future_to_ip[future]
+                try:
+                    future.result(timeout=60)
+                    results[ip] = True
+                    print(f"  ✓ {ip}: Filter enabled")
+                except Exception as e:
+                    results[ip] = False
+                    print(f"  ✗ {ip}: Filter enable failed - {e}")
+        
+        elapsed = time.time() - start_time
+        success_count = sum(1 for v in results.values() if v)
+        print(f"Filter enablement complete: {success_count}/{len(machines)} successful in {elapsed:.1f}s")
+        
+        return results
+
+    def disable_filters_parallel(self, machines, max_workers=None):
+        """
+        Disable filter drivers in parallel across multiple machines.
+        
+        Args:
+            machines: List of dicts with keys: ip, user, pwd, adaptor_name
+            max_workers: Max parallel workers (default: min(len(machines), 10))
+        
+        Returns:
+            dict mapping ip -> result (True=success, False=failed)
+        """
+        from concurrent.futures import ThreadPoolExecutor, as_completed
+        import time
+        
+        if not machines:
+            print("No machines provided for parallel filter disablement")
+            return {}
+        
+        max_workers = max_workers or min(len(machines), 10)
+        print(f"Disabling filters in parallel on {len(machines)} machines (max_workers={max_workers})...")
+        
+        results = {}
+        start_time = time.time()
+        
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            future_to_ip = {
+                executor.submit(
+                    self.disable_filter,
+                    m['ip'], m['user'], m['pwd'], m['adaptor_name']
+                ): m['ip']
+                for m in machines
+            }
+            
+            for future in as_completed(future_to_ip):
+                ip = future_to_ip[future]
+                try:
+                    future.result(timeout=60)
+                    results[ip] = True
+                    print(f"  ✓ {ip}: Filter disabled")
+                except Exception as e:
+                    results[ip] = False
+                    print(f"  ✗ {ip}: Filter disable failed - {e}")
+        
+        elapsed = time.time() - start_time
+        success_count = sum(1 for v in results.values() if v)
+        print(f"Filter disablement complete: {success_count}/{len(machines)} successful in {elapsed:.1f}s")
+        
+        return results
+
     def clean(self, ip, user, pwd, pid=False):
         print(f"- clean pid: {pid}")
         tool = 'taskkill.exe'
@@ -709,11 +807,39 @@ class PerfCommon(object):
                     return False
 
     def enable_agent_filter(self, sip, suser, spwd, cip, cuser, cpwd, scenario):
+        """Enable agents and filters with parallel filter activation."""
+        print("+" * 50)
+        print("Enabling agents and filters...")
+        start_time = time.time()
+        
+        # Activate agents sequentially (DSM operations must be sequential)
         if scenario in ["Server_Download", "Server_Upload"]:
             self.activate_dsa(sip, suser, spwd)
-            self.enable_filter(sip, suser, spwd, self.s_adap_name)
         if scenario == "Client_Download":
             self.activate_dsa(cip, cuser, cpwd)
-            self.enable_filter(cip, cuser, cpwd, self.c_adap_name)
-        print("Waiting 30 sec, Both machine Agent: Enabled, Filter Driver: Enable")
-        time.sleep(30)
+        
+        # Enable filters in parallel
+        machines_to_enable = []
+        if scenario in ["Server_Download", "Server_Upload"]:
+            machines_to_enable.append({
+                'ip': sip,
+                'user': suser,
+                'pwd': spwd,
+                'adaptor_name': self.s_adap_name
+            })
+        if scenario == "Client_Download":
+            machines_to_enable.append({
+                'ip': cip,
+                'user': cuser,
+                'pwd': cpwd,
+                'adaptor_name': self.c_adap_name
+            })
+        
+        # Parallel filter enablement
+        if machines_to_enable:
+            self.enable_filters_parallel(machines_to_enable, max_workers=len(machines_to_enable))
+        
+        elapsed = time.time() - start_time
+        print(f"Agent and filter enablement complete in {elapsed:.1f}s")
+        print(f"Waiting for stabilization... (additional 5s)")
+        time.sleep(5)  # Reduced from 30s to 5s for stabilization
