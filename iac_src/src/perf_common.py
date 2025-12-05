@@ -13,7 +13,6 @@ import time
 from backoff_utils import wait_for_nginx_ready
 import os
 import re
-import json
 
 
 class PerfCommon(object):
@@ -232,22 +231,7 @@ class PerfCommon(object):
     @staticmethod
     def get_bandwidth(cmd, stdout, stderr, all_through_put, index):
         try:
-            if "iperf3" in cmd:
-                # iperf3 outputs JSON; parse for throughput
-                if stdout:
-                    try:
-                        out = stdout.decode("utf-8")
-                        json_data = json.loads(out)
-                        # Extract throughput from JSON: end.sum_received.bits_per_second
-                        bits_per_sec = json_data.get("end", {}).get("sum_received", {}).get("bits_per_second", 0)
-                        mbps = round(bits_per_sec / 1_000_000, 2)
-                        print("{0}\n+ {1}: {2} Mbps +\n{0}".format("+" * 50, index + 1, mbps))
-                        all_through_put.append(mbps)
-                        return True
-                    except (json.JSONDecodeError, KeyError, TypeError) as e:
-                        print(f"Failed to parse iperf3 JSON: {e}")
-                        return False
-            elif "PCATTCP" in cmd:
+            if "PCATTCP" in cmd:
                 if stderr:
                     out = stderr.decode("utf-8")
                     for line in out.split("\r\n"):
@@ -478,35 +462,20 @@ class PerfCommon(object):
         print(f"- Clean Nginx in {self.ip_type[ip]}-{ip}")
         return self.clean(ip, user, pwd, pid=False)
 
-    def run_iperf3_server(self, ip, user, pwd, port=5201, asynchronous=False):
-        """Start iperf3 server on remote host."""
-        print(f"{'+' * 50}\n+ Run iperf3 Server on {self.ip_type.get(ip, 'Unknown')}-{ip} +\n{'+' * 50}")
+    def run_pcattcp_rec(self, ip, user, pwd, target_ip, asynchronous=False):
+        print(f"run_pcattcp_rec: {ip}, {user}, {pwd}, {target_ip}")
+        print(f"{'+' * 50}\n+ Run PCATTCP on {self.ip_type[ip]}-{ip} +\n{'+' * 50}")
         self.clean(ip, user, pwd)
         tool = "Powershell.exe"
-        # iperf3 server: listen on port, output JSON
-        cmd = f'iperf3.exe -s -p {port} -J'
+        cmd = f'{self.path}PCATTCP\\PCATTCP.exe -r -l 490000 {target_ip} -c'
         return self.execute_cmd(cmd, ip, user, pwd, tool=tool, asynchronous=asynchronous)
 
-    def run_iperf3_client(self, ip, user, pwd, target_ip, port=5201, duration=10, bandwidth=False, asynchronous=False):
-        """Start iperf3 client on remote host connecting to target."""
-        print(f"{'+' * 50}\n+ Run iperf3 Client on {self.ip_type.get(ip, 'Unknown')}-{ip} +\n{'+' * 50}")
+    def run_pcattcp_tran(self, ip, user, pwd, target_ip, bandwidth=False, asynchronous=False):
+        print(f"{'+' * 50}\n+ Run PCATTCP on {self.ip_type[ip]}-{ip} and take Reading +\n{'+' * 50}")
         self.clean(ip, user, pwd)
         tool = "Powershell.exe"
-        # iperf3 client: connect to server, run for duration seconds, output JSON
-        cmd = f'iperf3.exe -c {target_ip} -p {port} -t {duration} -J'
+        cmd = f'{self.path}PCATTCP\\PCATTCP.exe -t -l 490000 {target_ip}'
         return self.execute_cmd(cmd, ip, user, pwd, tool=tool, bandwidth=bandwidth, asynchronous=asynchronous)
-
-    def run_pcattcp_rec(self, ip, user, pwd, target_ip, asynchronous=False):
-        """DEPRECATED: Use run_iperf3_server instead."""
-        print(f"[DEPRECATED] run_pcattcp_rec: {ip}, {user}, {pwd}, {target_ip}")
-        print(f"{'+' * 50}\n+ Run iperf3 Server (legacy PCATTCP) on {self.ip_type.get(ip, 'Unknown')}-{ip} +\n{'+' * 50}")
-        return self.run_iperf3_server(ip, user, pwd, asynchronous=asynchronous)
-
-    def run_pcattcp_tran(self, ip, user, pwd, target_ip, bandwidth=False, asynchronous=False):
-        """DEPRECATED: Use run_iperf3_client instead."""
-        print(f"[DEPRECATED] run_pcattcp_tran: {ip}, {user}, {pwd}, {target_ip}")
-        print(f"{'+' * 50}\n+ Run iperf3 Client (legacy PCATTCP) on {self.ip_type.get(ip, 'Unknown')}-{ip} +\n{'+' * 50}")
-        return self.run_iperf3_client(ip, user, pwd, target_ip, bandwidth=bandwidth, asynchronous=asynchronous)
 
     def run_nginx(self, ip, user, pwd):
         print(f"{'+' * 50}\n+ Run nginx on {self.ip_type[ip]}-{ip} +\n{'+' * 50}")
