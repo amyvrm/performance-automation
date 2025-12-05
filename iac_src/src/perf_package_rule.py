@@ -52,8 +52,19 @@ class PerfPackageRule(PerfCommon, DsmPolicy):
 
     def get_filtered_rules(self, server_rules, client_rules):
         print(f"self.summary: {self.summary}")
-        # Ensure self.summary is a string
+        # Ensure self.summary is a string, handle None values
+        if self.summary is None:
+            print("⚠️  Warning: summary is None, returning default")
+            return "Server Rules: None\nClient Rules: None"
+        
         summary_text = self.summary[0] if isinstance(self.summary, tuple) else self.summary
+        
+        # Validate summary_text is not None and is a string
+        if summary_text is None:
+            print("⚠️  Warning: summary_text is None, returning default")
+            return "Server Rules: None\nClient Rules: None"
+        
+        summary_text = str(summary_text)  # Ensure it's a string
 
         filtered_rules = "Server Rules:\n" + "\n".join(
             line for line in summary_text.split("\n") if any(rule_id.strip() in line for rule_id in server_rules)

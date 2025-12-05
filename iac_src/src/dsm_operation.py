@@ -592,8 +592,15 @@ class DsmPolicy(object):
 
     def disconnect(self):
         print("Disconnecting DSM")
-        self.client.service.endSession(sID=self.sID)
-        self.client.transport.session.close()
+        try:
+            if self.client and self.sID:
+                self.client.service.endSession(sID=self.sID)
+            if self.client and self.client.transport and self.client.transport.session:
+                self.client.transport.session.close()
+            print("✓ DSM disconnection successful")
+        except Exception as e:
+            print(f"⚠️  Warning: Error disconnecting from DSM: {type(e).__name__}: {e}")
+            print("(This is non-critical and may occur if connection was already closed)")
 
 if __name__ == '__main__':
     pass
