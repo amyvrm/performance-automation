@@ -190,7 +190,7 @@ class PerfCommon(object):
                         try:
                             stdout, stderr, rc = machine.run_executable(tool, arguments=cmd, asynchronous=asynchronous)
                             PerfCommon.get_bandwidth(cmd, stdout, stderr, all_through_put, i)
-                            time.sleep(30)
+                            time.sleep(5)  # OPTIMIZATION: Reduced from 30s to 5s (sufficient for connection/system cool-down)
                         except SCMRException as exc:
                             if "STATUS_SHARING_VIOLATION" in str(exc):
                                 print(f"Retrying due to sharing violation: {exc}")

@@ -293,6 +293,9 @@ class PerformanceScenario(PerfCommon):
                     'adaptor_name': adaptor
                 }]
                 self.disable_filters_parallel(machines_to_disable)
+                # Wait for filter driver state to settle
+                import time
+                time.sleep(10)
                 print("{0}\n{2}-{1} Agent: Disabled from DSM\n{2}-{1} Filter: Disabled from network driver\n{0}".format(
                       self.header, ip, self.ip_type[ip]))
             elif action == "filter":
@@ -307,6 +310,9 @@ class PerformanceScenario(PerfCommon):
                     'adaptor_name': adaptor
                 }]
                 self.enable_filters_parallel(machines_to_enable)
+                # Wait for filter driver state to settle
+                import time
+                time.sleep(10)
                 print("{0}\n{2}-{1} Agent: Enabled from DSM\n{2}-{1} Filter: Enabled from Network Driver\n{0}".format(
                                                                                     self.header, ip, self.ip_type[ip]))
             elif action == "rule":
