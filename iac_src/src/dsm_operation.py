@@ -250,7 +250,6 @@ class DsmPolicy(object):
             print("Update package applied successfully", flush=True)
             print(f"Details saved to update-info.txt\n", flush=True)
             print("No problems uploading or applying update package, all tests passed", flush=True)
-            print(response["detailedSummary"], flush=True)
             print("✓ Returning from apply_pkg_create_applied_rule_list", flush=True)
             return contentSummary, identifiers
         except Exception as e:
