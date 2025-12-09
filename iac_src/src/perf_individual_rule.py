@@ -79,7 +79,18 @@ class PerfIndividualRule(PerfCommon, DsmPolicy):
     def clean_and_enable_agents(self):
         print("### Perf Rule Individual clean_and_enable_agents###")
         self.dsm.clean_rules_from_dsm()
-        PerfCommon.enable_agent_filter(self.sip, self.suser, self.spwd, self.cip, self.cuser, self.cpwd)
+        # Enable both server and client agents when running "All" scenario
+        self.activate_dsa(self.sip, self.suser, self.spwd)
+        self.activate_dsa(self.cip, self.cuser, self.cpwd)
+        # Enable filters in parallel
+        machines_to_enable = [
+            {'ip': self.sip, 'user': self.suser, 'pwd': self.spwd, 'adaptor_name': self.s_adap_name},
+            {'ip': self.cip, 'user': self.cuser, 'pwd': self.cpwd, 'adaptor_name': self.c_adap_name}
+        ]
+        self.enable_filters_parallel(machines_to_enable)
+        print("→ Waiting 5s for agent/filter stabilization...")
+        import time
+        time.sleep(5)
 
     def perf_scenario_test_individual(self, scenario_name, server_rules, client_rules, grule_list):
         print(f"### Perf Rule Individual perf_scenario_test_individual### {self.identifiers}")
