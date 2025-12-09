@@ -8,6 +8,58 @@ def parseJson(String jsonString) {
     return jsonSlurper.parseText(jsonString)
 }
 
+def captureTeardownIds()
+{
+    // This function can be expanded if needed
+    script
+    {
+        echo "Reading the manifest file"
+        def manifestFile = readFile("${iac_path_dsm_dsa}/${manifest_file}")
+        echo "Manifest File : ${manifestFile}"
+        
+        def instanceIds = []
+        
+        try {
+            // Try to extract from terraform output first
+            def jsonText = parseJson(manifestFile)
+            echo "Tear Down IDs from output: ${jsonText}"
+            def keysToExtract = jsonText.keySet().findAll { key -> 
+                key.startsWith('dsa-windows-id') || 
+                key.startsWith('dsa-windows_agent-id') || 
+                key.startsWith('dsm-rhel-id')
+            }                                  
+            // Collect the values from matched keys
+            all_ids = keysToExtract.collect { key -> jsonText[key]?.value }
+                                      .findAll { it != null } // Remove nulls
+                                      .join(', ')
+            echo "All IDs from output: ${all_ids}"
+            // Extract only the instance IDs
+            instanceIds = all_ids.tokenize(',').collect { id -> id.trim().find(/i-[a-zA-Z0-9]+/)}.findAll { it != null }
+        } catch (Exception e) {
+            echo "Failed to parse terraform output, falling back to state file: ${e.message}"
+        }
+        
+        // Fallback: extract from state file if output parsing failed or is empty
+        if (instanceIds.isEmpty()) {
+            echo "Extracting instance IDs from terraform state..."
+            def stateIds = sh(script: "cat ${iac_path_dsm_dsa}/created_instance_ids.txt 2>/dev/null || echo ''", returnStdout: true).trim()
+            if (stateIds) {
+                instanceIds = stateIds.split('\n').findAll { it.trim() && it.startsWith('i-') }
+                echo "Instance IDs from state: ${instanceIds.join(', ')}"
+            }
+        }
+        
+        if (instanceIds.isEmpty()) {
+            echo "WARNING: No instance IDs found. Manual cleanup may be required."
+            destroy_param = 'AWS_RESOURCES = NONE_FOUND'
+        } else {
+            destroy_param = 'AWS_RESOURCES = ' + instanceIds.join(', ')
+        }
+    
+        echo "Destroy Manifest File : ${destroy_param}"
+    }
+}
+
 node('aws&&docker')
 {
     // SEC
@@ -79,6 +131,7 @@ node('aws&&docker')
             def stats_file =  "${scenario}_stats.html"
             def graph_file =  "${scenario}_band.png"
             def all_ids = ""
+            def applyResult = ""
 
             def server_rules
             def client_rules
@@ -225,21 +278,7 @@ node('aws&&docker')
                             echo "Terraform Apply"
 
                             // Try apply and capture exit code
-                            def applyResult = sh(script: "terraform -chdir=${iac_path_dsm_dsa} apply -auto-approve ${plan_dsm_dsa}", returnStatus: true)
-                            
-                            // Always capture instance IDs from state, even on partial failure
-                            
-                            // Fail the stage if apply failed, but after capturing IDs
-                            if (applyResult != 0) {
-                                dir("${iac_path_dsm_dsa}")
-                                {
-                                    // Use || true to ensure we continue even if output fails
-                                    sh "terraform output -json || echo '{}'"
-                                    sh "terraform output -json > ${manifest_file} || echo '{}' > ${manifest_file}"
-                                    archiveArtifacts allowEmptyArchive: true, artifacts: "${manifest_file}"
-                                }
-                                error("Terraform apply failed with exit code ${applyResult}, but instance IDs have been captured")
-                            }
+                            applyResult = sh(script: "terraform -chdir=${iac_path_dsm_dsa} apply -auto-approve ${plan_dsm_dsa}", returnStatus: true)
                     }
 
                     stage('DSM infra information')
@@ -255,53 +294,7 @@ node('aws&&docker')
 
                     stage('Tear Down Infrastructure - IDs')
                     {
-                        script
-                        {
-                            echo "Reading the manifest file"
-                            def manifestFile = readFile("${iac_path_dsm_dsa}/${manifest_file}")
-                            echo "Manifest File : ${manifestFile}"
-                            
-                            def instanceIds = []
-                            
-                            try {
-                                // Try to extract from terraform output first
-                                def jsonText = parseJson(manifestFile)
-                                echo "Tear Down IDs from output: ${jsonText}"
-                                def keysToExtract = jsonText.keySet().findAll { key -> 
-                                    key.startsWith('dsa-windows-id') || 
-                                    key.startsWith('dsa-windows_agent-id') || 
-                                    key.startsWith('dsm-rhel-id')
-                                }                                  
-                                // Collect the values from matched keys
-                                all_ids = keysToExtract.collect { key -> jsonText[key]?.value }
-                                                          .findAll { it != null } // Remove nulls
-                                                          .join(', ')
-                                echo "All IDs from output: ${all_ids}"
-                                // Extract only the instance IDs
-                                instanceIds = all_ids.tokenize(',').collect { id -> id.trim().find(/i-[a-zA-Z0-9]+/)}.findAll { it != null }
-                            } catch (Exception e) {
-                                echo "Failed to parse terraform output, falling back to state file: ${e.message}"
-                            }
-                            
-                            // Fallback: extract from state file if output parsing failed or is empty
-                            if (instanceIds.isEmpty()) {
-                                echo "Extracting instance IDs from terraform state..."
-                                def stateIds = sh(script: "cat ${iac_path_dsm_dsa}/created_instance_ids.txt 2>/dev/null || echo ''", returnStdout: true).trim()
-                                if (stateIds) {
-                                    instanceIds = stateIds.split('\n').findAll { it.trim() && it.startsWith('i-') }
-                                    echo "Instance IDs from state: ${instanceIds.join(', ')}"
-                                }
-                            }
-                            
-                            if (instanceIds.isEmpty()) {
-                                echo "WARNING: No instance IDs found. Manual cleanup may be required."
-                                destroy_param = 'AWS_RESOURCES = NONE_FOUND'
-                            } else {
-                                destroy_param = 'AWS_RESOURCES = ' + instanceIds.join(', ')
-                            }
-                        
-                            echo "Destroy Manifest File : ${destroy_param}"
-                        }
+                        captureTeardownIds()
                     }
 
                     stage('Tear Down Infrastructure - Manifest')
@@ -320,6 +313,24 @@ node('aws&&docker')
             currentBuild.result = "FAILURE"
             println(e)
 			throw e
+        }
+        finally
+        {
+            // Always capture instance IDs from state, even on partial failure
+                            
+            // Fail the stage if apply failed, but after capturing IDs
+            if (applyResult != 0) {
+                dir("${iac_path_dsm_dsa}")
+                {
+                    // Use || true to ensure we continue even if output fails
+                    sh "terraform output -json || echo '{}'"
+                    sh "terraform output -json > ${manifest_file} || echo '{}' > ${manifest_file}"
+                    archiveArtifacts allowEmptyArchive: true, artifacts: "${manifest_file}"
+                }
+                error("Terraform apply failed with exit code ${applyResult}, but instance IDs have been captured")
+
+                captureTeardownIds()
+            }
         }
     }
 }
