@@ -8,7 +8,7 @@ def parseJson(String jsonString) {
     return jsonSlurper.parseText(jsonString)
 }
 
-def captureTeardownIds()
+def captureTeardownIds(iac_path_dsm_dsa, manifest_file)
 {
     // This function can be expanded if needed
     script
@@ -18,6 +18,7 @@ def captureTeardownIds()
         echo "Manifest File : ${manifestFile}"
         
         def instanceIds = []
+        def destroy_param = ""
         
         try {
             // Try to extract from terraform output first
@@ -29,7 +30,7 @@ def captureTeardownIds()
                 key.startsWith('dsm-rhel-id')
             }                                  
             // Collect the values from matched keys
-            all_ids = keysToExtract.collect { key -> jsonText[key]?.value }
+            def all_ids = keysToExtract.collect { key -> jsonText[key]?.value }
                                       .findAll { it != null } // Remove nulls
                                       .join(', ')
             echo "All IDs from output: ${all_ids}"
@@ -57,6 +58,7 @@ def captureTeardownIds()
         }
     
         echo "Destroy Manifest File : ${destroy_param}"
+        return destroy_param
     }
 }
 
@@ -294,7 +296,7 @@ node('aws&&docker')
 
                     stage('Tear Down Infrastructure - IDs')
                     {
-                        captureTeardownIds()
+                        destroy_param = captureTeardownIds(iac_path_dsm_dsa, manifest_file)
                     }
 
                     stage('Tear Down Infrastructure - Manifest')
@@ -329,7 +331,7 @@ node('aws&&docker')
                 }
                 error("Terraform apply failed with exit code ${applyResult}, but instance IDs have been captured")
 
-                captureTeardownIds()
+                captureTeardownIds(iac_path_dsm_dsa, manifest_file)
             }
         }
     }
