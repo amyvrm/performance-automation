@@ -103,19 +103,30 @@ class PerfIndividualRule(PerfCommon, DsmPolicy):
         print(f"✓ Warm-up complete: System caches primed (DNS/ARP/TCP)")
         print(f"→ All subsequent measurements will use warm system state\n")
         
-        # Without Filter Driver
-        print("{0}{0}\n# Without Filter Driver #\n{0}{0}".format(self.header))
-        wo_filter_all_stats, wo_filter_stats, wof_avg = PerformanceScenario.apply_rule_get_stats(self, self.suser, self.sip, self.spwd, self.s_priv_ip, self.cuser, self.cip, self.cpwd, self.c_priv_ip, False, scenario_name, self.s_adap_name, self.c_adap_name, action="wo_filter", dsm=self.dsm)
-        print("- Without Filter Driver Average Stats: {} MBps\n".format(wof_avg))
+        if scenario_name == "Client Download":
+            # Run With Filter first for Client Download to isolate cache bias from affecting baseline
+            print("{0}{0}\n# With Filter Driver #\n{0}{0}".format(self.header))
+            w_filter_all_stats, w_filter_stats, wf_avg = PerformanceScenario.apply_rule_get_stats(self, self.suser, self.sip, self.spwd, self.s_priv_ip, self.cuser, self.cip, self.cpwd, self.c_priv_ip, False, scenario_name, self.s_adap_name, self.c_adap_name, action="filter", dsm=self.dsm)
+            print("- With Filter Driver Average Stats: {} MBps\n".format(wf_avg))
 
-        # Cooldown period to eliminate carry-over effects
-        print("→ Cooldown: Waiting 15s to clear CPU/network caches before next test...")
-        time.sleep(15)
+            print("→ Cooldown: Waiting 20s to clear CPU/network caches before baseline...")
+            time.sleep(20)
 
-        # With Filter Driver
-        print("{0}{0}\n# With Filter Driver #\n{0}{0}".format(self.header))
-        w_filter_all_stats, w_filter_stats, wf_avg = PerformanceScenario.apply_rule_get_stats(self, self.suser, self.sip, self.spwd, self.s_priv_ip, self.cuser, self.cip, self.cpwd, self.c_priv_ip, False, scenario_name, self.s_adap_name, self.c_adap_name, action="filter", dsm=self.dsm)
-        print("- With Filter Driver Average Stats: {} MBps\n".format(wf_avg))
+            print("{0}{0}\n# Without Filter Driver #\n{0}{0}".format(self.header))
+            wo_filter_all_stats, wo_filter_stats, wof_avg = PerformanceScenario.apply_rule_get_stats(self, self.suser, self.sip, self.spwd, self.s_priv_ip, self.cuser, self.cip, self.cpwd, self.c_priv_ip, False, scenario_name, self.s_adap_name, self.c_adap_name, action="wo_filter", dsm=self.dsm)
+            print("- Without Filter Driver Average Stats: {} MBps\n".format(wof_avg))
+        else:
+            # Default order for other scenarios
+            print("{0}{0}\n# Without Filter Driver #\n{0}{0}".format(self.header))
+            wo_filter_all_stats, wo_filter_stats, wof_avg = PerformanceScenario.apply_rule_get_stats(self, self.suser, self.sip, self.spwd, self.s_priv_ip, self.cuser, self.cip, self.cpwd, self.c_priv_ip, False, scenario_name, self.s_adap_name, self.c_adap_name, action="wo_filter", dsm=self.dsm)
+            print("- Without Filter Driver Average Stats: {} MBps\n".format(wof_avg))
+
+            print("→ Cooldown: Waiting 15s to clear CPU/network caches before next test...")
+            time.sleep(15)
+
+            print("{0}{0}\n# With Filter Driver #\n{0}{0}".format(self.header))
+            w_filter_all_stats, w_filter_stats, wf_avg = PerformanceScenario.apply_rule_get_stats(self, self.suser, self.sip, self.spwd, self.s_priv_ip, self.cuser, self.cip, self.cpwd, self.c_priv_ip, False, scenario_name, self.s_adap_name, self.c_adap_name, action="filter", dsm=self.dsm)
+            print("- With Filter Driver Average Stats: {} MBps\n".format(wf_avg))
 
 
         print("{0}{0}\n# Threshold Rule with Dependency #\n{0}{0}".format(self.header))
