@@ -2,6 +2,7 @@ from perform_scenario import PerformanceScenario
 from perf_common import PerfCommon
 from dsm_operation import DsmPolicy
 import pandas as pd
+import time
 
 class PerfIndividualRule(PerfCommon, DsmPolicy):
     def __init__(self, dsm, scenario, path_json, grule, identifiers, suser, sip, spwd, s_priv_ip, cuser, cip, cpwd, c_priv_ip, summary, stats, graph, s_adap_name, c_adap_name, title, ip_type, path, best_iteration):
@@ -89,7 +90,6 @@ class PerfIndividualRule(PerfCommon, DsmPolicy):
         ]
         self.enable_filters_parallel(machines_to_enable)
         print("→ Waiting 5s for agent/filter stabilization...")
-        import time
         time.sleep(5)
 
     def perf_scenario_test_individual(self, scenario_name, server_rules, client_rules, grule_list):
@@ -107,6 +107,10 @@ class PerfIndividualRule(PerfCommon, DsmPolicy):
         print("{0}{0}\n# Without Filter Driver #\n{0}{0}".format(self.header))
         wo_filter_all_stats, wo_filter_stats, wof_avg = PerformanceScenario.apply_rule_get_stats(self, self.suser, self.sip, self.spwd, self.s_priv_ip, self.cuser, self.cip, self.cpwd, self.c_priv_ip, False, scenario_name, self.s_adap_name, self.c_adap_name, action="wo_filter", dsm=self.dsm)
         print("- Without Filter Driver Average Stats: {} MBps\n".format(wof_avg))
+
+        # Cooldown period to eliminate carry-over effects
+        print("→ Cooldown: Waiting 15s to clear CPU/network caches before next test...")
+        time.sleep(15)
 
         # With Filter Driver
         print("{0}{0}\n# With Filter Driver #\n{0}{0}".format(self.header))
@@ -141,8 +145,7 @@ class PerfIndividualRule(PerfCommon, DsmPolicy):
         
         # System warm-up: eliminate cold-start bias (DNS, ARP, TCP window, routing cache)
         print(f"{self.header}\n→ Running lightweight warm-up (3 iterations) to eliminate cold-start effects...\n{self.header}")
-        warmup_stats = PerformanceScenario.run_warmup_test(self, self.suser, self.sip, self.spwd, self.s_priv_ip, 
-                                                           self.cuser, self.cip, self.cpwd, self.c_priv_ip, scenario_name)
+        warmup_stats = PerformanceScenario.run_warmup_test(self, self.suser, self.sip, self.spwd, self.s_priv_ip, self.cuser, self.cip, self.cpwd, self.c_priv_ip, scenario_name)
         print(f"✓ Warm-up complete: System caches primed (DNS/ARP/TCP)")
         print(f"→ All subsequent measurements will use warm system state\n")
         

@@ -130,20 +130,25 @@ class DSMConfig:
 		
 		req = request.Request('{}/api/sessions/current'.format(self.DSM_BASE_URL), headers=deleteSessionHeaders, method='DELETE')
 		
+		deleteCurrentResponse = None
 		try:
 			deleteCurrentResponse = request.urlopen(req, context=self.context)
+			print(f"deleteCurrentResponse.code: {deleteCurrentResponse.code}")
+			return deleteCurrentResponse.code
 		except error.HTTPError as e:
 			print('HTTPError = ' + str(e.code))
 			print('Message = ' + str(e.read()))
+			return e.code
 		except error.URLError as e:
 			print('URLError = ' + str(e.reason))
+			return None
 		except http.client.HTTPException as e:
 			print('HTTPException: {}'.format(e.message))
+			return None
 		except Exception:
 			import traceback
 			print('generic exception: ' + traceback.format_exc())
-		print(f"deleteCurrentResponse.code: {deleteCurrentResponse.code}")
-		return deleteCurrentResponse.code
+			return None
 
 	def createAPIKey(self):
 		createAPIKeyHeaders = copy.copy(self.headers)
