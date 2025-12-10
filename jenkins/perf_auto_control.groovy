@@ -68,6 +68,8 @@ node('aws&&docker') {
 
         def pipelineShouldExit = false
 
+        def infrajobStatus = ""
+
         if (!(scenario in ["Server_Upload", "Server_Download", "Client_Download"])) {
             error("Scenario unknown")
         }
@@ -98,6 +100,8 @@ node('aws&&docker') {
                 script {
                     job_number = infrajob.getNumber().toString()
                     def copied = false
+                    infrajobStatus = infrajob.getResult().toString()
+                    echo "Infra job status: ${infrajobStatus}"
 
                     sh "rm -rf ${WORKSPACE}/*.json ${WORKSPACE}/*.txt"
 
@@ -120,29 +124,32 @@ node('aws&&docker') {
                 }
             }
 
-            if (!pipelineShouldExit) {
-                stage('Collect DSM DSA infrastructure Info') {
-                    sleep(time: 15, unit: "SECONDS")
-                    job_number = infrajob.getNumber().toString()
-                    copyArtifacts filter: '**/*.json, **/*.txt', projectName: 'Infra_Create_Perf_Scenario', selector: specific(job_number.toString())
-                    echo "Manifest file is copied"
-                    sh "ls -la ${WORKSPACE}"
-                    echo "Reading the manifest file"
-                    echo "Manifest File: ${manifest_file}"
-                }
 
-                stage('Run Performance Test') {
-                    sleep(time: 15, unit: "SECONDS")
-                    job_number = infrajob.getNumber().toString()
-                    perf_test = build job: 'Performance_Scenario_Test',
-                        parameters: [
-                            string(name: 'DSM_PACKAGE_URL', value: dsm_package_url),
-                            string(name: 'SCENARIO', value: scenario),
-                            string(name: 'PACKAGE_URL', value: "${package_url}"),
-                            string(name: 'JOB_NUMBER', value: job_number),
-                            string(name: 'RULE_ID', value: rule_id),
-                            booleanParam(name: 'INDIVIDUAL_RULE_TEST', value: individual_rule_test)
-                        ]
+            if (infrajobStatus == 'SUCCESS') {
+                if (!pipelineShouldExit) {
+                    stage('Collect DSM DSA infrastructure Info') {
+                        sleep(time: 15, unit: "SECONDS")
+                        job_number = infrajob.getNumber().toString()
+                        copyArtifacts filter: '**/*.json, **/*.txt', projectName: 'Infra_Create_Perf_Scenario', selector: specific(job_number.toString())
+                        echo "Manifest file is copied"
+                        sh "ls -la ${WORKSPACE}"
+                        echo "Reading the manifest file"
+                        echo "Manifest File: ${manifest_file}"
+                    }
+
+                    stage('Run Performance Test') {
+                        sleep(time: 15, unit: "SECONDS")
+                        job_number = infrajob.getNumber().toString()
+                        perf_test = build job: 'Performance_Scenario_Test',
+                            parameters: [
+                                string(name: 'DSM_PACKAGE_URL', value: dsm_package_url),
+                                string(name: 'SCENARIO', value: scenario),
+                                string(name: 'PACKAGE_URL', value: "${package_url}"),
+                                string(name: 'JOB_NUMBER', value: job_number),
+                                string(name: 'RULE_ID', value: rule_id),
+                                booleanParam(name: 'INDIVIDUAL_RULE_TEST', value: individual_rule_test)
+                            ]
+                    }
                 }
             }
         } catch (e) {
@@ -150,17 +157,48 @@ node('aws&&docker') {
             println(e)
             throw e
         } finally {
-            if (!pipelineShouldExit) {
-                stage('Collect Automation Machine Tear Down infrastructure') {
-                    sleep(time: 15, unit: "SECONDS")
-                    perf_test_number = perf_test.getNumber().toString()
-                    copyArtifacts filter: '**/*.txt', projectName: 'Performance_Scenario_Test', selector: specific(perf_test_number.toString())
-                    def tearDown = readFile("tear_down_params_automation.txt")
-                    echo "Tear Down Params: ${tearDown}"
-                    all_ids = tearDown.drop(16)
-                    echo "All IDs: ${all_ids}"
-                }
 
+            if (infrajobStatus == 'SUCCESS') {
+                perfjobStatus = perf_test.getResult().toString()
+                if (perfjobStatus == 'SUCCESS') {
+                    if (!pipelineShouldExit) {
+                        stage('Collect Automation Machine Tear Down infrastructure') {
+                            sleep(time: 15, unit: "SECONDS")
+                            perf_test_number = perf_test.getNumber().toString()
+                            copyArtifacts filter: '**/*.txt', projectName: 'Performance_Scenario_Test', selector: specific(perf_test_number.toString())
+                            def tearDown = readFile("tear_down_params_automation.txt")
+                            echo "Tear Down Params: ${tearDown}"
+                            all_ids = tearDown.drop(16)
+                            echo "All IDs: ${all_ids}"
+                        }
+
+                        stage('Collect Tear Down infrastructure') {
+                            def tearDown = readFile("tear_down_params.txt")
+                            echo "Tear Down Params: ${tearDown}"
+                            def new_ids = tearDown.drop(16).split(',').collect { it.trim() }
+                            def existing_ids = all_ids.split(',').collect { it.trim() }.findAll { it }
+                            all_ids = (existing_ids + new_ids).unique().join(', ')
+                            echo "All IDs: ${all_ids}"
+                        }
+
+                        stage('Tear Down infrastructure') {
+                            if ("${debug}" == 'false') {
+                                echo "Debug disabled. Destroying Infrastructure...."
+                                build job: 'Performance-Scenario-teardown',
+                                    parameters: [
+                                        string(name: 'AWS_RESOURCES', value: all_ids),
+                                        string(name: 'INFRASTRUCTURE_BRANCH', value: infra_branch)
+                                    ]
+                            } else {
+                                echo "Debug enabled. Infrastructure Preserved."
+                            }
+                            jsonText = null
+                        }
+                    }
+                }
+            }
+            else {
+                echo "Infrastructure deployment failed. Skipping performance test and performing infrastructure teardown."
                 stage('Collect Tear Down infrastructure') {
                     def tearDown = readFile("tear_down_params.txt")
                     echo "Tear Down Params: ${tearDown}"
@@ -169,7 +207,7 @@ node('aws&&docker') {
                     all_ids = (existing_ids + new_ids).unique().join(', ')
                     echo "All IDs: ${all_ids}"
                 }
-
+                
                 stage('Tear Down infrastructure') {
                     if ("${debug}" == 'false') {
                         echo "Debug disabled. Destroying Infrastructure...."
