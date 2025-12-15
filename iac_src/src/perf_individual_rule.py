@@ -104,30 +104,23 @@ class PerfIndividualRule(PerfCommon, DsmPolicy):
         print(f"→ All subsequent measurements will use warm system state\n")
         
         if scenario_name == "Client Download":
-            # Run With Filter first for Client Download to isolate cache bias from affecting baseline
-            print("{0}{0}\n# With Filter Driver #\n{0}{0}".format(self.header))
-            w_filter_all_stats, w_filter_stats, wf_avg = PerformanceScenario.apply_rule_get_stats(self, self.suser, self.sip, self.spwd, self.s_priv_ip, self.cuser, self.cip, self.cpwd, self.c_priv_ip, False, scenario_name, self.s_adap_name, self.c_adap_name, action="filter", dsm=self.dsm)
-            print("- With Filter Driver Average Stats: {} MBps\n".format(wf_avg))
-
-            print("→ Cooldown: Waiting 20s to clear CPU/network caches before baseline...")
-            time.sleep(20)
-
+            # Run Without Filter first (baseline on warm system), then With Filter to show overhead
             print("{0}{0}\n# Without Filter Driver #\n{0}{0}".format(self.header))
             wo_filter_all_stats, wo_filter_stats, wof_avg = PerformanceScenario.apply_rule_get_stats(self, self.suser, self.sip, self.spwd, self.s_priv_ip, self.cuser, self.cip, self.cpwd, self.c_priv_ip, False, scenario_name, self.s_adap_name, self.c_adap_name, action="wo_filter", dsm=self.dsm)
             print("- Without Filter Driver Average Stats: {} MBps\n".format(wof_avg))
+
+            print("{0}{0}\n# With Filter Driver #\n{0}{0}".format(self.header))
+            w_filter_all_stats, w_filter_stats, wf_avg = PerformanceScenario.apply_rule_get_stats(self, self.suser, self.sip, self.spwd, self.s_priv_ip, self.cuser, self.cip, self.cpwd, self.c_priv_ip, False, scenario_name, self.s_adap_name, self.c_adap_name, action="filter", dsm=self.dsm)
+            print("- With Filter Driver Average Stats: {} MBps\n".format(wf_avg))
         else:
-            # For Server Upload/Download: run With Filter first, then cooldown, then baseline to avoid cache advantage on With FD
-            print("{0}{0}\n# With Filter Driver #\n{0}{0}".format(self.header))
-            w_filter_all_stats, w_filter_stats, wf_avg = PerformanceScenario.apply_rule_get_stats(self, self.suser, self.sip, self.spwd, self.s_priv_ip, self.cuser, self.cip, self.cpwd, self.c_priv_ip, False, scenario_name, self.s_adap_name, self.c_adap_name, action="filter", dsm=self.dsm)
-            print("- With Filter Driver Average Stats: {} MBps\n".format(wf_avg))
-
-            print("→ Cooldown: Waiting 20s to clear CPU/network caches before baseline...")
-            import time
-            time.sleep(20)
-
+            # For Server Upload: run Without Filter first (baseline on warm system), then With Filter to show overhead
             print("{0}{0}\n# Without Filter Driver #\n{0}{0}".format(self.header))
             wo_filter_all_stats, wo_filter_stats, wof_avg = PerformanceScenario.apply_rule_get_stats(self, self.suser, self.sip, self.spwd, self.s_priv_ip, self.cuser, self.cip, self.cpwd, self.c_priv_ip, False, scenario_name, self.s_adap_name, self.c_adap_name, action="wo_filter", dsm=self.dsm)
             print("- Without Filter Driver Average Stats: {} MBps\n".format(wof_avg))
+
+            print("{0}{0}\n# With Filter Driver #\n{0}{0}".format(self.header))
+            w_filter_all_stats, w_filter_stats, wf_avg = PerformanceScenario.apply_rule_get_stats(self, self.suser, self.sip, self.spwd, self.s_priv_ip, self.cuser, self.cip, self.cpwd, self.c_priv_ip, False, scenario_name, self.s_adap_name, self.c_adap_name, action="filter", dsm=self.dsm)
+            print("- With Filter Driver Average Stats: {} MBps\n".format(wf_avg))
 
 
         print("{0}{0}\n# Threshold Rule with Dependency #\n{0}{0}".format(self.header))
