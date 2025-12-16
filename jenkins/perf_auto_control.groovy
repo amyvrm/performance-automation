@@ -160,7 +160,7 @@ node('aws&&docker') {
 
             if (infrajobStatus == 'SUCCESS') {
                 perfjobStatus = perf_test.getResult().toString()
-                if (perfjobStatus == 'SUCCESS') {
+                if (perfjobStatus != 'SUCCESS') {
                     if (!pipelineShouldExit) {
                         stage('Collect Automation Machine Tear Down infrastructure') {
                             sleep(time: 15, unit: "SECONDS")
