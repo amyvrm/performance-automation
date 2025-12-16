@@ -129,7 +129,7 @@ class PerfCommon(object):
         print(f"→ Enforcing NIC settings on {ip}: RSC=Disabled, RSS=Enabled (adapter={adapter_name})")
         tool = "Powershell.exe"
         ps = (
-            f"$name=\"{adapter_name}\";"
+            f"$name='{adapter_name}';"
             "Disable-NetAdapterRsc -Name $name -ErrorAction SilentlyContinue;"
             "Enable-NetAdapterRss -Name $name -ErrorAction SilentlyContinue;"
             "$rsc = Get-NetAdapterRsc -Name $name -ErrorAction SilentlyContinue;"
@@ -380,7 +380,7 @@ class PerfCommon(object):
         tool = "Powershell.exe"
         cmd = "Get-NetAdapter -Name *|select Name|%{$_.Name}"
         name = self.execute_cmd(cmd, ip, user, pwd, tool=tool)
-        normalized_name = name.replace(" ", "` ") if " " in name else name
+        normalized_name = name.strip()
         self._adapter_cache[ip] = normalized_name
         self._adapter_cache_timestamp[ip] = time.time()
         print(f"✓ Cached adapter name '{normalized_name}' for {ip}")
