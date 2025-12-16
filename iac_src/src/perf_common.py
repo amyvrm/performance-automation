@@ -130,17 +130,12 @@ class PerfCommon(object):
         tool = "Powershell.exe"
         ps = (
             f"$name=\"{adapter_name}\";"
-            # Disable RSC; ignore errors if not supported
             "Disable-NetAdapterRsc -Name $name -ErrorAction SilentlyContinue;"
-            # Ensure RSS is enabled for consistent CPU distribution
             "Enable-NetAdapterRss -Name $name -ErrorAction SilentlyContinue;"
-            # Emit summary
             "$rsc = Get-NetAdapterRsc -Name $name -ErrorAction SilentlyContinue;"
             "$rss = Get-NetAdapterRss -Name $name -ErrorAction SilentlyContinue;"
-            "if ($rsc) { Write-Output ('RSC: ' + ($rsc.Enabled ? 'Enabled' : 'Disabled')) }"
-            "else { Write-Output 'RSC: Unknown' }"
-            "if ($rss) { Write-Output ('RSS: ' + ($rss.Enabled ? 'Enabled' : 'Disabled')) }"
-            "else { Write-Output 'RSS: Unknown' }"
+            "if ($rsc) { if ($rsc.Enabled) { 'RSC: Enabled' } else { 'RSC: Disabled' } } else { 'RSC: Unknown' };"
+            "if ($rss) { if ($rss.Enabled) { 'RSS: Enabled' } else { 'RSS: Disabled' } } else { 'RSS: Unknown' }"
         )
         try:
             self.execute_cmd(ps, ip, user, pwd, tool=tool)
