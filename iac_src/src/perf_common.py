@@ -418,7 +418,7 @@ class PerfCommon(object):
             return False, "Adapter name unavailable"
         tool = "Powershell.exe"
         ps = (
-            f"$name=\"{adapter_name}\"; $disp=\"Trend Micro LightWeight Filter Driver\";"
+            f"$name='{adapter_name}'; $disp='Trend Micro LightWeight Filter Driver';"
             "$binding = Get-NetAdapterBinding -Name $name -ErrorAction SilentlyContinue | Where-Object { $_.DisplayName -eq $disp };"
             "if ($binding) { 'Present' } else { 'Absent' }"
         )
@@ -471,7 +471,7 @@ class PerfCommon(object):
         tool = "Powershell.exe"
         # Guard: enable binding only if present
         ps = (
-            f"$name=\"{adaptor_name}\"; $disp=\"Trend Micro LightWeight Filter Driver\";"
+            f"$name='{adaptor_name}'; $disp='Trend Micro LightWeight Filter Driver';"
             "$binding = Get-NetAdapterBinding -Name $name -ErrorAction SilentlyContinue | Where-Object { $_.DisplayName -eq $disp };"
             "if ($binding) { Enable-NetAdapterBinding -Name $name -DisplayName $disp -ErrorAction SilentlyContinue; Write-Output 'Filter enabled' }"
             " else { Write-Output 'Filter binding not found' }"
@@ -482,7 +482,7 @@ class PerfCommon(object):
         print("{0}\n # {2}-{1} Disable Filter #\n{0}".format("+" * 50, ip, self.ip_type[ip]))
         tool = "Powershell.exe"
         ps = (
-            f"$name=\"{adaptor_name}\"; $disp=\"Trend Micro LightWeight Filter Driver\";"
+            f"$name='{adaptor_name}'; $disp='Trend Micro LightWeight Filter Driver';"
             "$binding = Get-NetAdapterBinding -Name $name -ErrorAction SilentlyContinue | Where-Object { $_.DisplayName -eq $disp };"
             "if ($binding) { Disable-NetAdapterBinding -Name $name -DisplayName $disp -ErrorAction SilentlyContinue; Write-Output 'Filter disabled' }"
             " else { Write-Output 'Filter binding not found' }"
