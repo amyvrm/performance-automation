@@ -46,9 +46,10 @@ class DsmPolicy(object):
 
     def connect(self):
         # Configure transport with timeouts to prevent indefinite hangs
-        transport = zeep.Transport(timeout=300, operation_timeout=600)  # 5 min connect, 10 min operation
+        # Longer timeouts + slightly higher retry budget to tolerate transient DSM slowness
+        transport = zeep.Transport(timeout=600, operation_timeout=1200, session=requests.Session())  # 10 min connect, 20 min operation
         transport.session.verify = False  # Bypass self-signed certificate errors
-        for retry in range(3):
+        for retry in range(5):
             print("Attempt-{} to Create DSM Connection...".format(retry+1), flush=True)
             try:
                 self.client = zeep.Client(wsdl=self.wsdl_url, transport=transport)
@@ -56,7 +57,7 @@ class DsmPolicy(object):
                 break
             except Exception as ex:
                 print("Exception!!! {}".format(ex), flush=True)
-                exponential_backoff_sleep(retry, base_delay=5, max_delay=20)
+                exponential_backoff_sleep(retry, base_delay=5, max_delay=30)
 
         self.session = requests.Session()
         self.session.verify = False

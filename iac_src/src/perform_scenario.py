@@ -271,8 +271,7 @@ class PerformanceScenario(PerfCommon):
                 except Exception as e:
                     print(f"Error closing DSM connection for {x}: {e}")
 
-    def apply_rule_get_stats(self, suser, sip, spwd, s_priv_ip, cuser, cip, cpwd, c_priv_ip, grule_list, scenario_name, c_adaptor=None, s_adaptor=None,
-                             action="reading", dsm=None):
+    def apply_rule_get_stats(self, suser, sip, spwd, s_priv_ip, cuser, cip, cpwd, c_priv_ip, grule_list, scenario_name, c_adaptor=None, s_adaptor=None, action="reading", dsm=None):
         try:
             # Choose target host and adapter strictly from provided args to avoid cross-class attribute access
             if scenario_name == "Client Download":
@@ -296,8 +295,7 @@ class PerformanceScenario(PerfCommon):
                 # Wait for filter driver state to settle (increased to 20s for full network stack propagation)
                 import time
                 time.sleep(20)
-                print("{0}\n{2}-{1} Agent: Disabled from DSM\n{2}-{1} Filter: Disabled from network driver\n{0}".format(
-                      self.header, ip, self.ip_type[ip]))
+                print("{0}\n{2}-{1} Agent: Disabled from DSM\n{2}-{1} Filter: Disabled from network driver\n{0}".format(self.header, ip, self.ip_type[ip]))
                 # Additional settling time before measurement to clear residual effects
                 print("→ Waiting 10s for network stack to fully stabilize before measurement...")
                 time.sleep(10)
@@ -316,8 +314,7 @@ class PerformanceScenario(PerfCommon):
                 # Wait for filter driver state to settle (increased to 20s for full network stack propagation)
                 import time
                 time.sleep(20)
-                print("{0}\n{2}-{1} Agent: Enabled from DSM\n{2}-{1} Filter: Enabled from Network Driver\n{0}".format(
-                                                                                    self.header, ip, self.ip_type[ip]))
+                print("{0}\n{2}-{1} Agent: Enabled from DSM\n{2}-{1} Filter: Enabled from Network Driver\n{0}".format(self.header, ip, self.ip_type[ip]))
                 # Additional settling time before measurement to clear residual effects
                 print("→ Waiting 10s for network stack to fully stabilize before measurement...")
                 time.sleep(10)
@@ -331,8 +328,7 @@ class PerformanceScenario(PerfCommon):
             all_stats = self.run_band_test(suser, sip, spwd, s_priv_ip, cuser, cip, cpwd, c_priv_ip, scenario_name)
             iter_stats = all_stats[:self.best_iteration]
             avg = round(sum(map(float, iter_stats)) / len(iter_stats), 2)
-            print("{0}{0}\n- {1} iteration stats {2} MBps\n- Average Bandwidth: {3} MBps\n{0}{0}\n".format(self.header,
-                                                                                len(iter_stats), iter_stats, avg))
+            print("{0}{0}\n- {1} iteration stats {2} MBps\n- Average Bandwidth: {3} MBps\n{0}{0}\n".format(self.header, len(iter_stats), iter_stats, avg))
             return all_stats, iter_stats, avg
         except Exception as e:
             print(f"Error in apply_rule_get_stats: {e}")

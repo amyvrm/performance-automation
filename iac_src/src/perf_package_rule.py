@@ -96,8 +96,7 @@ class PerfPackageRule(PerfCommon, DsmPolicy):
         
         # System warm-up: eliminate cold-start bias (DNS, ARP, TCP window, routing cache)
         print(f"{self.header}\n→ Running lightweight warm-up (3 iterations) to eliminate cold-start effects...\n{self.header}")
-        warmup_stats = PerformanceScenario.run_warmup_test(self, self.suser, self.sip, self.spwd, self.s_priv_ip, 
-                                                           self.cuser, self.cip, self.cpwd, self.c_priv_ip, scenario_name)
+        warmup_stats = PerformanceScenario.run_warmup_test(self, self.suser, self.sip, self.spwd, self.s_priv_ip, self.cuser, self.cip, self.cpwd, self.c_priv_ip, scenario_name)
         print(f"✓ Warm-up complete: System caches primed (DNS/ARP/TCP)")
         print(f"→ All subsequent measurements will use warm system state\n")
         
