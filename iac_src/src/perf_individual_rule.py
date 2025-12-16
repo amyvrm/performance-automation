@@ -102,6 +102,14 @@ class PerfIndividualRule(PerfCommon, DsmPolicy):
         warmup_stats = PerformanceScenario.run_warmup_test(self, self.suser, self.sip, self.spwd, self.s_priv_ip, self.cuser, self.cip, self.cpwd, self.c_priv_ip, scenario_name)
         print(f"✓ Warm-up complete: System caches primed (DNS/ARP/TCP)")
         print(f"→ All subsequent measurements will use warm system state\n")
+        # Enforce consistent NIC settings and flush caches on both hosts
+        try:
+            self.enforce_consistent_nic_settings(self.sip, self.suser, self.spwd, self.s_adap_name)
+            self.enforce_consistent_nic_settings(self.cip, self.cuser, self.cpwd, self.c_adap_name)
+            self.flush_network_caches(self.sip, self.suser, self.spwd)
+            self.flush_network_caches(self.cip, self.cuser, self.cpwd)
+        except Exception as e:
+            print(f"⚠️  Pre-test NIC/cache prep failed: {e}")
         
         if scenario_name == "Client Download":
             # Run Without Filter first (baseline on warm system), then With Filter to show overhead
@@ -153,6 +161,14 @@ class PerfIndividualRule(PerfCommon, DsmPolicy):
         warmup_stats = PerformanceScenario.run_warmup_test(self, self.suser, self.sip, self.spwd, self.s_priv_ip, self.cuser, self.cip, self.cpwd, self.c_priv_ip, scenario_name)
         print(f"✓ Warm-up complete: System caches primed (DNS/ARP/TCP)")
         print(f"→ All subsequent measurements will use warm system state\n")
+        # Enforce consistent NIC settings and flush caches on both hosts
+        try:
+            self.enforce_consistent_nic_settings(self.sip, self.suser, self.spwd, self.s_adap_name)
+            self.enforce_consistent_nic_settings(self.cip, self.cuser, self.cpwd, self.c_adap_name)
+            self.flush_network_caches(self.sip, self.suser, self.spwd)
+            self.flush_network_caches(self.cip, self.cuser, self.cpwd)
+        except Exception as e:
+            print(f"⚠️  Pre-test NIC/cache prep failed: {e}")
         
         # Without Filter Driver (run FIRST for Server Download to avoid warm-up bias)
         print("{0}{0}\n# Without Filter Driver #\n{0}{0}".format(self.header))

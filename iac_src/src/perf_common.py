@@ -116,6 +116,52 @@ class PerfCommon(object):
                       "</head>\n<body>\n"
         return html_header
 
+    def enforce_consistent_nic_settings(self, ip, user, pwd, adapter_name):
+        """
+        Enforce consistent NIC settings to reduce offload-related bias between
+        filter-enabled and filter-disabled runs.
+        - Disable RSC (Receive Segment Coalescing)
+        - Enable RSS (Receive Side Scaling)
+        """
+        if not adapter_name:
+            print(f"⚠️  Adapter name missing for {ip}; skipping NIC settings enforcement")
+            return
+        print(f"→ Enforcing NIC settings on {ip}: RSC=Disabled, RSS=Enabled (adapter={adapter_name})")
+        tool = "Powershell.exe"
+        ps = (
+            f"$name=\"{adapter_name}\";"
+            # Disable RSC; ignore errors if not supported
+            "Disable-NetAdapterRsc -Name $name -ErrorAction SilentlyContinue;"
+            # Ensure RSS is enabled for consistent CPU distribution
+            "Enable-NetAdapterRss -Name $name -ErrorAction SilentlyContinue;"
+            # Emit summary
+            "$rsc = Get-NetAdapterRsc -Name $name -ErrorAction SilentlyContinue;"
+            "$rss = Get-NetAdapterRss -Name $name -ErrorAction SilentlyContinue;"
+            "if ($rsc) { Write-Output ('RSC: ' + ($rsc.Enabled ? 'Enabled' : 'Disabled')) }"
+            "else { Write-Output 'RSC: Unknown' }"
+            "if ($rss) { Write-Output ('RSS: ' + ($rss.Enabled ? 'Enabled' : 'Disabled')) }"
+            "else { Write-Output 'RSS: Unknown' }"
+        )
+        try:
+            self.execute_cmd(ps, ip, user, pwd, tool=tool)
+        except Exception as e:
+            print(f"⚠️  Failed to enforce NIC settings on {ip}: {e}")
+
+    def flush_network_caches(self, ip, user, pwd):
+        """
+        Flush DNS and ARP caches to minimize warm-up advantages.
+        """
+        print(f"→ Flushing network caches on {ip} (DNS/ARP)")
+        tool = "cmd.exe"
+        # Use cmd to run multiple commands; tolerate failures gracefully
+        cmd = (
+            "ipconfig /flushdns & arp -d * & netsh interface ip delete arpcache"
+        )
+        try:
+            self.execute_cmd(cmd, ip, user, pwd, tool=tool)
+        except Exception as e:
+            print(f"⚠️  Failed to flush caches on {ip}: {e}")
+
     def run_band_test(self, suser, sip, spwd, s_priv_ip, cuser, cip, cpwd, c_priv_ip, scenario_name):
         print("c_priv_ip: {}".format(c_priv_ip))
         print("s_priv_ip: {}".format(s_priv_ip))
