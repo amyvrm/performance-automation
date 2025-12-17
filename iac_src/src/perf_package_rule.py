@@ -52,8 +52,19 @@ class PerfPackageRule(PerfCommon, DsmPolicy):
 
     def get_filtered_rules(self, server_rules, client_rules):
         print(f"self.summary: {self.summary}")
-        # Ensure self.summary is a string
+        # Ensure self.summary is a string, handle None values
+        if self.summary is None:
+            print("⚠️  Warning: summary is None, returning default")
+            return "Server Rules: None\nClient Rules: None"
+        
         summary_text = self.summary[0] if isinstance(self.summary, tuple) else self.summary
+        
+        # Validate summary_text is not None and is a string
+        if summary_text is None:
+            print("⚠️  Warning: summary_text is None, returning default")
+            return "Server Rules: None\nClient Rules: None"
+        
+        summary_text = str(summary_text)  # Ensure it's a string
 
         filtered_rules = "Server Rules:\n" + "\n".join(
             line for line in summary_text.split("\n") if any(rule_id.strip() in line for rule_id in server_rules)
@@ -66,26 +77,50 @@ class PerfPackageRule(PerfCommon, DsmPolicy):
 
     def clean_and_enable_agents(self):
         self.dsm.clean_rules_from_dsm()
-        PerfCommon.enable_agent_filter(self.sip, self.suser, self.spwd, self.cip, self.cuser, self.cpwd)
+        # Enable both server and client agents when running "All" scenario
+        self.activate_dsa(self.sip, self.suser, self.spwd)
+        self.activate_dsa(self.cip, self.cuser, self.cpwd)
+        # Enable filters in parallel
+        machines_to_enable = [
+            {'ip': self.sip, 'user': self.suser, 'pwd': self.spwd, 'adaptor_name': self.s_adap_name},
+            {'ip': self.cip, 'user': self.cuser, 'pwd': self.cpwd, 'adaptor_name': self.c_adap_name}
+        ]
+        self.enable_filters_parallel(machines_to_enable)
+        print("→ Waiting 5s for agent/filter stabilization...")
+        import time
+        time.sleep(5)
 
     def perf_scenario_test_package(self, scenario_name, server_rules, client_rules, grule_list):
 
         print("{0}\n### {1} ###\n{0}".format("#" * 50, scenario_name))
-        # Without Filter Driver
-        print("{0}{0}\n# Without Filter Driver #\n{0}{0}".format(self.header))
-        wo_filter_all_stats, wo_filter_stats, wof_avg = PerformanceScenario.apply_rule_get_stats(self, self.suser, self.sip, self.spwd, self.s_priv_ip, self.cuser, self.cip, self.cpwd, self.c_priv_ip, False, scenario_name, self.s_adap_name, self.c_adap_name, action="wo_filter", dsm=self.dsm)
-        print("- Without Filter Driver Average Stats: {} MBps\n".format(wof_avg))
+        
+        # System warm-up: eliminate cold-start bias (DNS, ARP, TCP window, routing cache)
+        print(f"{self.header}\n→ Running lightweight warm-up (3 iterations) to eliminate cold-start effects...\n{self.header}")
+        warmup_stats = PerformanceScenario.run_warmup_test(self, self.suser, self.sip, self.spwd, self.s_priv_ip, self.cuser, self.cip, self.cpwd, self.c_priv_ip, scenario_name)
+        print(f"✓ Warm-up complete: System caches primed (DNS/ARP/TCP)")
+        print(f"→ All subsequent measurements will use warm system state\n")
+        
+        if scenario_name == "Client Download":
+            # Run Without Filter first (baseline on warm system), then With Filter to show overhead
+            print("{0}{0}\n# Without Filter Driver #\n{0}{0}".format(self.header))
+            wo_filter_all_stats, wo_filter_stats, wof_avg = PerformanceScenario.apply_rule_get_stats(self, self.suser, self.sip, self.spwd, self.s_priv_ip, self.cuser, self.cip, self.cpwd, self.c_priv_ip, False, scenario_name, self.s_adap_name, self.c_adap_name, action="wo_filter", dsm=self.dsm)
+            print("- Without Filter Driver Average Stats: {} MBps\n".format(wof_avg))
 
-        # With Filter Driver
-        print("{0}{0}\n# With Filter Driver #\n{0}{0}".format(self.header))
-        w_filter_all_stats, w_filter_stats, wf_avg = PerformanceScenario.apply_rule_get_stats(self, self.suser, self.sip, self.spwd, self.s_priv_ip, self.cuser, self.cip, self.cpwd, self.c_priv_ip, False, scenario_name, self.s_adap_name, self.c_adap_name, action="filter", dsm=self.dsm)
-        print("- With Filter Driver Average Stats: {} MBps\n".format(wf_avg))
+            print("{0}{0}\n# With Filter Driver #\n{0}{0}".format(self.header))
+            w_filter_all_stats, w_filter_stats, wf_avg = PerformanceScenario.apply_rule_get_stats(self, self.suser, self.sip, self.spwd, self.s_priv_ip, self.cuser, self.cip, self.cpwd, self.c_priv_ip, False, scenario_name, self.s_adap_name, self.c_adap_name, action="filter", dsm=self.dsm)
+            print("- With Filter Driver Average Stats: {} MBps\n".format(wf_avg))
+        else:
+            # For Server Upload: run Without Filter first (baseline on warm system), then With Filter to show overhead
+            print("{0}{0}\n# Without Filter Driver #\n{0}{0}".format(self.header))
+            wo_filter_all_stats, wo_filter_stats, wof_avg = PerformanceScenario.apply_rule_get_stats(self, self.suser, self.sip, self.spwd, self.s_priv_ip, self.cuser, self.cip, self.cpwd, self.c_priv_ip, False, scenario_name, self.s_adap_name, self.c_adap_name, action="wo_filter", dsm=self.dsm)
+            print("- Without Filter Driver Average Stats: {} MBps\n".format(wof_avg))
 
+            print("{0}{0}\n# With Filter Driver #\n{0}{0}".format(self.header))
+            w_filter_all_stats, w_filter_stats, wf_avg = PerformanceScenario.apply_rule_get_stats(self, self.suser, self.sip, self.spwd, self.s_priv_ip, self.cuser, self.cip, self.cpwd, self.c_priv_ip, False, scenario_name, self.s_adap_name, self.c_adap_name, action="filter", dsm=self.dsm)
+            print("- With Filter Driver Average Stats: {} MBps\n".format(wf_avg))
 
         print("{0}{0}\n# Threshold Rule with Dependency #\n{0}{0}".format(self.header))
-        rulelist_stats, iter_rulelist, rulelist_avg = PerformanceScenario.apply_rule_get_stats(self, self.suser, self.sip, self.spwd, self.s_priv_ip, self.cuser, self.cip, self.cpwd, self.c_priv_ip,
-            grule_list, scenario_name, self.s_adap_name, self.c_adap_name, action="rule", dsm=self.dsm
-        )
+        rulelist_stats, iter_rulelist, rulelist_avg = PerformanceScenario.apply_rule_get_stats(self, self.suser, self.sip, self.spwd, self.s_priv_ip, self.cuser, self.cip, self.cpwd, self.c_priv_ip, grule_list, scenario_name, self.s_adap_name, self.c_adap_name, action="rule", dsm=self.dsm)
         print(f"iter_rulelist: {iter_rulelist} | rulelist_avg: {rulelist_avg}")
 
         print("- Threshold Rule with Dependency: {} MBps\n".format(rulelist_avg))
@@ -105,29 +140,38 @@ class PerfPackageRule(PerfCommon, DsmPolicy):
 
     def perf_scenario_test_reverse_package(self, scenario_name, server_rules, client_rules, grule_list):
         print("{0}\n### {1} ###\n{0}".format("#" * 50, scenario_name))
-        rule_stats, iter_rule, rule_avg = PerformanceScenario.apply_rule_get_stats(
-            self, self.suser, self.sip, self.spwd, self.s_priv_ip, self.cuser, self.cip, self.cpwd, self.c_priv_ip,
-            False, scenario_name, self.s_adap_name, self.c_adap_name, action="rule", dsm=self.dsm
-        )
-        print(f"iter_rule: {iter_rule} | rule_avg: {rule_avg}")
+        
+        # System warm-up: eliminate cold-start bias (DNS, ARP, TCP window, routing cache)
+        print(f"{self.header}\n→ Running lightweight warm-up (3 iterations) to eliminate cold-start effects...\n{self.header}")
+        warmup_stats = PerformanceScenario.run_warmup_test(self, self.suser, self.sip, self.spwd, self.s_priv_ip, self.cuser, self.cip, self.cpwd, self.c_priv_ip, scenario_name)
+        print(f"✓ Warm-up complete: System caches primed (DNS/ARP/TCP)")
+        print(f"→ All subsequent measurements will use warm system state\n")
+        
+        # Without Filter Driver (run FIRST for Server Download to avoid warm-up bias)
+        print("{0}{0}\n# Without Filter Driver #\n{0}{0}".format(self.header))
+        wo_filter_all_stats, wo_filter_stats, wof_avg = PerformanceScenario.apply_rule_get_stats(self, self.suser, self.sip, self.spwd, self.s_priv_ip, self.cuser, self.cip, self.cpwd, self.c_priv_ip, False, scenario_name, self.s_adap_name, self.c_adap_name, action="wo_filter", dsm=self.dsm)
+        print("- Without Filter Driver Average Stats: {} MBps\n".format(wof_avg))
 
-        print("- Rule with Dependency Average stats: {} MBps\n".format(rule_avg))
-
+        # With Filter Driver
+        print("{0}{0}\n# With Filter Driver #\n{0}{0}".format(self.header))
+        w_filter_all_stats, w_filter_stats, wf_avg = PerformanceScenario.apply_rule_get_stats(self, self.suser, self.sip, self.spwd, self.s_priv_ip, self.cuser, self.cip, self.cpwd, self.c_priv_ip, False, scenario_name, self.s_adap_name, self.c_adap_name, action="filter", dsm=self.dsm)
+        print("- With Filter Driver Average Stats: {} MBps\n".format(wf_avg))
+        
+        # Best Case Rule (run after filter tests)
         print("{0}{0}\n# Threshold Rule with Dependency #\n{0}{0}".format(self.header))
         rulelist_stats, iter_rulelist, rulelist_avg = PerformanceScenario.apply_rule_get_stats(self, self.suser, self.sip, self.spwd, self.s_priv_ip, self.cuser, self.cip, self.cpwd, self.c_priv_ip, grule_list, scenario_name, self.s_adap_name, self.c_adap_name, action="rule", dsm=self.dsm
         )
         print(f"iter_rulelist: {iter_rulelist} | rulelist_avg: {rulelist_avg}")
         print("- Threshold Rule with Dependency: {} MBps\n".format(rulelist_avg))
 
-        # With Filter Driver
-        print("{0}{0}\n# With Filter Driver #\n{0}{0}".format(self.header))
-        w_filter_all_stats, w_filter_stats, wf_avg = PerformanceScenario.apply_rule_get_stats(self, self.suser, self.sip, self.spwd, self.s_priv_ip, self.cuser, self.cip, self.cpwd, self.c_priv_ip, False, scenario_name, self.s_adap_name, self.c_adap_name, action="filter", dsm=self.dsm)
-        print("- With Filter Driver Average Stats: {} MBps\n".format(wf_avg))
-
-        # Without Filter Driver
-        print("{0}{0}\n# Without Filter Driver #\n{0}{0}".format(self.header))
-        wo_filter_all_stats, wo_filter_stats, wof_avg = PerformanceScenario.apply_rule_get_stats(self, self.suser, self.sip, self.spwd, self.s_priv_ip, self.cuser, self.cip, self.cpwd, self.c_priv_ip, False, scenario_name, self.s_adap_name, self.c_adap_name, action="wo_filter", dsm=self.dsm)
-        print("- Without Filter Driver Average Stats: {} MBps\n".format(wof_avg))
+        # All Rules
+        print("{0}{0}\n# All Rules #\n{0}{0}".format(self.header))
+        rule_stats, iter_rule, rule_avg = PerformanceScenario.apply_rule_get_stats(
+            self, self.suser, self.sip, self.spwd, self.s_priv_ip, self.cuser, self.cip, self.cpwd, self.c_priv_ip,
+            False, scenario_name, self.s_adap_name, self.c_adap_name, action="rule", dsm=self.dsm
+        )
+        print(f"iter_rule: {iter_rule} | rule_avg: {rule_avg}")
+        print("- Rule with Dependency Average stats: {} MBps\n".format(rule_avg))
 
         wo_filter_stats.append(wof_avg)
         w_filter_stats.append(wf_avg)

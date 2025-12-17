@@ -4,6 +4,7 @@ import os
 import re
 import zipfile
 import time
+from backoff_utils import exponential_backoff_sleep
 import requests
 import urllib3
 import zeep
@@ -44,16 +45,19 @@ class DsmPolicy(object):
         self.connect()
 
     def connect(self):
-        transport = zeep.Transport()
+        # Configure transport with timeouts to prevent indefinite hangs
+        # Longer timeouts + slightly higher retry budget to tolerate transient DSM slowness
+        transport = zeep.Transport(timeout=600, operation_timeout=1200, session=requests.Session())  # 10 min connect, 20 min operation
         transport.session.verify = False  # Bypass self-signed certificate errors
         for retry in range(3):
-            print("Attempt-{} to Create DSM Connection...".format(retry+1))
+            print("Attempt-{} to Create DSM Connection...".format(retry+1), flush=True)
             try:
                 self.client = zeep.Client(wsdl=self.wsdl_url, transport=transport)
+                print("✓ DSM connection established", flush=True)
                 break
             except Exception as ex:
-                print("Exception!!! {}".format(ex))
-                time.sleep(10)
+                print("Exception!!! {}".format(ex), flush=True)
+                exponential_backoff_sleep(retry, base_delay=5, max_delay=20)
 
         self.session = requests.Session()
         self.session.verify = False
@@ -84,26 +88,37 @@ class DsmPolicy(object):
             raise Exception("Error!!! Not able to get DSM version")
 
     def upload_basic_policy(self, change_policy=False):
+        print("→ upload_basic_policy: Getting policy...", flush=True)
         fname = self.get_policy()
         if change_policy:
             dest_fname = os.path.join("templates", "perf_policy_changed.xml")
             fname = self.override_portlist(fname, dest_fname)
 
+        print("→ upload_basic_policy: Parsing XML...", flush=True)
         xml_root = ET.parse(fname)
         xml_root = xml_root.getroot()
         policy_xml = ET.tostring(xml_root, encoding='utf8', method='xml')
+        
+        print("→ upload_basic_policy: Uploading custom policy...", flush=True)
         self.upload_custom_policy(policy_xml)
-        print("No problems uploading policy {}, all tests passed".format(self.policy_name))
+        print("No problems uploading policy {}, all tests passed".format(self.policy_name), flush=True)
 
+        print("→ upload_basic_policy: Retrieving policy ID...", flush=True)
         policy_id = self.client.service.securityProfileRetrieveByName(name=self.policy_name, sID=self.sID)["ID"]
+        print(f"✓ Policy ID: {policy_id}", flush=True)
+        
+        print("→ upload_basic_policy: Retrieving all hosts...", flush=True)
         get_all_host = self.client.service.hostRetrieveAll(sID=self.sID)
+        print(f"✓ Found {len(get_all_host)} hosts", flush=True)
 
-        for host in get_all_host:
+        print("→ upload_basic_policy: Assigning policy to hosts...", flush=True)
+        for idx, host in enumerate(get_all_host):
             host_id = host['ID']
+            print(f"  → Assigning policy to host {idx+1}/{len(get_all_host)} (ID: {host_id})...", flush=True)
             self.client.service.securityProfileAssignToHost(securityProfileID=policy_id, hostIDs=host_id, sID=self.sID)
-            time.sleep(20)
+            exponential_backoff_sleep(idx, base_delay=10, max_delay=20)
 
-        print("No problems applying policy {}, to all hosts".format(self.policy_name))
+        print("✓ No problems applying policy {}, to all hosts".format(self.policy_name), flush=True)
 
     def upload_custom_policy(self, policy_xml_data):
         print("Uploading {} xml file".format(self.policy_name))
@@ -118,17 +133,17 @@ class DsmPolicy(object):
                 "parentProfileID_tree_selected": (None, "0"), "certificatePurpose": (None, "2"),
                 "finish": (None, "Next >")}
         self.session.post(self.import_policy_url, files=data)
-        time.sleep(10)  # Waiting for the policy to be parsed
+        exponential_backoff_sleep(0, base_delay=10, max_delay=15)
 
         del data["file"]
         del data["finish"]
         data["step"] = (None, "1")
         self.session.post(self.import_policy_url, data=data)
-        time.sleep(5)
+        exponential_backoff_sleep(0, base_delay=5, max_delay=10)
 
         data["step"] = (None, "2")
         self.session.post(self.import_policy_url, data=data)
-        time.sleep(20)
+        exponential_backoff_sleep(0, base_delay=15, max_delay=20)
 
     def override_portlist(self, source_fname, dest_fname):
         print("{0}\n# Updating policy to override rule port list with port {1} #\n{0}".format("#" * 50, self.port))
@@ -206,13 +221,43 @@ class DsmPolicy(object):
                 f.write(",".join(identifiers))
 
         print("Attempting to apply update package", flush=True)
-        response = self.client.service.securityUpdateApply(ID=update_id, detectOnly=False, sID=self.sID)
-        with open(os.path.join("update-info", f"dsm-assigned_rules.txt"), "w") as f:
-            f.write(response["detailedSummary"])
-        print("Update package applied successfully")
-        print(f"Details saved to update-info.txt\n")
-        print("No problems uploading or applying update package, all tests passed")
-        return contentSummary, identifiers
+        try:
+            # Retry with exponential backoff for timeout errors
+            from backoff_utils import retry_with_backoff
+            
+            def apply_security_update():
+                """Wrapper function for retry logic"""
+                response = self.client.service.securityUpdateApply(ID=update_id, detectOnly=False, sID=self.sID)
+                return response
+            
+            # Retry on timeout/connection errors with exponential backoff
+            response = retry_with_backoff(
+                func=apply_security_update,
+                max_attempts=3,
+                base_delay=30,  # Start with 30s delay
+                max_delay=120,  # Cap at 2 minutes
+                exceptions=(
+                    requests.exceptions.ReadTimeout,
+                    requests.exceptions.ConnectionError,
+                    requests.exceptions.Timeout,
+                    Exception  # Catch zeep transport errors too
+                )
+            )
+            
+            print("✓ securityUpdateApply call completed", flush=True)
+            
+            with open(os.path.join("update-info", f"dsm-assigned_rules.txt"), "w") as f:
+                f.write(response["detailedSummary"])
+            print("Update package applied successfully", flush=True)
+            print(f"Details saved to update-info.txt\n", flush=True)
+            print("No problems uploading or applying update package, all tests passed", flush=True)
+            print("✓ Returning from apply_pkg_create_applied_rule_list", flush=True)
+            return contentSummary, identifiers
+        except Exception as e:
+            print(f"✗ Error in securityUpdateApply: {e}", flush=True)
+            import traceback
+            traceback.print_exc()
+            raise
 
     def upload_package(self):
         # pkg_name = [filename for filename in os.listdir("update-packages")
@@ -252,8 +297,8 @@ class DsmPolicy(object):
         self.upload_policy(policy_id, dpi_rule_ids, integrity_rule_ids, log_inspection_rule_ids)
         response = self.client.service.securityProfileRetrieveByName(name=self.policy_name, sID=self.sID)
         print("Appled Rule info: {}".format(response))
-        print("Waiting 60 secs, for policies to apply", flush=True)
-        time.sleep(60)
+        print("Waiting for policies to apply", flush=True)
+        exponential_backoff_sleep(1, base_delay=30, max_delay=60)
         self.update_ports(policy_id)
 
         response = self.client.service.hostRetrieveAll(sID=self.sID)
@@ -276,8 +321,8 @@ class DsmPolicy(object):
             self.upload_custom_policy(new_policy_xml)
 
         # It only takes about 5 seconds to apply, but better safe than sorry
-        print("Waiting 60 sec for policies to apply completely to all hosts..")
-        time.sleep(60)
+        print("Waiting for policies to apply completely to all hosts...")
+        exponential_backoff_sleep(1, base_delay=30, max_delay=60)
 
         # Finally, once the policy has been uploaded and applied, we check all the computers with the policy applied
         #   to see what their status is
@@ -358,8 +403,8 @@ class DsmPolicy(object):
 
         policy_xml = ET.tostring(root, encoding='utf8', method='xml')
         self.upload_custom_policy(policy_xml)
-        print("Waiting 30 sec, after changing perf port {}".format(self.port))
-        time.sleep(30)
+        print(f"Waiting after changing perf port {self.port}...")
+        exponential_backoff_sleep(1, base_delay=15, max_delay=30)
 
     def export_policy_xml(self, policy_id):
         data = {"rID": self.rID, "cmdArguments": policy_id, "command": "EXPORT"}
@@ -568,8 +613,15 @@ class DsmPolicy(object):
 
     def disconnect(self):
         print("Disconnecting DSM")
-        self.client.service.endSession(sID=self.sID)
-        self.client.transport.session.close()
+        try:
+            if self.client and self.sID:
+                self.client.service.endSession(sID=self.sID)
+            if self.client and self.client.transport and self.client.transport.session:
+                self.client.transport.session.close()
+            print("✓ DSM disconnection successful")
+        except Exception as e:
+            print(f"⚠️  Warning: Error disconnecting from DSM: {type(e).__name__}: {e}")
+            print("(This is non-critical and may occur if connection was already closed)")
 
 if __name__ == '__main__':
     pass

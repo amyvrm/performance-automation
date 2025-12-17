@@ -130,20 +130,25 @@ class DSMConfig:
 		
 		req = request.Request('{}/api/sessions/current'.format(self.DSM_BASE_URL), headers=deleteSessionHeaders, method='DELETE')
 		
+		deleteCurrentResponse = None
 		try:
 			deleteCurrentResponse = request.urlopen(req, context=self.context)
+			print(f"deleteCurrentResponse.code: {deleteCurrentResponse.code}")
+			return deleteCurrentResponse.code
 		except error.HTTPError as e:
 			print('HTTPError = ' + str(e.code))
 			print('Message = ' + str(e.read()))
+			return e.code
 		except error.URLError as e:
 			print('URLError = ' + str(e.reason))
+			return None
 		except http.client.HTTPException as e:
 			print('HTTPException: {}'.format(e.message))
+			return None
 		except Exception:
 			import traceback
 			print('generic exception: ' + traceback.format_exc())
-		print(f"deleteCurrentResponse.code: {deleteCurrentResponse.code}")
-		return deleteCurrentResponse.code
+			return None
 
 	def createAPIKey(self):
 		createAPIKeyHeaders = copy.copy(self.headers)
@@ -279,8 +284,16 @@ if __name__ == '__main__':
 	for i in agentFile:
 		strAgentFile = str(i)
 		print(strAgentFile)
-		dsmAPIinstance.uploadPackage(strAgentFile)
-		time.sleep(8)
+		# Upload with simple retry to avoid unnecessary delays
+		max_retries = 3
+		for attempt in range(1, max_retries + 1):
+			try:
+				dsmAPIinstance.uploadPackage(strAgentFile)
+				break
+			except Exception as e:
+				print(f"Upload attempt {attempt} failed for {strAgentFile}: {e}")
+				if attempt == max_retries:
+					raise
 
 	dsmAPIinstance.deleteCurrentSession()
 	#dsmAPIinstance.deleteAPIKey(keyname=None)

@@ -14,7 +14,7 @@ resource "aws_instance" "windows_server2019" {
 			Name         	= "${var.tag_windows_name}_${var.random_num}_${count.index}"
 			"Trender"    	= var.tag_trender
 			"Automation" 	= var.tag_automation
-			"ValidUntil" 	= formatdate("YYYY-MM-DD", timeadd(timestamp(), "48h"))
+			"ValidUntil" 	= formatdate("YYYY-MM-DD", timeadd(timestamp(), "24h"))
 			"workingHours" 	= "IGNORE"
 	}
 }
@@ -43,9 +43,14 @@ resource "null_resource" "provision-agent-server" {
 		destination = "C:/temp/"
 	}
 
+	provisioner "file" {
+		source      = "scripts/AgentDeploymentScript/WindowsAgentDeploymentScript.ps1"
+		destination = "C:/temp/WindowsAgentDeploymentScript.ps1"
+	}
+
 	provisioner "remote-exec"  {
 		inline = [
-//					"powershell.exe -File C:\\temp\\WindowsAgentDeploymentScript.ps1",
+					"powershell.exe -File C:\\temp\\WindowsAgentDeploymentScript.ps1 ${aws_instance.windows_server2019[count.index].private_ip}",
 					"powershell.exe -File C:\\temp\\InstallAllDependencies.ps1",
 					# "powershell.exe -File C:\\temp\\install_pcattcp.ps1",
 					# "powershell.exe -File C:\\temp\\install_ab.ps1",

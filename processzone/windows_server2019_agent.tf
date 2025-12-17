@@ -14,7 +14,7 @@ resource "aws_instance" "windows_server2019_agent" {
 		Name           = "${var.tag_dsa_windows_name}_${var.random_num}_${count.index}"
 		"Trender"      = var.tag_trender
 		"Automation"   = var.tag_automation
-		"ValidUntil"   = formatdate("YYYY-MM-DD", timeadd(timestamp(), "48h"))
+		"ValidUntil"   = formatdate("YYYY-MM-DD", timeadd(timestamp(), "24h"))
 		"workingHours" = "IGNORE"
 	}
 }
@@ -23,7 +23,6 @@ resource "null_resource" "provision-agent" {
 	triggers = {
     	always_run = "${timestamp()}"
   	}
-	
 	count = var.instance_count + 1
 	connection {
 			type     = "winrm"

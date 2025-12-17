@@ -12,7 +12,7 @@ resource "aws_instance" "rhel_dsm" {
     Name           = "${var.tag_dsm_name}_${var.random_num}_${count.index}"
     "Trender"      = var.tag_trender
     "Automation"   = var.tag_automation
-    "ValidUntil"   = formatdate("YYYY-MM-DD", timeadd(timestamp(), "48h"))
+    "ValidUntil"   = formatdate("YYYY-MM-DD", timeadd(timestamp(), "24h"))
     "workingHours" = "IGNORE"
   }
 
@@ -32,12 +32,8 @@ resource "aws_instance" "rhel_dsm" {
 
   provisioner "remote-exec" {
     inline = [
-      "chmod +x /tmp/setupDSMInstall.sh",
-      "chmod +x /tmp/generatePropertiesDSM.sh",
-      "chmod +x /tmp/restartDSM.sh",
-      "chmod +x /tmp/setupPython3.6.sh",
-      "chmod +x /tmp/downloadAgents.sh",
-      "chmod +x /tmp/uploadDSAToDSM.py",
+      # Fast chmod for all scripts in one go
+      "chmod +x /tmp/setupDSMInstall.sh /tmp/generatePropertiesDSM.sh /tmp/restartDSM.sh /tmp/setupPython3.6.sh /tmp/downloadAgents.sh /tmp/uploadDSAToDSM.py",
       "sudo sh /tmp/setupDSMInstall.sh ${var.dsm_redhat_url} ${var.dsm_license}",
       "sh /tmp/downloadAgents.sh ${var.all_agent_urls}"
     ]

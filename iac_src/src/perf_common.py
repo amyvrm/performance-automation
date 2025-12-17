@@ -10,6 +10,7 @@ from matplotlib.patches import Patch
 import seaborn as sns
 import numpy as np
 import time
+from backoff_utils import wait_for_nginx_ready
 import os
 import re
 
@@ -23,6 +24,10 @@ class PerfCommon(object):
         self.server_rule_file = os.path.join("update-info", "server-rule-identifiers.txt")
         self.client_rule_file = os.path.join("update-info", "client-rule-identifiers.txt")
         self.portlist_file = os.path.join("update-info", "port_list.txt")
+        # Adapter name cache
+        self._adapter_cache = {}  # {ip: adapter_name}
+        self._adapter_cache_ttl = 3600  # Cache for 1 hour
+        self._adapter_cache_timestamp = {}  # {ip: timestamp}
 
     def create_html_table(self, df, scenario_name, filtered_rules):
         fname = "{}_{}".format(scenario_name.replace(" ", "_"), self.stats)
@@ -117,8 +122,9 @@ class PerfCommon(object):
         if scenario_name == "Server Download" or scenario_name == "Client Download":
             # Run Nginx
             self.run_nginx(sip, suser, spwd)
-            print("Waiting 3 min, to flow the traffic")
-            time.sleep(180)
+            print("Probing nginx readiness with adaptive wait...")
+            probe_result = wait_for_nginx_ready(s_priv_ip)
+            print(f"Nginx readiness probe: attempts={probe_result['attempts']}, avg_latency_ms={probe_result['avg_latency_ms']:.2f}, avg_ttfb_ms={probe_result['avg_ttfb_ms']:.2f}")
             # Run Apache Bench
             #through_put = self.run_ab(cip, cuser, cpwd, s_priv_ip)
             through_put = self.run_hey(cip, cuser, cpwd, s_priv_ip)
@@ -133,8 +139,9 @@ class PerfCommon(object):
                     print("Exception: Attempt-{} to get the stats...Found stats=[{}]".format(retry, through_put))
                     # Run Nginx
                     self.run_nginx(sip, suser, spwd)
-                    print("Waiting 3 min, to flow the traffic")
-                    time.sleep(180)
+                    print("Probing nginx readiness with adaptive wait...")
+                    probe_result = wait_for_nginx_ready(s_priv_ip)
+                    print(f"Nginx readiness probe: attempts={probe_result['attempts']}, avg_latency_ms={probe_result['avg_latency_ms']:.2f}, avg_ttfb_ms={probe_result['avg_ttfb_ms']:.2f}")
                     # Run Apache Bench
                     #through_put = self.run_ab(cip, cuser, cpwd, s_priv_ip)
                     through_put = self.run_hey(cip, cuser, cpwd, s_priv_ip)
@@ -183,7 +190,7 @@ class PerfCommon(object):
                         try:
                             stdout, stderr, rc = machine.run_executable(tool, arguments=cmd, asynchronous=asynchronous)
                             PerfCommon.get_bandwidth(cmd, stdout, stderr, all_through_put, i)
-                            time.sleep(30)
+                            time.sleep(5)  # OPTIMIZATION: Reduced from 30s to 5s (sufficient for connection/system cool-down)
                         except SCMRException as exc:
                             if "STATUS_SHARING_VIOLATION" in str(exc):
                                 print(f"Retrying due to sharing violation: {exc}")
@@ -243,8 +250,7 @@ class PerfCommon(object):
                         if "Transfer rate" in line:
                             through_put = re.findall("\d+\.\d+", line)[0]
                             t_mbps = round(float(through_put) / 1024.0, 2)
-                            print("{0}\n+ {1}: {2} KBps, {3} MBps +\n{0}".format("+" * 50, index + 1, through_put,
-                                                                                 t_mbps))
+                            print("{0}\n+ {1}: {2} KBps, {3} MBps +\n{0}".format("+" * 50, index + 1, through_put, t_mbps))
                             all_through_put.append(t_mbps)
                             return True
             elif "hey" in cmd:
@@ -308,26 +314,237 @@ class PerfCommon(object):
         except Exception as e:
             raise Exception(f"Failed to decrypt password: {e}")
 
-    def get_adaptor_name(self, ip, user, pwd):
-        print("- get_adaptor_name")
+    def get_adaptor_name(self, ip, user, pwd, force_refresh=False):
+        """
+        Get network adapter name with caching.
+        Args:
+            ip: Target machine IP
+            user: Username
+            pwd: Password
+            force_refresh: Bypass cache and fetch fresh value
+        Returns:
+            Adapter name string
+        """
+        # Check cache first
+        if not force_refresh and ip in self._adapter_cache:
+            cached_time = self._adapter_cache_timestamp.get(ip, 0)
+            age = time.time() - cached_time
+            if age < self._adapter_cache_ttl:
+                print(f"✓ Using cached adapter name for {ip} (age: {age:.0f}s)")
+                return self._adapter_cache[ip]
+            else:
+                print(f"⚠ Cache expired for {ip} (age: {age:.0f}s), refreshing...")
+        # Fetch from remote
+        print(f"→ Fetching adapter name for {ip} via remote call...")
         tool = "Powershell.exe"
         cmd = "Get-NetAdapter -Name *|select Name|%{$_.Name}"
         name = self.execute_cmd(cmd, ip, user, pwd, tool=tool)
-        return name.replace(" ", "` ") if " " in name else name
+        normalized_name = name.replace(" ", "` ") if " " in name else name
+        self._adapter_cache[ip] = normalized_name
+        self._adapter_cache_timestamp[ip] = time.time()
+        print(f"✓ Cached adapter name '{normalized_name}' for {ip}")
+        return normalized_name
+
+    def clear_adapter_cache(self, ip=None):
+        """Clear adapter cache for specific IP or all IPs."""
+        if ip:
+            self._adapter_cache.pop(ip, None)
+            self._adapter_cache_timestamp.pop(ip, None)
+            print(f"Cleared adapter cache for {ip}")
+        else:
+            self._adapter_cache.clear()
+            self._adapter_cache_timestamp.clear()
+            print("Cleared all adapter cache")
+
+    def _check_dsa_service_present(self, ip, user, pwd):
+        """Return tuple(status_bool, message) for DSA service presence."""
+        tool = "Powershell.exe"
+        ps = (
+            "$svc = Get-Service | Where-Object { $_.Name -like '*Deep*Security*Agent*' -or $_.DisplayName -like '*Deep*Security*Agent*' };"
+            "if ($null -ne $svc) { Write-Output ('Present:' + $svc.Name) } else { Write-Output 'Absent' }"
+        )
+        try:
+            out = self.execute_cmd(ps, ip, user, pwd, tool=tool)
+            if out and out.startswith("Present:"):
+                return True, out.replace("Present:", "")
+            return False, "DSA service not found"
+        except Exception as e:
+            return False, f"Error checking DSA: {e}"
+    
+    def _check_filter_binding_exists(self, ip, user, pwd, adapter_name):
+        """Return tuple(status_bool, message) for TM Lightweight Filter binding."""
+        if not adapter_name:
+            return False, "Adapter name unavailable"
+        tool = "Powershell.exe"
+        ps = (
+            f"$name=\"{adapter_name}\"; $disp=\"Trend Micro LightWeight Filter Driver\";"
+            "$binding = Get-NetAdapterBinding -Name $name -ErrorAction SilentlyContinue | Where-Object { $_.DisplayName -eq $disp };"
+            "if ($binding) { 'Present' } else { 'Absent' }"
+        )
+        try:
+            out = self.execute_cmd(ps, ip, user, pwd, tool=tool)
+            return (out == 'Present'), ("Filter binding present" if out == 'Present' else "Filter binding absent")
+        except Exception as e:
+            return False, f"Error checking filter: {e}"
+    
+    def print_readiness_report(self, host_label, ip, user, pwd, adapter_name):
+        """Print a concise readiness report for a host (DSA + filter only)."""
+        dsa_ok, dsa_msg = self._check_dsa_service_present(ip, user, pwd)
+        filt_ok, filt_msg = self._check_filter_binding_exists(ip, user, pwd, adapter_name)
+        status = (
+            f"{host_label} {self.ip_type.get(ip, '')}-{ip} | DSA: {'OK' if dsa_ok else 'Missing'}"
+            f" | Filter: {'Present' if filt_ok else 'Absent'}"
+        )
+        print(status)
+        print(f"  Details → Adapter: {adapter_name or 'N/A'} | {dsa_msg} | {filt_msg}")
+
+    def preload_adapter_names(self, machines):
+        """
+        Preload adapter names for multiple machines in parallel.
+        Args:
+            machines: List of dicts with keys: ip, user, pwd
+        Returns:
+            dict mapping ip -> adapter_name
+        """
+        from concurrent.futures import ThreadPoolExecutor, as_completed
+        print(f"Preloading adapter names for {len(machines)} machines...")
+        results = {}
+        with ThreadPoolExecutor(max_workers=min(len(machines), 10)) as executor:
+            future_to_ip = {
+                executor.submit(self.get_adaptor_name, m['ip'], m['user'], m['pwd']): m['ip']
+                for m in machines
+            }
+            for future in as_completed(future_to_ip):
+                ip = future_to_ip[future]
+                try:
+                    adapter_name = future.result()
+                    results[ip] = adapter_name
+                    print(f"  ✓ {ip}: {adapter_name}")
+                except Exception as e:
+                    print(f"  ✗ {ip}: Failed - {e}")
+                    results[ip] = None
+        return results
 
     def enable_filter(self, ip, user, pwd, adaptor_name):
         print("{0}\n # {2}-{1} Enable Filter #\n{0}".format("+" * 50, ip, self.ip_type[ip]))
         tool = "Powershell.exe"
-        cmd = 'Enable-NetAdapterBinding -Name "{}" -DisplayName "Trend` Micro` LightWeight` Filter` Driver"'.format(
-            adaptor_name)
-        self.execute_cmd(cmd, ip, user, pwd, tool=tool)
+        # Guard: enable binding only if present
+        ps = (
+            f"$name=\"{adaptor_name}\"; $disp=\"Trend Micro LightWeight Filter Driver\";"
+            "$binding = Get-NetAdapterBinding -Name $name -ErrorAction SilentlyContinue | Where-Object { $_.DisplayName -eq $disp };"
+            "if ($binding) { Enable-NetAdapterBinding -Name $name -DisplayName $disp -ErrorAction SilentlyContinue; Write-Output 'Filter enabled' }"
+            " else { Write-Output 'Filter binding not found' }"
+        )
+        self.execute_cmd(ps, ip, user, pwd, tool=tool)
 
     def disable_filter(self, ip, user, pwd, adaptor_name):
         print("{0}\n # {2}-{1} Disable Filter #\n{0}".format("+" * 50, ip, self.ip_type[ip]))
         tool = "Powershell.exe"
-        cmd = 'Disable-NetAdapterBinding -Name "{}" -DisplayName "Trend` Micro` LightWeight` Filter` Driver"'.format(
-            adaptor_name)
-        self.execute_cmd(cmd, ip, user, pwd, tool=tool)
+        ps = (
+            f"$name=\"{adaptor_name}\"; $disp=\"Trend Micro LightWeight Filter Driver\";"
+            "$binding = Get-NetAdapterBinding -Name $name -ErrorAction SilentlyContinue | Where-Object { $_.DisplayName -eq $disp };"
+            "if ($binding) { Disable-NetAdapterBinding -Name $name -DisplayName $disp -ErrorAction SilentlyContinue; Write-Output 'Filter disabled' }"
+            " else { Write-Output 'Filter binding not found' }"
+        )
+        self.execute_cmd(ps, ip, user, pwd, tool=tool)
+
+    def enable_filters_parallel(self, machines, max_workers=None):
+        """
+        Enable filter drivers in parallel across multiple machines.
+        
+        Args:
+            machines: List of dicts with keys: ip, user, pwd, adaptor_name
+            max_workers: Max parallel workers (default: min(len(machines), 10))
+        
+        Returns:
+            dict mapping ip -> result (True=success, False=failed)
+        """
+        from concurrent.futures import ThreadPoolExecutor, as_completed
+        import time
+        
+        if not machines:
+            print("No machines provided for parallel filter enablement")
+            return {}
+        
+        max_workers = max_workers or min(len(machines), 10)
+        print(f"Enabling filters in parallel on {len(machines)} machines (max_workers={max_workers})...")
+        
+        results = {}
+        start_time = time.time()
+        
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            future_to_ip = {
+                executor.submit(
+                    self.enable_filter,
+                    m['ip'], m['user'], m['pwd'], m['adaptor_name']
+                ): m['ip']
+                for m in machines
+            }
+            
+            for future in as_completed(future_to_ip):
+                ip = future_to_ip[future]
+                try:
+                    future.result(timeout=60)
+                    results[ip] = True
+                    print(f"  ✓ {ip}: Filter enabled")
+                except Exception as e:
+                    results[ip] = False
+                    print(f"  ✗ {ip}: Filter enable failed - {e}")
+        
+        elapsed = time.time() - start_time
+        success_count = sum(1 for v in results.values() if v)
+        print(f"Filter enablement complete: {success_count}/{len(machines)} successful in {elapsed:.1f}s")
+        
+        return results
+
+    def disable_filters_parallel(self, machines, max_workers=None):
+        """
+        Disable filter drivers in parallel across multiple machines.
+        
+        Args:
+            machines: List of dicts with keys: ip, user, pwd, adaptor_name
+            max_workers: Max parallel workers (default: min(len(machines), 10))
+        
+        Returns:
+            dict mapping ip -> result (True=success, False=failed)
+        """
+        from concurrent.futures import ThreadPoolExecutor, as_completed
+        import time
+        
+        if not machines:
+            print("No machines provided for parallel filter disablement")
+            return {}
+        
+        max_workers = max_workers or min(len(machines), 10)
+        print(f"Disabling filters in parallel on {len(machines)} machines (max_workers={max_workers})...")
+        
+        results = {}
+        start_time = time.time()
+        
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            future_to_ip = {
+                executor.submit(
+                    self.disable_filter,
+                    m['ip'], m['user'], m['pwd'], m['adaptor_name']
+                ): m['ip']
+                for m in machines
+            }
+            
+            for future in as_completed(future_to_ip):
+                ip = future_to_ip[future]
+                try:
+                    future.result(timeout=60)
+                    results[ip] = True
+                    print(f"  ✓ {ip}: Filter disabled")
+                except Exception as e:
+                    results[ip] = False
+                    print(f"  ✗ {ip}: Filter disable failed - {e}")
+        
+        elapsed = time.time() - start_time
+        success_count = sum(1 for v in results.values() if v)
+        print(f"Filter disablement complete: {success_count}/{len(machines)} successful in {elapsed:.1f}s")
+        
+        return results
 
     def clean(self, ip, user, pwd, pid=False):
         print(f"- clean pid: {pid}")
@@ -372,13 +589,35 @@ class PerfCommon(object):
         cmd = f"{self.path}ab.exe -c 10 -n 100 http://{target_ip}/test.htm"
         return self.execute_cmd(cmd, ip, user, pwd, tool=tool, bandwidth=True)
 
-    def run_hey(self, ip, user, pwd, target_ip):
+    def run_hey(self, ip, user, pwd, target_ip, iteration=20):
         print(f"{'+' * 50}\n+ Run Hey.exe {self.ip_type[ip]}-{ip} +\n{'+' * 50}")
         tool = "Powershell.exe"
         # Clean up any existing Hey.exe processes
         self.clean(ip, user, pwd, pid=False)
         cmd = f"{self.path}hey.exe -c 10 -n 100 http://{target_ip}/test.htm"
-        return self.execute_cmd(cmd, ip, user, pwd, tool=tool, bandwidth=True, iteration=20)
+        return self.execute_cmd(cmd, ip, user, pwd, tool=tool, bandwidth=True, iteration=iteration)
+    
+    def run_warmup_test(self, suser, sip, spwd, s_priv_ip, cuser, cip, cpwd, c_priv_ip, scenario_name):
+        """Lightweight warm-up: 3 iterations to prime DNS/ARP/TCP caches (~1-2 min)"""
+        if scenario_name == "Server Download" or scenario_name == "Client Download":
+            self.run_nginx(sip, suser, spwd)
+            probe_result = wait_for_nginx_ready(s_priv_ip)
+            print(f"Nginx warm-up ready: {probe_result['attempts']} attempts")
+            # Only 3 iterations for warm-up
+            warmup_stats = self.run_hey(cip, cuser, cpwd, s_priv_ip, iteration=3)
+            self.clean_nginx(sip, suser, spwd)
+            self.clean_ab(cip, cuser, cpwd)
+            return warmup_stats
+        elif scenario_name == "Server Upload":
+            # Quick warm-up for Server Upload: single 30s flow
+            pid = self.run_pcattcp_rec(sip, suser, spwd, c_priv_ip, asynchronous=True)
+            print("Waiting 30s for warm-up traffic flow...")
+            time.sleep(30)  # Minimal warm-up
+            self.run_pcattcp_tran(cip, cuser, cpwd, s_priv_ip, bandwidth=False)
+            self.clean(cip, cuser, cpwd, pid=pid)
+            self.clean(sip, suser, spwd)
+            return [0]  # Placeholder
+        return []
 
     def check_test_page(self, ip, user, pwd, target_ip):
         print(f"{'+' * 50}\n+ Check Test Page {self.ip_type[ip]}-{ip} +\n{'+' * 50}")
@@ -391,14 +630,22 @@ class PerfCommon(object):
     def disable_dsa(self, ip, user, pwd):
         print(f"{'+' * 50}\n # {self.ip_type[ip]}-{ip} Disable DSA #\n{'+' * 50}")
         tool = "Powershell.exe"
-        cmd = "Stop-Service -Name \"Trend` Micro` Deep` Security` Agent\""
-        self.execute_cmd(cmd, ip, user, pwd, tool=tool)
+        ps = (
+            "$svc = Get-Service | Where-Object { $_.Name -like '*Deep*Security*Agent*' -or $_.DisplayName -like '*Deep*Security*Agent*' };"
+            "if ($null -ne $svc) { Stop-Service -Name $svc.Name -ErrorAction SilentlyContinue; Write-Output ('Stopped ' + $svc.Name) }"
+            " else { Write-Output 'DSA service not found' }"
+        )
+        self.execute_cmd(ps, ip, user, pwd, tool=tool)
 
     def activate_dsa(self, ip, user, pwd):
         print(f"{'+' * 50}\n # {self.ip_type[ip]}-{ip} Activate DSA #\n{'+' * 50}")
         tool = "Powershell.exe"
-        cmd = "Start-Service -Name \"Trend` Micro` Deep` Security` Agent\""
-        self.execute_cmd(cmd, ip, user, pwd, tool=tool)
+        ps = (
+            "$svc = Get-Service | Where-Object { $_.Name -like '*Deep*Security*Agent*' -or $_.DisplayName -like '*Deep*Security*Agent*' };"
+            "if ($null -ne $svc) { Start-Service -Name $svc.Name -ErrorAction SilentlyContinue; Write-Output ('Started ' + $svc.Name) }"
+            " else { Write-Output 'DSA service not found' }"
+        )
+        self.execute_cmd(ps, ip, user, pwd, tool=tool)
 
     def reboot_instance(self, instance_id, access_key, secret_key, region):
         print(f"{self.header}\n # Reboot {instance_id} Instance #\n{self.header}")
@@ -582,11 +829,39 @@ class PerfCommon(object):
                     return False
 
     def enable_agent_filter(self, sip, suser, spwd, cip, cuser, cpwd, scenario):
+        """Enable agents and filters with parallel filter activation."""
+        print("+" * 50)
+        print("Enabling agents and filters...")
+        start_time = time.time()
+        
+        # Activate agents sequentially (DSM operations must be sequential)
         if scenario in ["Server_Download", "Server_Upload"]:
             self.activate_dsa(sip, suser, spwd)
-            self.enable_filter(sip, suser, spwd, self.s_adap_name)
         if scenario == "Client_Download":
             self.activate_dsa(cip, cuser, cpwd)
-            self.enable_filter(cip, cuser, cpwd, self.c_adap_name)
-        print("Waiting 30 sec, Both machine Agent: Enabled, Filter Driver: Enable")
-        time.sleep(30)
+        
+        # Enable filters in parallel
+        machines_to_enable = []
+        if scenario in ["Server_Download", "Server_Upload"]:
+            machines_to_enable.append({
+                'ip': sip,
+                'user': suser,
+                'pwd': spwd,
+                'adaptor_name': self.s_adap_name
+            })
+        if scenario == "Client_Download":
+            machines_to_enable.append({
+                'ip': cip,
+                'user': cuser,
+                'pwd': cpwd,
+                'adaptor_name': self.c_adap_name
+            })
+        
+        # Parallel filter enablement
+        if machines_to_enable:
+            self.enable_filters_parallel(machines_to_enable, max_workers=len(machines_to_enable))
+        
+        elapsed = time.time() - start_time
+        print(f"Agent and filter enablement complete in {elapsed:.1f}s")
+        print(f"Waiting for stabilization... (additional 5s)")
+        time.sleep(5)  # Reduced from 30s to 5s for stabilization

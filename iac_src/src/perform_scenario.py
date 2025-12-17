@@ -67,11 +67,20 @@ class PerformanceScenario(PerfCommon):
 
             def sequential_dsm_tasks(dsm, rule_file):
                 try:
+                    print(f"→ Starting sequential_dsm_tasks for rule_file: {rule_file}", flush=True)
+                    print("→ Calling dsm.upload_basic_policy()...", flush=True)
                     dsm.upload_basic_policy()
+                    print("✓ upload_basic_policy completed", flush=True)
+                    
+                    print("→ Calling dsm.apply_pkg_create_applied_rule_list()...", flush=True)
                     summary, identifiers = dsm.apply_pkg_create_applied_rule_list(rule_file)
+                    print("✓ apply_pkg_create_applied_rule_list completed", flush=True)
+                    print(f"✓ sequential_dsm_tasks completed successfully", flush=True)
                     return summary, identifiers
                 except Exception as e:
-                    print(f"Error in sequential_dsm_tasks: {e}")
+                    print(f"✗ Error in sequential_dsm_tasks: {e}", flush=True)
+                    import traceback
+                    traceback.print_exc()
                     return None, None
 
             def reboot_instance(instance):
@@ -83,20 +92,30 @@ class PerformanceScenario(PerfCommon):
 
             with ThreadPoolExecutor(max_workers=len(all_instance)) as executor:
                 try:
+                    # Submit DSM tasks
                     future_dsm_tasks = [executor.submit(
                             sequential_dsm_tasks, dsm[x], rule_file) for x in range(len(dsm))]
 
+                    # Submit reboot tasks
                     future_to_instance = {
                     executor.submit(reboot_instance, instance): instance for instance in all_instance
                     }
+                    
+                    # Collect reboot results
                     results = {future_to_instance[future]: future.result() for future in future_to_instance}
+                    print(f"✓ Reboot tasks completed for {len(results)} instances")
 
-                    print("Results: {}".format([future.result() for future in future_dsm_tasks]))
-
+                    # Collect DSM task results (only call result() once per future)
+                    print("Waiting for DSM tasks to complete...", flush=True)
                     summaries_and_identifiers = [future.result() for future in future_dsm_tasks]
+                    print(f"✓ DSM tasks completed: {summaries_and_identifiers}", flush=True)
+                    
+                    # Unzip results
                     summary, identifiers = zip(*summaries_and_identifiers)
                 except Exception as e:
                     print(f"Error in ThreadPoolExecutor block: {e}")
+                    import traceback
+                    traceback.print_exc()
                     summary, identifiers, results = [], [], []
 
             _sip = [] 
@@ -161,26 +180,27 @@ class PerformanceScenario(PerfCommon):
 
             print(f"_sip: {_sip} \n | _cip: {_cip} \n | _s_priv_ip: {_s_priv_ip} \n | _c_priv_ip: {_c_priv_ip}\n")
 
+
             self._s_adap_name = []
             self._c_adap_name = []
 
             _sip, _cip = _s_priv_ip, _c_priv_ip
 
-            for x in range(0, len(all_instance_server)):
-                try:
-                    print("Server Machine Public IP:{}, Private IP: {}".format(_sip[x], _s_priv_ip[x]))
-                    self._s_adap_name.append(self.get_adaptor_name(_sip[x], suser, _spwd[x]))
-                    print("Server Machine Public IP:{}, Private IP: {}, s_adap_name: {}".format(_sip[x], _s_priv_ip[x], self._s_adap_name[x]))
-                except Exception as e:
-                    print(f"Error getting server adaptor name for {x}: {e}")
-
-            for x in range(0, len(all_instance_agent)):
-                try:
-                    print("Client Machine Public IP:{}, Private IP: {}".format(_cip[x], _c_priv_ip[x]))
-                    self._c_adap_name.append(self.get_adaptor_name(_cip[x], cuser, _cpwd[x]))
-                    print("Client Machine Public IP:{}, Private IP: {}, c_adap_name: {}".format(_cip[x], _c_priv_ip[x], self._c_adap_name[x]))
-                except Exception as e:
-                    print(f"Error getting client adaptor name for {x}: {e}")
+            # Prepare machine dicts for parallel preload
+            server_machines = [
+                {'ip': _sip[x], 'user': suser, 'pwd': _spwd[x]}
+                for x in range(len(all_instance_server))
+            ]
+            client_machines = [
+                {'ip': _cip[x], 'user': cuser, 'pwd': _cpwd[x]}
+                for x in range(len(all_instance_agent))
+            ]
+            all_machines = server_machines + client_machines
+            # Preload all adapters in parallel
+            adapter_map = self.preload_adapter_names(all_machines)
+            # Extract results
+            self._s_adap_name = [adapter_map.get(_sip[x]) for x in range(len(all_instance_server))]
+            self._c_adap_name = [adapter_map.get(_cip[x]) for x in range(len(all_instance_agent))]
 
             print(f"Lengths: _sip: {len(_sip)} | _cip: {len(_cip)} | self._s_adap_name: {len(self._s_adap_name)} | self._c_adap_name: {len(self._c_adap_name)} | self.ip_type: {len(self.ip_type)} | _spwd: {len(_spwd)} | _cpwd: {len(_cpwd)}")
 
@@ -251,41 +271,64 @@ class PerformanceScenario(PerfCommon):
                 except Exception as e:
                     print(f"Error closing DSM connection for {x}: {e}")
 
-    def apply_rule_get_stats(self, suser, sip, spwd, s_priv_ip, cuser, cip, cpwd, c_priv_ip, grule_list, scenario_name, c_adaptor=None, s_adaptor=None,
-                             action="reading", dsm=None):
+    def apply_rule_get_stats(self, suser, sip, spwd, s_priv_ip, cuser, cip, cpwd, c_priv_ip, grule_list, scenario_name, c_adaptor=None, s_adaptor=None, action="reading", dsm=None):
         try:
+            # Choose target host and adapter strictly from provided args to avoid cross-class attribute access
             if scenario_name == "Client Download":
-                ip, user, pwd, adaptor = cip, cuser, cpwd, c_adaptor or self._s_adap_name
+                ip, user, pwd, adaptor = cip, cuser, cpwd, c_adaptor
             else:
-                ip, user, pwd, adaptor = sip, suser, spwd, s_adaptor or self._c_adap_name
+                ip, user, pwd, adaptor = sip, suser, spwd, s_adaptor
+            if adaptor is None:
+                raise Exception("Adapter name not provided for selected scenario")
             if action == "wo_filter":
                 dsm.clean_rules_from_dsm()
                 # Disable Server Agent
                 self.disable_dsa(ip, user, pwd)
-                # Disable Server filter
-                self.disable_filter(ip, user, pwd, adaptor)
-                print("{0}\n{2}-{1} Agent: Disabled from DSM\n{2}-{1} Filter: Disabled from network driver\n{0}".format(
-                      self.header, ip, self.ip_type[ip]))
+                # Disable Server filter (using parallel for consistency)
+                machines_to_disable = [{
+                    'ip': ip,
+                    'user': user,
+                    'pwd': pwd,
+                    'adaptor_name': adaptor
+                }]
+                self.disable_filters_parallel(machines_to_disable)
+                # Wait for filter driver state to settle (increased to 20s for full network stack propagation)
+                import time
+                time.sleep(20)
+                print("{0}\n{2}-{1} Agent: Disabled from DSM\n{2}-{1} Filter: Disabled from network driver\n{0}".format(self.header, ip, self.ip_type[ip]))
+                # Additional settling time before measurement to clear residual effects
+                print("→ Waiting 10s for network stack to fully stabilize before measurement...")
+                time.sleep(10)
             elif action == "filter":
                 dsm.clean_rules_from_dsm()
                 # Activate Server Agent
                 self.activate_dsa(ip, user, pwd)
-                # Enable Server Filter
-                self.enable_filter(ip, user, pwd, adaptor)
-                print("{0}\n{2}-{1} Agent: Enabled from DSM\n{2}-{1} Filter: Enabled from Network Driver\n{0}".format(
-                                                                                    self.header, ip, self.ip_type[ip]))
+                # Enable Server Filter (using parallel for consistency)
+                machines_to_enable = [{
+                    'ip': ip,
+                    'user': user,
+                    'pwd': pwd,
+                    'adaptor_name': adaptor
+                }]
+                self.enable_filters_parallel(machines_to_enable)
+                # Wait for filter driver state to settle (increased to 20s for full network stack propagation)
+                import time
+                time.sleep(20)
+                print("{0}\n{2}-{1} Agent: Enabled from DSM\n{2}-{1} Filter: Enabled from Network Driver\n{0}".format(self.header, ip, self.ip_type[ip]))
+                # Additional settling time before measurement to clear residual effects
+                print("→ Waiting 10s for network stack to fully stabilize before measurement...")
+                time.sleep(10)
             elif action == "rule":
                 dsm.connect()
                 identifier = dsm.apply_rule(scenario_name, rule_list=grule_list)
                 print("\n# {} Rule Applied \n".format(grule_list))
                 print("{0}{0}\n# {1} Rule Applied \n{0}{0}".format(self.header, identifier))
-            # print("Waiting 3 min")
-            # time.sleep(180)
+            
+            # Actual measurement
             all_stats = self.run_band_test(suser, sip, spwd, s_priv_ip, cuser, cip, cpwd, c_priv_ip, scenario_name)
             iter_stats = all_stats[:self.best_iteration]
             avg = round(sum(map(float, iter_stats)) / len(iter_stats), 2)
-            print("{0}{0}\n- {1} iteration stats {2} MBps\n- Average Bandwidth: {3} MBps\n{0}{0}\n".format(self.header,
-                                                                                len(iter_stats), iter_stats, avg))
+            print("{0}{0}\n- {1} iteration stats {2} MBps\n- Average Bandwidth: {3} MBps\n{0}{0}\n".format(self.header, len(iter_stats), iter_stats, avg))
             return all_stats, iter_stats, avg
         except Exception as e:
             print(f"Error in apply_rule_get_stats: {e}")
