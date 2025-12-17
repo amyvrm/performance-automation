@@ -281,6 +281,8 @@ node('aws&&docker')
 
                             // Try apply and capture exit code
                             applyResult = sh(script: "terraform -chdir=${iac_path_dsm_dsa} apply -auto-approve ${plan_dsm_dsa}", returnStatus: true)
+
+                            echo "Terraform Apply Result: ${applyResult}"
                     }
 
                     stage('DSM infra information')
@@ -319,9 +321,14 @@ node('aws&&docker')
         finally
         {
             // Always capture instance IDs from state, even on partial failure
-                            
             // Fail the stage if apply failed, but after capturing IDs
-            if (applyResult != 0) {
+            if (((scenario == "Server_Upload" || scenario == "Server_Download") && server_rules != 0 ) || (scenario == "Client_Download" && client_rules != 0))
+            {
+                echo "No ${scenario} rules available"
+                currentBuild.result = "SUCCESS"
+                return
+            }
+            else if (applyResult != 0) {
                 dir("${iac_path_dsm_dsa}")
                 {
                     // Use || true to ensure we continue even if output fails
