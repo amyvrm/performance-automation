@@ -116,47 +116,6 @@ class PerfCommon(object):
                       "</head>\n<body>\n"
         return html_header
 
-    def enforce_consistent_nic_settings(self, ip, user, pwd, adapter_name):
-        """
-        Enforce consistent NIC settings to reduce offload-related bias between
-        filter-enabled and filter-disabled runs.
-        - Disable RSC (Receive Segment Coalescing)
-        - Enable RSS (Receive Side Scaling)
-        """
-        if not adapter_name:
-            print(f"⚠️  Adapter name missing for {ip}; skipping NIC settings enforcement")
-            return
-        print(f"→ Enforcing NIC settings on {ip}: RSC=Disabled, RSS=Enabled (adapter={adapter_name})")
-        tool = "Powershell.exe"
-        ps = (
-            f"$name='{adapter_name}';"
-            "Disable-NetAdapterRsc -Name $name -ErrorAction SilentlyContinue;"
-            "Enable-NetAdapterRss -Name $name -ErrorAction SilentlyContinue;"
-            "$rsc = Get-NetAdapterRsc -Name $name -ErrorAction SilentlyContinue;"
-            "$rss = Get-NetAdapterRss -Name $name -ErrorAction SilentlyContinue;"
-            "if ($rsc) { if ($rsc.Enabled) { 'RSC: Enabled' } else { 'RSC: Disabled' } } else { 'RSC: Unknown' };"
-            "if ($rss) { if ($rss.Enabled) { 'RSS: Enabled' } else { 'RSS: Disabled' } } else { 'RSS: Unknown' }"
-        )
-        try:
-            self.execute_cmd(ps, ip, user, pwd, tool=tool)
-        except Exception as e:
-            print(f"⚠️  Failed to enforce NIC settings on {ip}: {e}")
-
-    def flush_network_caches(self, ip, user, pwd):
-        """
-        Flush DNS and ARP caches to minimize warm-up advantages.
-        """
-        print(f"→ Flushing network caches on {ip} (DNS/ARP)")
-        tool = "cmd.exe"
-        # Use cmd to run multiple commands; tolerate failures gracefully
-        cmd = (
-            "ipconfig /flushdns & arp -d * & netsh interface ip delete arpcache"
-        )
-        try:
-            self.execute_cmd(cmd, ip, user, pwd, tool=tool)
-        except Exception as e:
-            print(f"⚠️  Failed to flush caches on {ip}: {e}")
-
     def run_band_test(self, suser, sip, spwd, s_priv_ip, cuser, cip, cpwd, c_priv_ip, scenario_name):
         print("c_priv_ip: {}".format(c_priv_ip))
         print("s_priv_ip: {}".format(s_priv_ip))
@@ -380,7 +339,7 @@ class PerfCommon(object):
         tool = "Powershell.exe"
         cmd = "Get-NetAdapter -Name *|select Name|%{$_.Name}"
         name = self.execute_cmd(cmd, ip, user, pwd, tool=tool)
-        normalized_name = name.strip()
+        normalized_name = name.replace(" ", "` ") if " " in name else name
         self._adapter_cache[ip] = normalized_name
         self._adapter_cache_timestamp[ip] = time.time()
         print(f"✓ Cached adapter name '{normalized_name}' for {ip}")
@@ -418,7 +377,7 @@ class PerfCommon(object):
             return False, "Adapter name unavailable"
         tool = "Powershell.exe"
         ps = (
-            f"$name='{adapter_name}'; $disp='Trend Micro LightWeight Filter Driver';"
+            f"$name=\"{adapter_name}\"; $disp=\"Trend Micro LightWeight Filter Driver\";"
             "$binding = Get-NetAdapterBinding -Name $name -ErrorAction SilentlyContinue | Where-Object { $_.DisplayName -eq $disp };"
             "if ($binding) { 'Present' } else { 'Absent' }"
         )
@@ -471,7 +430,7 @@ class PerfCommon(object):
         tool = "Powershell.exe"
         # Guard: enable binding only if present
         ps = (
-            f"$name='{adaptor_name}'; $disp='Trend Micro LightWeight Filter Driver';"
+            f"$name=\"{adaptor_name}\"; $disp=\"Trend Micro LightWeight Filter Driver\";"
             "$binding = Get-NetAdapterBinding -Name $name -ErrorAction SilentlyContinue | Where-Object { $_.DisplayName -eq $disp };"
             "if ($binding) { Enable-NetAdapterBinding -Name $name -DisplayName $disp -ErrorAction SilentlyContinue; Write-Output 'Filter enabled' }"
             " else { Write-Output 'Filter binding not found' }"
@@ -482,7 +441,7 @@ class PerfCommon(object):
         print("{0}\n # {2}-{1} Disable Filter #\n{0}".format("+" * 50, ip, self.ip_type[ip]))
         tool = "Powershell.exe"
         ps = (
-            f"$name='{adaptor_name}'; $disp='Trend Micro LightWeight Filter Driver';"
+            f"$name=\"{adaptor_name}\"; $disp=\"Trend Micro LightWeight Filter Driver\";"
             "$binding = Get-NetAdapterBinding -Name $name -ErrorAction SilentlyContinue | Where-Object { $_.DisplayName -eq $disp };"
             "if ($binding) { Disable-NetAdapterBinding -Name $name -DisplayName $disp -ErrorAction SilentlyContinue; Write-Output 'Filter disabled' }"
             " else { Write-Output 'Filter binding not found' }"

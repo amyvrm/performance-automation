@@ -157,9 +157,10 @@ node('aws&&docker') {
             println(e)
             throw e
         } finally {
-
             if (infrajobStatus == 'SUCCESS') {
+                echo "Finally Infra deployment successful. Proceeding to check performance test results."
                 perfjobStatus = perf_test.getResult().toString()
+                echo "Finally Performance Test job status: ${perfjobStatus}"
                 if (perfjobStatus != 'SUCCESS') {
                     if (!pipelineShouldExit) {
                         stage('Collect Automation Machine Tear Down infrastructure') {
