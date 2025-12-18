@@ -70,6 +70,14 @@ node('aws&&docker') {
 
         def infrajobStatus = ""
 
+        def copied = false
+
+        def job_number = ""
+        def infrajob = null
+        def perf_test = null
+        def perfjobStatus = ""
+    
+
         if (!(scenario in ["Server_Upload", "Server_Download", "Client_Download"])) {
             error("Scenario unknown")
         }
@@ -99,7 +107,6 @@ node('aws&&docker') {
             stage('Verify Artifacts') {
                 script {
                     job_number = infrajob.getNumber().toString()
-                    def copied = false
                     infrajobStatus = infrajob.getResult().toString()
                     echo "Infra job status: ${infrajobStatus}"
 
@@ -114,16 +121,17 @@ node('aws&&docker') {
                         )
                         copied = sh(script: "ls -1 | grep -E '.json|.txt' | wc -l || true", returnStdout: true).trim().toInteger() > 0
                         echo "copied: ${copied}"
+                        echo "Artifacts copied from Infra_Create_Perf_Scenario job."
                     } catch (Exception e) {
                         echo "Error occurred while copying artifacts."
                     }
                     if (!copied) {
+                        echo "No artifacts found to copy. Exiting pipeline. Check if there are ${scenario} related rules are present in the DSM package."
                         pipelineShouldExit = true
                         return
                     }
                 }
             }
-
 
             if (infrajobStatus == 'SUCCESS') {
                 if (!pipelineShouldExit) {
@@ -157,7 +165,7 @@ node('aws&&docker') {
             println(e)
             throw e
         } finally {
-            if (infrajobStatus == 'SUCCESS') {
+            if (infrajobStatus == 'SUCCESS' && !pipelineShouldExit) {
                 echo "Finally Infra deployment successful. Proceeding to check performance test results."
                 perfjobStatus = perf_test.getResult().toString()
                 echo "Finally Performance Test job status: ${perfjobStatus}"
@@ -199,28 +207,30 @@ node('aws&&docker') {
                 }
             }
             else {
-                echo "Infrastructure deployment failed. Skipping performance test and performing infrastructure teardown."
-                stage('Collect Tear Down infrastructure') {
-                    def tearDown = readFile("tear_down_params.txt")
-                    echo "Tear Down Params: ${tearDown}"
-                    def new_ids = tearDown.drop(16).split(',').collect { it.trim() }
-                    def existing_ids = all_ids.split(',').collect { it.trim() }.findAll { it }
-                    all_ids = (existing_ids + new_ids).unique().join(', ')
-                    echo "All IDs: ${all_ids}"
-                }
-                
-                stage('Tear Down infrastructure') {
-                    if ("${debug}" == 'false') {
-                        echo "Debug disabled. Destroying Infrastructure...."
-                        build job: 'Performance-Scenario-teardown',
-                            parameters: [
-                                string(name: 'AWS_RESOURCES', value: all_ids),
-                                string(name: 'INFRASTRUCTURE_BRANCH', value: infra_branch)
-                            ]
-                    } else {
-                        echo "Debug enabled. Infrastructure Preserved."
+                if (copied) {
+                    echo "Infrastructure deployment failed. Skipping performance test and performing infrastructure teardown."
+                    stage('Collect Tear Down infrastructure') {
+                        def tearDown = readFile("tear_down_params.txt")
+                        echo "Tear Down Params: ${tearDown}"
+                        def new_ids = tearDown.drop(16).split(',').collect { it.trim() }
+                        def existing_ids = all_ids.split(',').collect { it.trim() }.findAll { it }
+                        all_ids = (existing_ids + new_ids).unique().join(', ')
+                        echo "All IDs: ${all_ids}"
                     }
-                    jsonText = null
+
+                    stage('Tear Down infrastructure') {
+                        if ("${debug}" == 'false') {
+                            echo "Debug disabled. Destroying Infrastructure...."
+                            build job: 'Performance-Scenario-teardown',
+                                parameters: [
+                                    string(name: 'AWS_RESOURCES', value: all_ids),
+                                    string(name: 'INFRASTRUCTURE_BRANCH', value: infra_branch)
+                                ]
+                        } else {
+                            echo "Debug enabled. Infrastructure Preserved."
+                        }
+                        jsonText = null
+                    }
                 }
             }
         }
