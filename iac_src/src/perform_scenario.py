@@ -292,13 +292,10 @@ class PerformanceScenario(PerfCommon):
                     'adaptor_name': adaptor
                 }]
                 self.disable_filters_parallel(machines_to_disable)
-                # Wait for filter driver state to settle (increased to 20s for full network stack propagation)
-                import time
-                time.sleep(20)
+                # Wait for filter driver state to settle (increased to 45s for full network stack propagation)
+                time.sleep(45)
                 print("{0}\n{2}-{1} Agent: Disabled from DSM\n{2}-{1} Filter: Disabled from network driver\n{0}".format(self.header, ip, self.ip_type[ip]))
-                # Additional settling time before measurement to clear residual effects
-                print("→ Waiting 10s for network stack to fully stabilize before measurement...")
-                time.sleep(10)
+                print("✓ Network stack stabilized after 45s cooldown")
             elif action == "filter":
                 dsm.clean_rules_from_dsm()
                 # Activate Server Agent
@@ -311,13 +308,10 @@ class PerformanceScenario(PerfCommon):
                     'adaptor_name': adaptor
                 }]
                 self.enable_filters_parallel(machines_to_enable)
-                # Wait for filter driver state to settle (increased to 20s for full network stack propagation)
-                import time
-                time.sleep(20)
+                # Wait for filter driver state to settle (increased to 45s for full network stack propagation)
+                time.sleep(45)
                 print("{0}\n{2}-{1} Agent: Enabled from DSM\n{2}-{1} Filter: Enabled from Network Driver\n{0}".format(self.header, ip, self.ip_type[ip]))
-                # Additional settling time before measurement to clear residual effects
-                print("→ Waiting 10s for network stack to fully stabilize before measurement...")
-                time.sleep(10)
+                print("✓ Network stack stabilized after 45s cooldown")
             elif action == "rule":
                 dsm.connect()
                 identifier = dsm.apply_rule(scenario_name, rule_list=grule_list)
