@@ -109,23 +109,23 @@ class PerfPackageRule(PerfCommon, DsmPolicy):
             wo_filter_all_stats, wo_filter_stats, wof_avg = PerformanceScenario.apply_rule_get_stats(self, self.suser, self.sip, self.spwd, self.s_priv_ip, self.cuser, self.cip, self.cpwd, self.c_priv_ip, False, scenario_name, self.s_adap_name, self.c_adap_name, action="wo_filter", dsm=self.dsm)
             print("- Without Filter Driver Average Stats: {} MBps\n".format(wof_avg))
             
-            # Cooldown period to reset network stack
-            print("→ Waiting 30s cooldown before next test to reset network stack state...")
-            time.sleep(30)
+            # Extended cooldown period to fully reset network stack (TCP state, CPU scaling, caches)
+            print("→ Waiting 90s cooldown to fully reset network stack state (TCP connections, routing cache, CPU frequency)...")
+            time.sleep(90)
 
             # With Filter Driver
             print("{0}{0}\n# With Filter Driver #\n{0}{0}".format(self.header))
             w_filter_all_stats, w_filter_stats, wf_avg = PerformanceScenario.apply_rule_get_stats(self, self.suser, self.sip, self.spwd, self.s_priv_ip, self.cuser, self.cip, self.cpwd, self.c_priv_ip, False, scenario_name, self.s_adap_name, self.c_adap_name, action="filter", dsm=self.dsm)
-            print("- With Filter Driver Average Stats: {} MBps\n".format(wf_avg))
+            print("- With Filter Driver Average Stats: {} MBps\n".format(wof_avg))
         else:
             # With Filter Driver (run FIRST)
             print("{0}{0}\n# With Filter Driver #\n{0}{0}".format(self.header))
             w_filter_all_stats, w_filter_stats, wf_avg = PerformanceScenario.apply_rule_get_stats(self, self.suser, self.sip, self.spwd, self.s_priv_ip, self.cuser, self.cip, self.cpwd, self.c_priv_ip, False, scenario_name, self.s_adap_name, self.c_adap_name, action="filter", dsm=self.dsm)
             print("- With Filter Driver Average Stats: {} MBps\n".format(wf_avg))
             
-            # Cooldown period to reset network stack
-            print("→ Waiting 30s cooldown before next test to reset network stack state...")
-            time.sleep(30)
+            # Extended cooldown period to fully reset network stack (TCP state, CPU scaling, caches)
+            print("→ Waiting 90s cooldown to fully reset network stack state (TCP connections, routing cache, CPU frequency)...")
+            time.sleep(90)
 
             # Without Filter Driver
             print("{0}{0}\n# Without Filter Driver #\n{0}{0}".format(self.header))
@@ -169,9 +169,9 @@ class PerfPackageRule(PerfCommon, DsmPolicy):
             wo_filter_all_stats, wo_filter_stats, wof_avg = PerformanceScenario.apply_rule_get_stats(self, self.suser, self.sip, self.spwd, self.s_priv_ip, self.cuser, self.cip, self.cpwd, self.c_priv_ip, False, scenario_name, self.s_adap_name, self.c_adap_name, action="wo_filter", dsm=self.dsm)
             print("- Without Filter Driver Average Stats: {} MBps\n".format(wof_avg))
             
-            # Cooldown period to reset network stack
-            print("→ Waiting 30s cooldown before next test to reset network stack state...")
-            time.sleep(30)
+            # Extended cooldown period to fully reset network stack (TCP state, CPU scaling, caches)
+            print("→ Waiting 90s cooldown to fully reset network stack state (TCP connections, routing cache, CPU frequency)...")
+            time.sleep(90)
 
             # With Filter Driver
             print("{0}{0}\n# With Filter Driver #\n{0}{0}".format(self.header))
@@ -183,9 +183,9 @@ class PerfPackageRule(PerfCommon, DsmPolicy):
             w_filter_all_stats, w_filter_stats, wf_avg = PerformanceScenario.apply_rule_get_stats(self, self.suser, self.sip, self.spwd, self.s_priv_ip, self.cuser, self.cip, self.cpwd, self.c_priv_ip, False, scenario_name, self.s_adap_name, self.c_adap_name, action="filter", dsm=self.dsm)
             print("- With Filter Driver Average Stats: {} MBps\n".format(wf_avg))
             
-            # Cooldown period to reset network stack
-            print("→ Waiting 30s cooldown before next test to reset network stack state...")
-            time.sleep(30)
+            # Extended cooldown period to fully reset network stack (TCP state, CPU scaling, caches)
+            print("→ Waiting 90s cooldown to fully reset network stack state (TCP connections, routing cache, CPU frequency)...")
+            time.sleep(90)
 
             # Without Filter Driver
             print("{0}{0}\n# Without Filter Driver #\n{0}{0}".format(self.header))
