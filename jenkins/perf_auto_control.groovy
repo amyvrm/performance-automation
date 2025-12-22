@@ -231,6 +231,20 @@ node('aws&&docker') {
                         }
                         jsonText = null
                     }
+
+                    stage('Tear Down infrastructure') {
+                        if ("${debug}" == 'false') {
+                            echo "Debug disabled. Destroying Infrastructure...."
+                            build job: 'Performance-Scenario-teardown',
+                                parameters: [
+                                    string(name: 'AWS_RESOURCES', value: all_ids),
+                                    string(name: 'INFRASTRUCTURE_BRANCH', value: infra_branch)
+                                ]
+                        } else {
+                            echo "Debug enabled. Infrastructure Preserved."
+                        }
+                        jsonText = null
+                    }
                 }
             }
         }
