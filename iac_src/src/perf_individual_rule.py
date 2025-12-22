@@ -114,12 +114,19 @@ class PerfIndividualRule(PerfCommon, DsmPolicy):
             
             # For download scenarios, clear nginx cache to prevent server-side cache bias
             if "Download" in scenario_name:
-                print("→ Clearing nginx cache to eliminate server-side caching bias...")
+                print("→ Stopping nginx to eliminate all server-side state (cache, TCP connections, buffers)...")
                 PerformanceScenario.clean_nginx(self, self.sip, self.suser, self.spwd)
             
             # Extended cooldown period to fully reset network stack (TCP state, CPU scaling, caches)
             print("→ Waiting 90s cooldown to fully reset network stack state (TCP connections, routing cache, CPU frequency)...")
             time.sleep(90)
+            
+            # For download scenarios, start fresh nginx instance
+            if "Download" in scenario_name:
+                print("→ Starting fresh nginx instance for second test...")
+                PerformanceScenario.run_nginx(self, self.sip, self.suser, self.spwd)
+                print("→ Waiting for nginx to fully initialize...")
+                time.sleep(10)
 
             print("{0}{0}\n# With Filter Driver #\n{0}{0}".format(self.header))
             w_filter_all_stats, w_filter_stats, wf_avg = PerformanceScenario.apply_rule_get_stats(self, self.suser, self.sip, self.spwd, self.s_priv_ip, self.cuser, self.cip, self.cpwd, self.c_priv_ip, False, scenario_name, self.s_adap_name, self.c_adap_name, action="filter", dsm=self.dsm)
@@ -132,12 +139,19 @@ class PerfIndividualRule(PerfCommon, DsmPolicy):
             
             # For download scenarios, clear nginx cache to prevent server-side cache bias
             if "Download" in scenario_name:
-                print("→ Clearing nginx cache to eliminate server-side caching bias...")
+                print("→ Stopping nginx to eliminate all server-side state (cache, TCP connections, buffers)...")
                 PerformanceScenario.clean_nginx(self, self.sip, self.suser, self.spwd)
             
             # Extended cooldown period to fully reset network stack (TCP state, CPU scaling, caches)
             print("→ Waiting 90s cooldown to fully reset network stack state (TCP connections, routing cache, CPU frequency)...")
             time.sleep(90)
+            
+            # For download scenarios, start fresh nginx instance
+            if "Download" in scenario_name:
+                print("→ Starting fresh nginx instance for second test...")
+                PerformanceScenario.run_nginx(self, self.sip, self.suser, self.spwd)
+                print("→ Waiting for nginx to fully initialize...")
+                time.sleep(10)
 
             print("{0}{0}\n# Without Filter Driver #\n{0}{0}".format(self.header))
             wo_filter_all_stats, wo_filter_stats, wof_avg = PerformanceScenario.apply_rule_get_stats(self, self.suser, self.sip, self.spwd, self.s_priv_ip, self.cuser, self.cip, self.cpwd, self.c_priv_ip, False, scenario_name, self.s_adap_name, self.c_adap_name, action="wo_filter", dsm=self.dsm)
@@ -186,12 +200,19 @@ class PerfIndividualRule(PerfCommon, DsmPolicy):
             
             # For download scenarios, clear nginx cache to prevent server-side cache bias
             if "Download" in scenario_name:
-                print("→ Clearing nginx cache to eliminate server-side caching bias...")
+                print("→ Stopping nginx to eliminate all server-side state (cache, TCP connections, buffers)...")
                 PerformanceScenario.clean_nginx(self, self.sip, self.suser, self.spwd)
             
             # Extended cooldown period to fully reset network stack (TCP state, CPU scaling, caches)
             print("→ Waiting 90s cooldown to fully reset network stack state (TCP connections, routing cache, CPU frequency)...")
             time.sleep(90)
+            
+            # For download scenarios, start fresh nginx instance
+            if "Download" in scenario_name:
+                print("→ Starting fresh nginx instance for second test...")
+                PerformanceScenario.run_nginx(self, self.sip, self.suser, self.spwd)
+                print("→ Waiting for nginx to fully initialize...")
+                time.sleep(10)
 
             # With Filter Driver
             print("{0}{0}\n# With Filter Driver #\n{0}{0}".format(self.header))
@@ -205,12 +226,19 @@ class PerfIndividualRule(PerfCommon, DsmPolicy):
             
             # For download scenarios, clear nginx cache to prevent server-side cache bias
             if "Download" in scenario_name:
-                print("→ Clearing nginx cache to eliminate server-side caching bias...")
+                print("→ Stopping nginx to eliminate all server-side state (cache, TCP connections, buffers)...")
                 PerformanceScenario.clean_nginx(self, self.sip, self.suser, self.spwd)
             
             # Extended cooldown period to fully reset network stack (TCP state, CPU scaling, caches)
             print("→ Waiting 90s cooldown to fully reset network stack state (TCP connections, routing cache, CPU frequency)...")
             time.sleep(90)
+            
+            # For download scenarios, start fresh nginx instance
+            if "Download" in scenario_name:
+                print("→ Starting fresh nginx instance for second test...")
+                PerformanceScenario.run_nginx(self, self.sip, self.suser, self.spwd)
+                print("→ Waiting for nginx to fully initialize...")
+                time.sleep(10)
 
             # Without Filter Driver
             print("{0}{0}\n# Without Filter Driver #\n{0}{0}".format(self.header))
