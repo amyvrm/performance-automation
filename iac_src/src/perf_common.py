@@ -594,7 +594,9 @@ class PerfCommon(object):
         tool = "Powershell.exe"
         # Clean up any existing Hey.exe processes
         self.clean(ip, user, pwd, pid=False)
-        cmd = f"{self.path}hey.exe -c 10 -n 100 http://{target_ip}/test.htm"
+        # Disable keep-alives to avoid persistent connection reuse and warm-up advantages
+        # Also disable compression to ensure raw throughput measurements are not masked
+        cmd = f"{self.path}hey.exe -disable-keepalive -disable-compression -c 10 -n 100 http://{target_ip}/test.htm"
         return self.execute_cmd(cmd, ip, user, pwd, tool=tool, bandwidth=True, iteration=iteration)
     
     def run_warmup_test(self, suser, sip, spwd, s_priv_ip, cuser, cip, cpwd, c_priv_ip, scenario_name):
