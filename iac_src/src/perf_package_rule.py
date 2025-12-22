@@ -2,6 +2,7 @@ from perform_scenario import PerformanceScenario
 from perf_common import PerfCommon
 from dsm_operation import DsmPolicy
 import pandas as pd
+import time
 
 class PerfPackageRule(PerfCommon, DsmPolicy):
     def __init__(self, dsm, scenario, path_json, grule, identifiers, suser, sip, spwd, s_priv_ip, cuser, cip, cpwd, c_priv_ip, summary, stats, graph, s_adap_name, c_adap_name, title, ip_type, path, best_iteration):
@@ -109,6 +110,11 @@ class PerfPackageRule(PerfCommon, DsmPolicy):
             wo_filter_all_stats, wo_filter_stats, wof_avg = PerformanceScenario.apply_rule_get_stats(self, self.suser, self.sip, self.spwd, self.s_priv_ip, self.cuser, self.cip, self.cpwd, self.c_priv_ip, False, scenario_name, self.s_adap_name, self.c_adap_name, action="wo_filter", dsm=self.dsm)
             print("- Without Filter Driver Average Stats: {} MBps\n".format(wof_avg))
             
+            # For download scenarios, clear nginx cache to prevent server-side cache bias
+            if "Download" in scenario_name:
+                print("→ Clearing nginx cache to eliminate server-side caching bias...")
+                PerformanceScenario.clean_nginx(self, self.sip, self.suser, self.spwd)
+            
             # Extended cooldown period to fully reset network stack (TCP state, CPU scaling, caches)
             print("→ Waiting 90s cooldown to fully reset network stack state (TCP connections, routing cache, CPU frequency)...")
             time.sleep(90)
@@ -122,6 +128,11 @@ class PerfPackageRule(PerfCommon, DsmPolicy):
             print("{0}{0}\n# With Filter Driver #\n{0}{0}".format(self.header))
             w_filter_all_stats, w_filter_stats, wf_avg = PerformanceScenario.apply_rule_get_stats(self, self.suser, self.sip, self.spwd, self.s_priv_ip, self.cuser, self.cip, self.cpwd, self.c_priv_ip, False, scenario_name, self.s_adap_name, self.c_adap_name, action="filter", dsm=self.dsm)
             print("- With Filter Driver Average Stats: {} MBps\n".format(wf_avg))
+            
+            # For download scenarios, clear nginx cache to prevent server-side cache bias
+            if "Download" in scenario_name:
+                print("→ Clearing nginx cache to eliminate server-side caching bias...")
+                PerformanceScenario.clean_nginx(self, self.sip, self.suser, self.spwd)
             
             # Extended cooldown period to fully reset network stack (TCP state, CPU scaling, caches)
             print("→ Waiting 90s cooldown to fully reset network stack state (TCP connections, routing cache, CPU frequency)...")
@@ -169,6 +180,11 @@ class PerfPackageRule(PerfCommon, DsmPolicy):
             wo_filter_all_stats, wo_filter_stats, wof_avg = PerformanceScenario.apply_rule_get_stats(self, self.suser, self.sip, self.spwd, self.s_priv_ip, self.cuser, self.cip, self.cpwd, self.c_priv_ip, False, scenario_name, self.s_adap_name, self.c_adap_name, action="wo_filter", dsm=self.dsm)
             print("- Without Filter Driver Average Stats: {} MBps\n".format(wof_avg))
             
+            # For download scenarios, clear nginx cache to prevent server-side cache bias
+            if "Download" in scenario_name:
+                print("→ Clearing nginx cache to eliminate server-side caching bias...")
+                PerformanceScenario.clean_nginx(self, self.sip, self.suser, self.spwd)
+            
             # Extended cooldown period to fully reset network stack (TCP state, CPU scaling, caches)
             print("→ Waiting 90s cooldown to fully reset network stack state (TCP connections, routing cache, CPU frequency)...")
             time.sleep(90)
@@ -182,6 +198,11 @@ class PerfPackageRule(PerfCommon, DsmPolicy):
             print("{0}{0}\n# With Filter Driver #\n{0}{0}".format(self.header))
             w_filter_all_stats, w_filter_stats, wf_avg = PerformanceScenario.apply_rule_get_stats(self, self.suser, self.sip, self.spwd, self.s_priv_ip, self.cuser, self.cip, self.cpwd, self.c_priv_ip, False, scenario_name, self.s_adap_name, self.c_adap_name, action="filter", dsm=self.dsm)
             print("- With Filter Driver Average Stats: {} MBps\n".format(wf_avg))
+            
+            # For download scenarios, clear nginx cache to prevent server-side cache bias
+            if "Download" in scenario_name:
+                print("→ Clearing nginx cache to eliminate server-side caching bias...")
+                PerformanceScenario.clean_nginx(self, self.sip, self.suser, self.spwd)
             
             # Extended cooldown period to fully reset network stack (TCP state, CPU scaling, caches)
             print("→ Waiting 90s cooldown to fully reset network stack state (TCP connections, routing cache, CPU frequency)...")
