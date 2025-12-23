@@ -325,8 +325,10 @@ class PerformanceScenario(PerfCommon):
             print("{0}{0}\n- {1} iteration stats {2} MBps\n- Average Bandwidth: {3} MBps\n{0}{0}\n".format(self.header, len(iter_stats), iter_stats, avg))
             return all_stats, iter_stats, avg
         except Exception as e:
-            print(f"Error in apply_rule_get_stats: {e}")
-            return None, None, None
+            error_msg = f"Error in apply_rule_get_stats ({scenario_name}/{action}): {e}"
+            print(error_msg)
+            # Bubble up so callers don't try to append into None results
+            raise RuntimeError(error_msg)
 
     def jfrog_upload(self, jfrog_base_url, auth):
         try:

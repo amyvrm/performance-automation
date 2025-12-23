@@ -116,6 +116,21 @@ class PerfCommon(object):
                       "</head>\n<body>\n"
         return html_header
 
+    def probe_http(self, ip, user, pwd, target_ip):
+        # Lightweight HTTP probe to verify nginx reachability before running throughput tools
+        tool = "Powershell.exe"
+        ps = (
+            f"$resp = Invoke-WebRequest -Uri http://{target_ip}/test.htm -UseBasicParsing -TimeoutSec 15 -ErrorAction Stop; "
+            "Write-Output ('Status:' + $resp.StatusCode + ' Length:' + $resp.Content.Length)"
+        )
+        try:
+            out = self.execute_cmd(ps, ip, user, pwd, tool=tool)
+            print(f"HTTP probe from {ip} → {target_ip}: {out}")
+            return out
+        except Exception as ex:
+            print(f"HTTP probe failed from {ip} → {target_ip}: {ex}")
+            return None
+
     def run_band_test(self, suser, sip, spwd, s_priv_ip, cuser, cip, cpwd, c_priv_ip, scenario_name):
         print("c_priv_ip: {}".format(c_priv_ip))
         print("s_priv_ip: {}".format(s_priv_ip))
@@ -125,6 +140,10 @@ class PerfCommon(object):
             print("Probing nginx readiness with adaptive wait...")
             probe_result = wait_for_nginx_ready(s_priv_ip)
             print(f"Nginx readiness probe: attempts={probe_result['attempts']}, avg_latency_ms={probe_result['avg_latency_ms']:.2f}, avg_ttfb_ms={probe_result['avg_ttfb_ms']:.2f}")
+            # Extra HTTP probe for clearer diagnostics
+            probe_out = self.probe_http(cip, cuser, cpwd, s_priv_ip)
+            if not probe_out or not str(probe_out).startswith("Status:200"):
+                raise Exception(f"HTTP probe failed from client {cip} to server {s_priv_ip}: {probe_out}")
             # Run Apache Bench
             #through_put = self.run_ab(cip, cuser, cpwd, s_priv_ip)
             through_put = self.run_hey(cip, cuser, cpwd, s_priv_ip)
@@ -142,6 +161,9 @@ class PerfCommon(object):
                     print("Probing nginx readiness with adaptive wait...")
                     probe_result = wait_for_nginx_ready(s_priv_ip)
                     print(f"Nginx readiness probe: attempts={probe_result['attempts']}, avg_latency_ms={probe_result['avg_latency_ms']:.2f}, avg_ttfb_ms={probe_result['avg_ttfb_ms']:.2f}")
+                    probe_out = self.probe_http(cip, cuser, cpwd, s_priv_ip)
+                    if not probe_out or not str(probe_out).startswith("Status:200"):
+                        raise Exception(f"HTTP probe failed from client {cip} to server {s_priv_ip}: {probe_out}")
                     # Run Apache Bench
                     #through_put = self.run_ab(cip, cuser, cpwd, s_priv_ip)
                     through_put = self.run_hey(cip, cuser, cpwd, s_priv_ip)
