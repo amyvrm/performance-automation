@@ -174,9 +174,10 @@ class PerfCommon(object):
             # If we get here after retries, provide detailed diagnostic info
             raise Exception(f"Failed to collect 20 bandwidth samples for {scenario_name}. "
                           f"Last attempt returned {len(through_put)} samples: {through_put}. "
-                          f"This typically indicates: (1) Hey.exe output parsing issue - check Hey output format, "
-                          f"(2) Missing 'Total:' or 'Total data:' line in Hey output, or (3) Network connectivity issue. "
-                          f"See detailed output above for Hey parsing diagnostics.")
+                          f"Possible causes: (1) Hey.exe timeout - server too slow or overloaded (increased timeout to 300s), "
+                          f"(2) Network connectivity issue - check if server is responding, "
+                          f"(3) Output parsing issue - missing 'Total:' or 'Total data:' lines. "
+                          f"See detailed output above with [HEY OUTPUT PARSING] sections for diagnostics.")
         elif scenario_name == "Server Upload":
             # receiver
             pid = self.run_pcattcp_rec(sip, suser, spwd, c_priv_ip, asynchronous=True)
@@ -293,6 +294,16 @@ class PerfCommon(object):
                     out = stdout.decode("utf-8")
                     print(f"\n{'=' * 50}\n[HEY OUTPUT PARSING - Iteration {index + 1}]\n{'=' * 50}")
                     print(f"DEBUG: Output length: {len(out)} bytes")
+                    
+                    # Check for timeout errors first
+                    if "context deadline exceeded" in out or "Client.Timeout" in out or "Timeout exceeded" in out:
+                        print(f"✗ TIMEOUT DETECTED in Hey output for iteration {index + 1}")
+                        print(f"✗ This means: Hey.exe exceeded its timeout waiting for server responses")
+                        print(f"✗ Suggestion: Server may be slow, overloaded, or network congestion occurring")
+                        print(f"✗ Solution: Increase Hey timeout (-t flag) or reduce concurrent connections (-c flag)")
+                        # Don't try to parse - timeout means incomplete results
+                        return False
+                    
                     time_val = None
                     size_val = None
                     
@@ -340,7 +351,7 @@ class PerfCommon(object):
                             missing.append("Total data (size)")
                         error_msg = f"✗ Failed to parse Hey output for iteration {index + 1}: Missing fields: {', '.join(missing)}"
                         print(error_msg)
-                        print(f"✗ Raw output bytes (first 500): {repr(out[:500])}")
+                        print(f"✗ Raw output (first 1000 chars): {out[:1000]}")
                 else:
                     print(f"✗ No stdout from Hey command for iteration {index + 1}")
                     if stderr:
@@ -676,7 +687,9 @@ class PerfCommon(object):
         self.clean(ip, user, pwd, pid=False)
         # Disable keep-alives to avoid persistent connection reuse and warm-up advantages
         # Also disable compression to ensure raw throughput measurements are not masked
-        cmd = f"{self.path}hey.exe -disable-keepalive -disable-compression -c 10 -n 100 http://{target_ip}/test.htm"
+        # -t 300s: 5-minute timeout to handle slow servers or network congestion
+        # This prevents premature timeouts when server is responding slowly
+        cmd = f"{self.path}hey.exe -disable-keepalive -disable-compression -t 300s -c 10 -n 100 http://{target_ip}/test.htm"
         return self.execute_cmd(cmd, ip, user, pwd, tool=tool, bandwidth=True, iteration=iteration)
     
     def run_warmup_test(self, suser, sip, spwd, s_priv_ip, cuser, cip, cpwd, c_priv_ip, scenario_name):
