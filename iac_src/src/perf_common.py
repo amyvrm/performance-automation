@@ -292,20 +292,38 @@ class PerfCommon(object):
                 if stdout:
                     out = stdout.decode("utf-8")
                     print(f"\n{'=' * 50}\n[HEY OUTPUT PARSING - Iteration {index + 1}]\n{'=' * 50}")
+                    print(f"DEBUG: Output length: {len(out)} bytes")
                     time_val = None
                     size_val = None
-                    for line in out.split("\n"):
-                        print(line)
-                        if "Total:" in line:
-                            matches = re.findall("\d+\.\d+", line)
+                    
+                    # Split by both \n and \r\n to handle different line endings
+                    lines = out.replace('\r\n', '\n').split('\n')
+                    
+                    for line_num, line in enumerate(lines, 1):
+                        print(f"[Line {line_num}] {line}")
+                        
+                        # More robust pattern matching - check for "Total:" at start of line (ignoring whitespace)
+                        line_stripped = line.strip()
+                        
+                        if line_stripped.startswith("Total:"):
+                            # Extract time value - look for first decimal number
+                            matches = re.findall(r"\d+\.\d+", line)
                             if matches:
                                 time_val = matches[0]
-                                print(f"✓ Found Total time: {time_val}s")
-                        elif "Total data:" in line:
-                            matches = re.findall("\d+", line)
+                                print(f"✓ Found Total time: {time_val}s (from: '{line_stripped}')")
+                            else:
+                                print(f"✗ 'Total:' line found but no decimal number: '{line_stripped}'")
+                        
+                        elif line_stripped.startswith("Total data:"):
+                            # Extract size value - look for integer
+                            matches = re.findall(r"\d+", line)
                             if matches:
                                 size_val = matches[0]
-                                print(f"✓ Found Total data: {size_val} bytes")
+                                print(f"✓ Found Total data: {size_val} bytes (from: '{line_stripped}')")
+                            else:
+                                print(f"✗ 'Total data:' line found but no number: '{line_stripped}'")
+                    
+                    print(f"DEBUG: After parsing - time_val={time_val}, size_val={size_val}")
                     
                     if time_val is not None and size_val is not None:
                         through_put = round(float(size_val) / float(time_val) / 1024.0, 2)
@@ -322,7 +340,7 @@ class PerfCommon(object):
                             missing.append("Total data (size)")
                         error_msg = f"✗ Failed to parse Hey output for iteration {index + 1}: Missing fields: {', '.join(missing)}"
                         print(error_msg)
-                        print(f"✗ Full output was:\n{out}")
+                        print(f"✗ Raw output bytes (first 500): {repr(out[:500])}")
                 else:
                     print(f"✗ No stdout from Hey command for iteration {index + 1}")
                     if stderr:
@@ -640,6 +658,9 @@ class PerfCommon(object):
         tool = "Powershell.exe"
         cmd = f"cd {self.path}nginx-1.19.2; start {self.path}nginx-1.19.2\\nginx.exe"
         self.execute_cmd(cmd, ip, user, pwd, tool=tool, asynchronous=True)
+        # Give Nginx brief moment to initialize before probing begins
+        print("→ Waiting 3s for Nginx process initialization...")
+        time.sleep(3)
 
     def run_ab(self, ip, user, pwd, target_ip):
         print(f"{'+' * 50}\n+ Run Apache Bench {self.ip_type[ip]}-{ip} +\n{'+' * 50}")
