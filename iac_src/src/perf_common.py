@@ -155,7 +155,7 @@ class PerfCommon(object):
                 if len(through_put) == 20:
                     return through_put
                 else:
-                    print("Exception: Attempt-{} to get the stats...Found stats=[{}]".format(retry, through_put))
+                    print(f"✗ Attempt {retry + 1}/2 failed: Expected 20 stats, got {len(through_put)}: {through_put}")
                     # Run Nginx
                     self.run_nginx(sip, suser, spwd)
                     print("Probing nginx readiness with adaptive wait...")
@@ -170,6 +170,13 @@ class PerfCommon(object):
                     print("Through put: {}".format(through_put))
                     self.clean_nginx(sip, suser, spwd)
                     #self.clean_ab(cip, cuser, cpwd)
+            
+            # If we get here after retries, provide detailed diagnostic info
+            raise Exception(f"Failed to collect 20 bandwidth samples for {scenario_name}. "
+                          f"Last attempt returned {len(through_put)} samples: {through_put}. "
+                          f"This typically indicates: (1) Hey.exe output parsing issue - check Hey output format, "
+                          f"(2) Missing 'Total:' or 'Total data:' line in Hey output, or (3) Network connectivity issue. "
+                          f"See detailed output above for Hey parsing diagnostics.")
         elif scenario_name == "Server Upload":
             # receiver
             pid = self.run_pcattcp_rec(sip, suser, spwd, c_priv_ip, asynchronous=True)
@@ -185,7 +192,7 @@ class PerfCommon(object):
                 if len(through_put) == 10:
                     return through_put
                 else:
-                    print("Exception: Attempt-{} to get the stats...Found stats=[{}]".format(retry, through_put))
+                    print(f"✗ Attempt {retry + 1}/2 failed: Expected 10 stats, got {len(through_put)}: {through_put}")
                     # receiver
                     pid = self.run_pcattcp_rec(sip, suser, spwd, c_priv_ip, asynchronous=True)
                     print("Waiting 3 min, to flow the traffic")
@@ -195,8 +202,14 @@ class PerfCommon(object):
                     print("Through put: {}".format(through_put))
                     self.clean(cip, cuser, cpwd, pid=pid)
                     self.clean(sip, suser, spwd)
-
-        raise Exception("Exception!!! Nginx access might be blocked, please check and try again")
+            
+            # If we get here after retries, provide detailed diagnostic info
+            raise Exception(f"Failed to collect 10 bandwidth samples for {scenario_name}. "
+                          f"Last attempt returned {len(through_put)} samples: {through_put}. "
+                          f"This typically indicates: (1) PCATTCP output parsing issue, (2) Network connectivity issue, "
+                          f"or (3) PCATTCP timeout. Check detailed output above for parsing diagnostics.")
+        
+        raise Exception(f"Unexpected scenario: {scenario_name}. Must be one of: Server Download, Client Download, Server Upload")
 
     def execute_cmd(self, cmd, ip, user, pwd, tool="Powershell.exe", iteration=10, bandwidth=False, asynchronous=False):
         machine = Client(ip, username=user, password=pwd, encrypt=False)
@@ -278,22 +291,46 @@ class PerfCommon(object):
             elif "hey" in cmd:
                 if stdout:
                     out = stdout.decode("utf-8")
-                    time = "time"
-                    size = "size"
+                    print(f"\n{'=' * 50}\n[HEY OUTPUT PARSING - Iteration {index + 1}]\n{'=' * 50}")
+                    time_val = None
+                    size_val = None
                     for line in out.split("\n"):
                         print(line)
                         if "Total:" in line:
-                            time = re.findall("\d+\.\d+", line)[0]
+                            matches = re.findall("\d+\.\d+", line)
+                            if matches:
+                                time_val = matches[0]
+                                print(f"✓ Found Total time: {time_val}s")
                         elif "Total data:" in line:
-                            size = re.findall("\d+", line)[0]
-                    if time != "time" and size != "size":
-                        through_put = round(float(size) / float(time) / 1024.0, 2)
-                        t_mbps = round(float(size) / float(time) / 1024.0 / 1024.0, 2)
-                        print("{0}\n+ {1}: {2} KBps, {3} MBps +\n{0}".format("+" * 50, index + 1, through_put, t_mbps))
+                            matches = re.findall("\d+", line)
+                            if matches:
+                                size_val = matches[0]
+                                print(f"✓ Found Total data: {size_val} bytes")
+                    
+                    if time_val is not None and size_val is not None:
+                        through_put = round(float(size_val) / float(time_val) / 1024.0, 2)
+                        t_mbps = round(float(size_val) / float(time_val) / 1024.0 / 1024.0, 2)
+                        print("{0}\n+ Iteration {1}: {2} KBps, {3} MBps +\n{0}".format("+" * 50, index + 1, through_put, t_mbps))
                         all_through_put.append(t_mbps)
+                        print(f"✓ Successfully extracted bandwidth for iteration {index + 1}")
                         return True
+                    else:
+                        missing = []
+                        if time_val is None:
+                            missing.append("Total (time)")
+                        if size_val is None:
+                            missing.append("Total data (size)")
+                        error_msg = f"✗ Failed to parse Hey output for iteration {index + 1}: Missing fields: {', '.join(missing)}"
+                        print(error_msg)
+                        print(f"✗ Full output was:\n{out}")
+                else:
+                    print(f"✗ No stdout from Hey command for iteration {index + 1}")
+                    if stderr:
+                        print(f"Stderr was: {stderr.decode('utf-8') if isinstance(stderr, bytes) else stderr}")
         except Exception as ex:
-            print("Exception: {}".format(ex))
+            print(f"✗ Exception in get_bandwidth for iteration {index + 1}: {ex}")
+            import traceback
+            traceback.print_exc()
             return False
         return False
 
