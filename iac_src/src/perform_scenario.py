@@ -292,10 +292,13 @@ class PerformanceScenario(PerfCommon):
                     'adaptor_name': adaptor
                 }]
                 self.disable_filters_parallel(machines_to_disable)
-                # Wait for filter driver state to settle (increased to 45s for full network stack propagation)
-                time.sleep(45)
+                # Wait for filter driver state to settle (increased to 20s for full network stack propagation)
+                import time
+                time.sleep(20)
                 print("{0}\n{2}-{1} Agent: Disabled from DSM\n{2}-{1} Filter: Disabled from network driver\n{0}".format(self.header, ip, self.ip_type[ip]))
-                print("✓ Network stack stabilized after 45s cooldown")
+                # Additional settling time before measurement to clear residual effects
+                print("→ Waiting 10s for network stack to fully stabilize before measurement...")
+                time.sleep(10)
             elif action == "filter":
                 dsm.clean_rules_from_dsm()
                 # Activate Server Agent
@@ -308,10 +311,13 @@ class PerformanceScenario(PerfCommon):
                     'adaptor_name': adaptor
                 }]
                 self.enable_filters_parallel(machines_to_enable)
-                # Wait for filter driver state to settle (increased to 45s for full network stack propagation)
-                time.sleep(45)
+                # Wait for filter driver state to settle (increased to 20s for full network stack propagation)
+                import time
+                time.sleep(20)
                 print("{0}\n{2}-{1} Agent: Enabled from DSM\n{2}-{1} Filter: Enabled from Network Driver\n{0}".format(self.header, ip, self.ip_type[ip]))
-                print("✓ Network stack stabilized after 45s cooldown")
+                # Additional settling time before measurement to clear residual effects
+                print("→ Waiting 10s for network stack to fully stabilize before measurement...")
+                time.sleep(10)
             elif action == "rule":
                 dsm.connect()
                 identifier = dsm.apply_rule(scenario_name, rule_list=grule_list)
@@ -325,10 +331,8 @@ class PerformanceScenario(PerfCommon):
             print("{0}{0}\n- {1} iteration stats {2} MBps\n- Average Bandwidth: {3} MBps\n{0}{0}\n".format(self.header, len(iter_stats), iter_stats, avg))
             return all_stats, iter_stats, avg
         except Exception as e:
-            error_msg = f"Error in apply_rule_get_stats ({scenario_name}/{action}): {e}"
-            print(error_msg)
-            # Bubble up so callers don't try to append into None results
-            raise RuntimeError(error_msg)
+            print(f"Error in apply_rule_get_stats: {e}")
+            return None, None, None
 
     def jfrog_upload(self, jfrog_base_url, auth):
         try:

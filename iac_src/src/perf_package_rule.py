@@ -2,7 +2,6 @@ from perform_scenario import PerformanceScenario
 from perf_common import PerfCommon
 from dsm_operation import DsmPolicy
 import pandas as pd
-import time
 
 class PerfPackageRule(PerfCommon, DsmPolicy):
     def __init__(self, dsm, scenario, path_json, grule, identifiers, suser, sip, spwd, s_priv_ip, cuser, cip, cpwd, c_priv_ip, summary, stats, graph, s_adap_name, c_adap_name, title, ip_type, path, best_iteration):
@@ -99,63 +98,24 @@ class PerfPackageRule(PerfCommon, DsmPolicy):
         print(f"{self.header}\n→ Running lightweight warm-up (3 iterations) to eliminate cold-start effects...\n{self.header}")
         warmup_stats = PerformanceScenario.run_warmup_test(self, self.suser, self.sip, self.spwd, self.s_priv_ip, self.cuser, self.cip, self.cpwd, self.c_priv_ip, scenario_name)
         
-        # Randomize test order to eliminate sequential bias
-        import random
-        run_without_filter_first = random.choice([True, False])
-        print(f"→ Randomized test order: {'Without FD → With FD' if run_without_filter_first else 'With FD → Without FD'}")
-        
-        if run_without_filter_first:
-            # Without Filter Driver (run FIRST)
+        if scenario_name == "Client Download":
+            # Run Without Filter first (baseline on warm system), then With Filter to show overhead
             print("{0}{0}\n# Without Filter Driver #\n{0}{0}".format(self.header))
             wo_filter_all_stats, wo_filter_stats, wof_avg = PerformanceScenario.apply_rule_get_stats(self, self.suser, self.sip, self.spwd, self.s_priv_ip, self.cuser, self.cip, self.cpwd, self.c_priv_ip, False, scenario_name, self.s_adap_name, self.c_adap_name, action="wo_filter", dsm=self.dsm)
             print("- Without Filter Driver Average Stats: {} MBps\n".format(wof_avg))
-            
-            # For download scenarios, clear nginx cache to prevent server-side cache bias
-            if "Download" in scenario_name:
-                print("→ Stopping nginx to eliminate all server-side state (cache, TCP connections, buffers)...")
-                PerformanceScenario.clean_nginx(self, self.sip, self.suser, self.spwd)
-            
-            # Extended cooldown period to fully reset network stack (TCP state, CPU scaling, caches)
-            print("→ Waiting 90s cooldown to fully reset network stack state (TCP connections, routing cache, CPU frequency)...")
-            time.sleep(90)
-            
-            # For download scenarios, start fresh nginx instance
-            if "Download" in scenario_name:
-                print("→ Starting fresh nginx instance for second test...")
-                PerformanceScenario.run_nginx(self, self.sip, self.suser, self.spwd)
-                print("→ Waiting for nginx to fully initialize...")
-                time.sleep(10)
 
-            # With Filter Driver
-            print("{0}{0}\n# With Filter Driver #\n{0}{0}".format(self.header))
-            w_filter_all_stats, w_filter_stats, wf_avg = PerformanceScenario.apply_rule_get_stats(self, self.suser, self.sip, self.spwd, self.s_priv_ip, self.cuser, self.cip, self.cpwd, self.c_priv_ip, False, scenario_name, self.s_adap_name, self.c_adap_name, action="filter", dsm=self.dsm)
-            print("- With Filter Driver Average Stats: {} MBps\n".format(wof_avg))
-        else:
-            # With Filter Driver (run FIRST)
             print("{0}{0}\n# With Filter Driver #\n{0}{0}".format(self.header))
             w_filter_all_stats, w_filter_stats, wf_avg = PerformanceScenario.apply_rule_get_stats(self, self.suser, self.sip, self.spwd, self.s_priv_ip, self.cuser, self.cip, self.cpwd, self.c_priv_ip, False, scenario_name, self.s_adap_name, self.c_adap_name, action="filter", dsm=self.dsm)
             print("- With Filter Driver Average Stats: {} MBps\n".format(wf_avg))
-            
-            # For download scenarios, clear nginx cache to prevent server-side cache bias
-            if "Download" in scenario_name:
-                print("→ Stopping nginx to eliminate all server-side state (cache, TCP connections, buffers)...")
-                PerformanceScenario.clean_nginx(self, self.sip, self.suser, self.spwd)
-            
-            # Extended cooldown period to fully reset network stack (TCP state, CPU scaling, caches)
-            print("→ Waiting 90s cooldown to fully reset network stack state (TCP connections, routing cache, CPU frequency)...")
-            time.sleep(90)
-            
-            # For download scenarios, start fresh nginx instance
-            if "Download" in scenario_name:
-                print("→ Starting fresh nginx instance for second test...")
-                PerformanceScenario.run_nginx(self, self.sip, self.suser, self.spwd)
-                print("→ Waiting for nginx to fully initialize...")
-                time.sleep(10)
-
-            # Without Filter Driver
+        else:
+            # For Server Upload: run Without Filter first (baseline on warm system), then With Filter to show overhead
             print("{0}{0}\n# Without Filter Driver #\n{0}{0}".format(self.header))
             wo_filter_all_stats, wo_filter_stats, wof_avg = PerformanceScenario.apply_rule_get_stats(self, self.suser, self.sip, self.spwd, self.s_priv_ip, self.cuser, self.cip, self.cpwd, self.c_priv_ip, False, scenario_name, self.s_adap_name, self.c_adap_name, action="wo_filter", dsm=self.dsm)
             print("- Without Filter Driver Average Stats: {} MBps\n".format(wof_avg))
+
+            print("{0}{0}\n# With Filter Driver #\n{0}{0}".format(self.header))
+            w_filter_all_stats, w_filter_stats, wf_avg = PerformanceScenario.apply_rule_get_stats(self, self.suser, self.sip, self.spwd, self.s_priv_ip, self.cuser, self.cip, self.cpwd, self.c_priv_ip, False, scenario_name, self.s_adap_name, self.c_adap_name, action="filter", dsm=self.dsm)
+            print("- With Filter Driver Average Stats: {} MBps\n".format(wf_avg))
 
         print("{0}{0}\n# Threshold Rule with Dependency #\n{0}{0}".format(self.header))
         rulelist_stats, iter_rulelist, rulelist_avg = PerformanceScenario.apply_rule_get_stats(self, self.suser, self.sip, self.spwd, self.s_priv_ip, self.cuser, self.cip, self.cpwd, self.c_priv_ip, grule_list, scenario_name, self.s_adap_name, self.c_adap_name, action="rule", dsm=self.dsm)
@@ -183,80 +143,15 @@ class PerfPackageRule(PerfCommon, DsmPolicy):
         print(f"{self.header}\n→ Running lightweight warm-up (3 iterations) to eliminate cold-start effects...\n{self.header}")
         warmup_stats = PerformanceScenario.run_warmup_test(self, self.suser, self.sip, self.spwd, self.s_priv_ip, self.cuser, self.cip, self.cpwd, self.c_priv_ip, scenario_name)
         
-        # Randomize test order to eliminate sequential bias
-        import random
-        run_without_filter_first = random.choice([True, False])
-        print(f"→ Randomized test order: {'Without FD → With FD' if run_without_filter_first else 'With FD → Without FD'}")
-        
-        if run_without_filter_first:
-            # Without Filter Driver (run FIRST)
-            print("{0}{0}\n# Without Filter Driver #\n{0}{0}".format(self.header))
-            wo_filter_all_stats, wo_filter_stats, wof_avg = PerformanceScenario.apply_rule_get_stats(self, self.suser, self.sip, self.spwd, self.s_priv_ip, self.cuser, self.cip, self.cpwd, self.c_priv_ip, False, scenario_name, self.s_adap_name, self.c_adap_name, action="wo_filter", dsm=self.dsm)
-            print("- Without Filter Driver Average Stats: {} MBps\n".format(wof_avg))
-            
-            # For download scenarios, clear nginx cache to prevent server-side cache bias
-            if "Download" in scenario_name:
-                print("→ Stopping nginx to eliminate all server-side state (cache, TCP connections, buffers)...")
-                PerformanceScenario.clean_nginx(self, self.sip, self.suser, self.spwd)
-            
-            # Extended cooldown period to fully reset network stack (TCP state, CPU scaling, caches)
-            print("→ Waiting 90s cooldown to fully reset network stack state (TCP connections, routing cache, CPU frequency)...")
-            time.sleep(90)
-            
-            # For download scenarios, start fresh nginx instance
-            if "Download" in scenario_name:
-                print("→ Starting fresh nginx instance for second test...")
-                PerformanceScenario.run_nginx(self, self.sip, self.suser, self.spwd)
-                print("→ Waiting for nginx to fully initialize...")
-                time.sleep(10)
+        # Without Filter Driver (run FIRST for Server Download to avoid warm-up bias)
+        print("{0}{0}\n# Without Filter Driver #\n{0}{0}".format(self.header))
+        wo_filter_all_stats, wo_filter_stats, wof_avg = PerformanceScenario.apply_rule_get_stats(self, self.suser, self.sip, self.spwd, self.s_priv_ip, self.cuser, self.cip, self.cpwd, self.c_priv_ip, False, scenario_name, self.s_adap_name, self.c_adap_name, action="wo_filter", dsm=self.dsm)
+        print("- Without Filter Driver Average Stats: {} MBps\n".format(wof_avg))
 
-            # With Filter Driver
-            print("{0}{0}\n# With Filter Driver #\n{0}{0}".format(self.header))
-            w_filter_all_stats, w_filter_stats, wf_avg = PerformanceScenario.apply_rule_get_stats(self, self.suser, self.sip, self.spwd, self.s_priv_ip, self.cuser, self.cip, self.cpwd, self.c_priv_ip, False, scenario_name, self.s_adap_name, self.c_adap_name, action="filter", dsm=self.dsm)
-            print("- With Filter Driver Average Stats: {} MBps\n".format(wf_avg))
-        else:
-            # With Filter Driver (run FIRST)
-            print("{0}{0}\n# With Filter Driver #\n{0}{0}".format(self.header))
-            w_filter_all_stats, w_filter_stats, wf_avg = PerformanceScenario.apply_rule_get_stats(self, self.suser, self.sip, self.spwd, self.s_priv_ip, self.cuser, self.cip, self.cpwd, self.c_priv_ip, False, scenario_name, self.s_adap_name, self.c_adap_name, action="filter", dsm=self.dsm)
-            print("- With Filter Driver Average Stats: {} MBps\n".format(wf_avg))
-            
-            # For download scenarios, clear nginx cache to prevent server-side cache bias
-            if "Download" in scenario_name:
-                print("→ Stopping nginx to eliminate all server-side state (cache, TCP connections, buffers)...")
-                PerformanceScenario.clean_nginx(self, self.sip, self.suser, self.spwd)
-            
-            # Extended cooldown period to fully reset network stack (TCP state, CPU scaling, caches)
-            print("→ Waiting 90s cooldown to fully reset network stack state (TCP connections, routing cache, CPU frequency)...")
-            time.sleep(90)
-            
-            # For download scenarios, start fresh nginx instance
-            if "Download" in scenario_name:
-                print("→ Starting fresh nginx instance for second test...")
-                PerformanceScenario.run_nginx(self, self.sip, self.suser, self.spwd)
-                print("→ Waiting for nginx to fully initialize...")
-                time.sleep(10)
-
-            # Without Filter Driver
-            # For download scenarios, stop nginx to eliminate all server-side state
-            if "Download" in scenario_name:
-                print("→ Stopping nginx to eliminate all server-side state (cache, TCP connections, buffers)...")
-                PerformanceScenario.clean_nginx(self, self.sip, self.suser, self.spwd)
-            
-            # Extended cooldown period to fully reset network stack (TCP state, CPU scaling, caches)
-            print("→ Waiting 90s cooldown to fully reset network stack state (TCP connections, routing cache, CPU frequency)...")
-            time.sleep(90)
-            
-            # For download scenarios, start fresh nginx instance
-            if "Download" in scenario_name:
-                print("→ Starting fresh nginx instance for second test...")
-                PerformanceScenario.run_nginx(self, self.sip, self.suser, self.spwd)
-                print("→ Waiting for nginx to fully initialize...")
-                time.sleep(10)
-
-            # Without Filter Driver
-            print("{0}{0}\n# Without Filter Driver #\n{0}{0}".format(self.header))
-            wo_filter_all_stats, wo_filter_stats, wof_avg = PerformanceScenario.apply_rule_get_stats(self, self.suser, self.sip, self.spwd, self.s_priv_ip, self.cuser, self.cip, self.cpwd, self.c_priv_ip, False, scenario_name, self.s_adap_name, self.c_adap_name, action="wo_filter", dsm=self.dsm)
-            print("- Without Filter Driver Average Stats: {} MBps\n".format(wof_avg))
+        # With Filter Driver
+        print("{0}{0}\n# With Filter Driver #\n{0}{0}".format(self.header))
+        w_filter_all_stats, w_filter_stats, wf_avg = PerformanceScenario.apply_rule_get_stats(self, self.suser, self.sip, self.spwd, self.s_priv_ip, self.cuser, self.cip, self.cpwd, self.c_priv_ip, False, scenario_name, self.s_adap_name, self.c_adap_name, action="filter", dsm=self.dsm)
+        print("- With Filter Driver Average Stats: {} MBps\n".format(wf_avg))
         
         # Best Case Rule (run after filter tests)
         print("{0}{0}\n# Threshold Rule with Dependency #\n{0}{0}".format(self.header))

@@ -116,21 +116,6 @@ class PerfCommon(object):
                       "</head>\n<body>\n"
         return html_header
 
-    def probe_http(self, ip, user, pwd, target_ip):
-        # Lightweight HTTP probe to verify nginx reachability before running throughput tools
-        tool = "Powershell.exe"
-        ps = (
-            f"$resp = Invoke-WebRequest -Uri http://{target_ip}/test.htm -UseBasicParsing -TimeoutSec 15 -ErrorAction Stop; "
-            "Write-Output ('Status:' + $resp.StatusCode + ' Length:' + $resp.Content.Length)"
-        )
-        try:
-            out = self.execute_cmd(ps, ip, user, pwd, tool=tool)
-            print(f"HTTP probe from {ip} → {target_ip}: {out}")
-            return out
-        except Exception as ex:
-            print(f"HTTP probe failed from {ip} → {target_ip}: {ex}")
-            return None
-
     def run_band_test(self, suser, sip, spwd, s_priv_ip, cuser, cip, cpwd, c_priv_ip, scenario_name):
         print("c_priv_ip: {}".format(c_priv_ip))
         print("s_priv_ip: {}".format(s_priv_ip))
@@ -140,10 +125,6 @@ class PerfCommon(object):
             print("Probing nginx readiness with adaptive wait...")
             probe_result = wait_for_nginx_ready(s_priv_ip)
             print(f"Nginx readiness probe: attempts={probe_result['attempts']}, avg_latency_ms={probe_result['avg_latency_ms']:.2f}, avg_ttfb_ms={probe_result['avg_ttfb_ms']:.2f}")
-            # Extra HTTP probe for clearer diagnostics
-            probe_out = self.probe_http(cip, cuser, cpwd, s_priv_ip)
-            if not probe_out or not str(probe_out).startswith("Status:200"):
-                raise Exception(f"HTTP probe failed from client {cip} to server {s_priv_ip}: {probe_out}")
             # Run Apache Bench
             #through_put = self.run_ab(cip, cuser, cpwd, s_priv_ip)
             through_put = self.run_hey(cip, cuser, cpwd, s_priv_ip)
@@ -155,29 +136,18 @@ class PerfCommon(object):
                 if len(through_put) == 20:
                     return through_put
                 else:
-                    print(f"✗ Attempt {retry + 1}/2 failed: Expected 20 stats, got {len(through_put)}: {through_put}")
+                    print("Exception: Attempt-{} to get the stats...Found stats=[{}]".format(retry, through_put))
                     # Run Nginx
                     self.run_nginx(sip, suser, spwd)
                     print("Probing nginx readiness with adaptive wait...")
                     probe_result = wait_for_nginx_ready(s_priv_ip)
                     print(f"Nginx readiness probe: attempts={probe_result['attempts']}, avg_latency_ms={probe_result['avg_latency_ms']:.2f}, avg_ttfb_ms={probe_result['avg_ttfb_ms']:.2f}")
-                    probe_out = self.probe_http(cip, cuser, cpwd, s_priv_ip)
-                    if not probe_out or not str(probe_out).startswith("Status:200"):
-                        raise Exception(f"HTTP probe failed from client {cip} to server {s_priv_ip}: {probe_out}")
                     # Run Apache Bench
                     #through_put = self.run_ab(cip, cuser, cpwd, s_priv_ip)
                     through_put = self.run_hey(cip, cuser, cpwd, s_priv_ip)
                     print("Through put: {}".format(through_put))
                     self.clean_nginx(sip, suser, spwd)
                     #self.clean_ab(cip, cuser, cpwd)
-            
-            # If we get here after retries, provide detailed diagnostic info
-            raise Exception(f"Failed to collect 20 bandwidth samples for {scenario_name}. "
-                          f"Last attempt returned {len(through_put)} samples: {through_put}. "
-                          f"Possible causes: (1) Hey.exe timeout - server too slow or overloaded (increased timeout to 300s), "
-                          f"(2) Network connectivity issue - check if server is responding, "
-                          f"(3) Output parsing issue - missing 'Total:' or 'Total data:' lines. "
-                          f"See detailed output above with [HEY OUTPUT PARSING] sections for diagnostics.")
         elif scenario_name == "Server Upload":
             # receiver
             pid = self.run_pcattcp_rec(sip, suser, spwd, c_priv_ip, asynchronous=True)
@@ -193,7 +163,7 @@ class PerfCommon(object):
                 if len(through_put) == 10:
                     return through_put
                 else:
-                    print(f"✗ Attempt {retry + 1}/2 failed: Expected 10 stats, got {len(through_put)}: {through_put}")
+                    print("Exception: Attempt-{} to get the stats...Found stats=[{}]".format(retry, through_put))
                     # receiver
                     pid = self.run_pcattcp_rec(sip, suser, spwd, c_priv_ip, asynchronous=True)
                     print("Waiting 3 min, to flow the traffic")
@@ -203,14 +173,8 @@ class PerfCommon(object):
                     print("Through put: {}".format(through_put))
                     self.clean(cip, cuser, cpwd, pid=pid)
                     self.clean(sip, suser, spwd)
-            
-            # If we get here after retries, provide detailed diagnostic info
-            raise Exception(f"Failed to collect 10 bandwidth samples for {scenario_name}. "
-                          f"Last attempt returned {len(through_put)} samples: {through_put}. "
-                          f"This typically indicates: (1) PCATTCP output parsing issue, (2) Network connectivity issue, "
-                          f"or (3) PCATTCP timeout. Check detailed output above for parsing diagnostics.")
-        
-        raise Exception(f"Unexpected scenario: {scenario_name}. Must be one of: Server Download, Client Download, Server Upload")
+
+        raise Exception("Exception!!! Nginx access might be blocked, please check and try again")
 
     def execute_cmd(self, cmd, ip, user, pwd, tool="Powershell.exe", iteration=10, bandwidth=False, asynchronous=False):
         machine = Client(ip, username=user, password=pwd, encrypt=False)
@@ -290,88 +254,24 @@ class PerfCommon(object):
                             all_through_put.append(t_mbps)
                             return True
             elif "hey" in cmd:
-                # DEBUG: Log raw stdout/stderr to diagnose empty/missing output
-                print(f"\n{'~' * 60}\n[RAW HEY.EXE OUTPUT - Iteration {index + 1}]\n{'~' * 60}")
-                print(f"STDOUT present: {stdout is not None}, Length: {len(stdout) if stdout else 0} bytes")
-                print(f"STDERR present: {stderr is not None}, Length: {len(stderr) if stderr else 0} bytes")
-                if stderr and len(stderr) > 0:
-                    print(f"STDERR content:\n{stderr.decode('utf-8', errors='replace')}")
-                if not stdout or len(stdout) == 0:
-                    print("✗ CRITICAL: Hey.exe produced NO STDOUT - command may have failed silently")
-                    print("✗ This indicates: (1) Hey.exe didn't run, (2) Crashed without output, or (3) Network completely blocked")
-                    return False
-                print(f"{'~' * 60}\n")
-                
                 if stdout:
                     out = stdout.decode("utf-8")
-                    print(f"\n{'=' * 50}\n[HEY OUTPUT PARSING - Iteration {index + 1}]\n{'=' * 50}")
-                    print(f"DEBUG: Output length: {len(out)} bytes")
-                    
-                    # Check for timeout errors first
-                    if "context deadline exceeded" in out or "Client.Timeout" in out or "Timeout exceeded" in out:
-                        print(f"✗ TIMEOUT DETECTED in Hey output for iteration {index + 1}")
-                        print(f"✗ This means: Hey.exe exceeded its timeout waiting for server responses")
-                        print(f"✗ Suggestion: Server may be slow, overloaded, or network congestion occurring")
-                        print(f"✗ Solution: Increase Hey timeout (-t flag) or reduce concurrent connections (-c flag)")
-                        # Don't try to parse - timeout means incomplete results
-                        return False
-                    
-                    time_val = None
-                    size_val = None
-                    
-                    # Split by both \n and \r\n to handle different line endings
-                    lines = out.replace('\r\n', '\n').split('\n')
-                    
-                    for line_num, line in enumerate(lines, 1):
-                        print(f"[Line {line_num}] {line}")
-                        
-                        # More robust pattern matching - check for "Total:" at start of line (ignoring whitespace)
-                        line_stripped = line.strip()
-                        
-                        if line_stripped.startswith("Total:"):
-                            # Extract time value - look for first decimal number
-                            matches = re.findall(r"\d+\.\d+", line)
-                            if matches:
-                                time_val = matches[0]
-                                print(f"✓ Found Total time: {time_val}s (from: '{line_stripped}')")
-                            else:
-                                print(f"✗ 'Total:' line found but no decimal number: '{line_stripped}'")
-                        
-                        elif line_stripped.startswith("Total data:"):
-                            # Extract size value - look for integer
-                            matches = re.findall(r"\d+", line)
-                            if matches:
-                                size_val = matches[0]
-                                print(f"✓ Found Total data: {size_val} bytes (from: '{line_stripped}')")
-                            else:
-                                print(f"✗ 'Total data:' line found but no number: '{line_stripped}'")
-                    
-                    print(f"DEBUG: After parsing - time_val={time_val}, size_val={size_val}")
-                    
-                    if time_val is not None and size_val is not None:
-                        through_put = round(float(size_val) / float(time_val) / 1024.0, 2)
-                        t_mbps = round(float(size_val) / float(time_val) / 1024.0 / 1024.0, 2)
-                        print("{0}\n+ Iteration {1}: {2} KBps, {3} MBps +\n{0}".format("+" * 50, index + 1, through_put, t_mbps))
+                    time = "time"
+                    size = "size"
+                    for line in out.split("\n"):
+                        print(line)
+                        if "Total:" in line:
+                            time = re.findall("\d+\.\d+", line)[0]
+                        elif "Total data:" in line:
+                            size = re.findall("\d+", line)[0]
+                    if time != "time" and size != "size":
+                        through_put = round(float(size) / float(time) / 1024.0, 2)
+                        t_mbps = round(float(size) / float(time) / 1024.0 / 1024.0, 2)
+                        print("{0}\n+ {1}: {2} KBps, {3} MBps +\n{0}".format("+" * 50, index + 1, through_put, t_mbps))
                         all_through_put.append(t_mbps)
-                        print(f"✓ Successfully extracted bandwidth for iteration {index + 1}")
                         return True
-                    else:
-                        missing = []
-                        if time_val is None:
-                            missing.append("Total (time)")
-                        if size_val is None:
-                            missing.append("Total data (size)")
-                        error_msg = f"✗ Failed to parse Hey output for iteration {index + 1}: Missing fields: {', '.join(missing)}"
-                        print(error_msg)
-                        print(f"✗ Raw output (first 1000 chars): {out[:1000]}")
-                else:
-                    print(f"✗ No stdout from Hey command for iteration {index + 1}")
-                    if stderr:
-                        print(f"Stderr was: {stderr.decode('utf-8') if isinstance(stderr, bytes) else stderr}")
         except Exception as ex:
-            print(f"✗ Exception in get_bandwidth for iteration {index + 1}: {ex}")
-            import traceback
-            traceback.print_exc()
+            print("Exception: {}".format(ex))
             return False
         return False
 
@@ -681,9 +581,6 @@ class PerfCommon(object):
         tool = "Powershell.exe"
         cmd = f"cd {self.path}nginx-1.19.2; start {self.path}nginx-1.19.2\\nginx.exe"
         self.execute_cmd(cmd, ip, user, pwd, tool=tool, asynchronous=True)
-        # Give Nginx brief moment to initialize before probing begins
-        print("→ Waiting 3s for Nginx process initialization...")
-        time.sleep(3)
 
     def run_ab(self, ip, user, pwd, target_ip):
         print(f"{'+' * 50}\n+ Run Apache Bench {self.ip_type[ip]}-{ip} +\n{'+' * 50}")
@@ -697,11 +594,7 @@ class PerfCommon(object):
         tool = "Powershell.exe"
         # Clean up any existing Hey.exe processes
         self.clean(ip, user, pwd, pid=False)
-        # Disable keep-alives to avoid persistent connection reuse and warm-up advantages
-        # Also disable compression to ensure raw throughput measurements are not masked
-        # -t 300s: 5-minute timeout to handle slow servers or network congestion
-        # This prevents premature timeouts when server is responding slowly
-        cmd = f"{self.path}hey.exe -disable-keepalive -disable-compression -t 300s -c 10 -n 100 http://{target_ip}/test.htm"
+        cmd = f"{self.path}hey.exe -c 10 -n 100 http://{target_ip}/test.htm"
         return self.execute_cmd(cmd, ip, user, pwd, tool=tool, bandwidth=True, iteration=iteration)
     
     def run_warmup_test(self, suser, sip, spwd, s_priv_ip, cuser, cip, cpwd, c_priv_ip, scenario_name):
