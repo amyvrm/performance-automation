@@ -290,6 +290,18 @@ class PerfCommon(object):
                             all_through_put.append(t_mbps)
                             return True
             elif "hey" in cmd:
+                # DEBUG: Log raw stdout/stderr to diagnose empty/missing output
+                print(f"\n{'~' * 60}\n[RAW HEY.EXE OUTPUT - Iteration {index + 1}]\n{'~' * 60}")
+                print(f"STDOUT present: {stdout is not None}, Length: {len(stdout) if stdout else 0} bytes")
+                print(f"STDERR present: {stderr is not None}, Length: {len(stderr) if stderr else 0} bytes")
+                if stderr and len(stderr) > 0:
+                    print(f"STDERR content:\n{stderr.decode('utf-8', errors='replace')}")
+                if not stdout or len(stdout) == 0:
+                    print("✗ CRITICAL: Hey.exe produced NO STDOUT - command may have failed silently")
+                    print("✗ This indicates: (1) Hey.exe didn't run, (2) Crashed without output, or (3) Network completely blocked")
+                    return False
+                print(f"{'~' * 60}\n")
+                
                 if stdout:
                     out = stdout.decode("utf-8")
                     print(f"\n{'=' * 50}\n[HEY OUTPUT PARSING - Iteration {index + 1}]\n{'=' * 50}")
