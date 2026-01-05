@@ -169,7 +169,7 @@ node('aws&&docker') {
                 echo "Finally Infra deployment successful. Proceeding to check performance test results."
                 perfjobStatus = perf_test.getResult().toString()
                 echo "Finally Performance Test job status: ${perfjobStatus}"
-                if (perfjobStatus != 'SUCCESS') {
+                if (perfjobStatus == 'SUCCESS') {
                     if (!pipelineShouldExit) {
                         stage('Collect Automation Machine Tear Down infrastructure') {
                             sleep(time: 15, unit: "SECONDS")
@@ -216,6 +216,20 @@ node('aws&&docker') {
                         def existing_ids = all_ids.split(',').collect { it.trim() }.findAll { it }
                         all_ids = (existing_ids + new_ids).unique().join(', ')
                         echo "All IDs: ${all_ids}"
+                    }
+
+                    stage('Tear Down infrastructure') {
+                        if ("${debug}" == 'false') {
+                            echo "Debug disabled. Destroying Infrastructure...."
+                            build job: 'Performance-Scenario-teardown',
+                                parameters: [
+                                    string(name: 'AWS_RESOURCES', value: all_ids),
+                                    string(name: 'INFRASTRUCTURE_BRANCH', value: infra_branch)
+                                ]
+                        } else {
+                            echo "Debug enabled. Infrastructure Preserved."
+                        }
+                        jsonText = null
                     }
 
                     stage('Tear Down infrastructure') {

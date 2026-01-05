@@ -34,11 +34,19 @@ def retry_with_backoff(func, max_attempts=5, base_delay=2, max_delay=60, excepti
         raise last_exception
     raise RuntimeError("Retry loop exited unexpectedly without success or exception")
 
-def probe_endpoint_readiness(url, max_attempts=30, timeout=5, expected_status=200, check_content=None):
+def probe_endpoint_readiness(url, max_attempts=30, timeout=5, expected_status=200, check_content=None, initial_wait=2):
     """
     Probe HTTP endpoint until ready with latency tracking.
     Returns dict with readiness info and latency metrics.
+    
+    Args:
+        initial_wait: Wait this many seconds before first probe (allows server startup)
     """
+    # Initial wait for server startup
+    if initial_wait > 0:
+        print(f"→ Waiting {initial_wait}s for server startup before first probe...")
+        time.sleep(initial_wait)
+    
     latencies = []
     first_byte_times = []
     for attempt in range(max_attempts):
@@ -60,12 +68,17 @@ def probe_endpoint_readiness(url, max_attempts=30, timeout=5, expected_status=20
                     'avg_ttfb_ms': round(sum(first_byte_times) / len(first_byte_times) * 1000, 2),
                     'last_status': resp.status_code
                 }
-            delay = min(2 * (2 ** attempt), 15)
+            delay = min(3 * (2 ** attempt), 20)  # Increased base multiplier and max delay
+            print(f"→ Probe succeeded (status {resp.status_code}) but content check failed. Waiting {delay}s before retry...")
             time.sleep(delay)
         except Exception as e:
-            print(f"Probe attempt {attempt + 1} failed: {e}")
-            delay = min(2 * (2 ** attempt), 15)
-            time.sleep(delay)
+            print(f"✗ Probe attempt {attempt + 1} failed: {e}")
+            # Increase delay for failed probes to give server more time
+            delay = min(4 * (2 ** attempt), 25)
+            if attempt < max_attempts - 1:
+                print(f"→ Waiting {delay}s before next probe...")
+                time.sleep(delay)
+    
     return {
         'ready': False,
         'attempts': max_attempts,
