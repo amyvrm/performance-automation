@@ -32,8 +32,14 @@ class PerfIndividualRule(PerfCommon, DsmPolicy):
     def perf_rule(self):
         print(f"### Perf Rule Individual perf_rule### {self.identifiers}")
         print("Identifiers: {}".format(self.identifiers))
-        self.identifiers = [self.identifiers]
-        grule_list, server_rules, client_rules = PerfCommon.get_dependency_portlist(self, self.path_json, self.grule, self.identifiers)
+        # For individual rule testing, wrap single identifier in a list
+        # But preserve all identifiers for dependency analysis to ensure Server Upload uses all rules
+        all_identifiers_for_dependency = [self.identifiers] if not isinstance(self.identifiers, list) else self.identifiers
+        self.identifiers = [self.identifiers] if not isinstance(self.identifiers, list) else self.identifiers
+        
+        # Get full dependency info using all available identifiers from the update package
+        # This ensures Server Upload scenario sees all the same rules as Server Download
+        grule_list, server_rules, client_rules = PerfCommon.get_dependency_portlist(self, self.path_json, self.grule, all_identifiers_for_dependency)
         print(f"grule_list Individual: {grule_list} | server_rules Individual: {server_rules} | client_rules Individual: {client_rules}")
         #self.dsm.upload_basic_policy(change_policy=True)
         print(f"grule_list Individual: {grule_list} | server_rules Individual: {server_rules}")
