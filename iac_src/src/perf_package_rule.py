@@ -32,7 +32,11 @@ class PerfPackageRule(PerfCommon, DsmPolicy):
         print(f"### Perf Rule Package perf_rule### {self.identifiers}")
         print("Identifiers: {}".format(self.identifiers))
         #self.identifiers = [self.identifiers]
-        grule_list, server_rules, client_rules = PerfCommon.get_dependency_portlist(self, self.path_json, self.grule, self.identifiers)
+        # Ensure identifiers is a list for consistent processing
+        # get_dependency_portlist will use all identifiers to extract complete server_rules and client_rules
+        # This ensures Server Upload and Server Download scenarios use the same comprehensive rule set
+        all_identifiers = self.identifiers if isinstance(self.identifiers, list) else [self.identifiers]
+        grule_list, server_rules, client_rules = PerfCommon.get_dependency_portlist(self, self.path_json, self.grule, all_identifiers)
         print(f"grule_list Package: {grule_list} | server_rules Package: {server_rules} | client_rules Package: {client_rules}")
         #self.dsm.upload_basic_policy(change_policy=True)
         print(f"grule_list Package: {grule_list} | server_rules: {server_rules}")
