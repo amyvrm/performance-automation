@@ -182,6 +182,7 @@ class PerfPackageRule(PerfCommon, DsmPolicy):
         self.create_report(scenario_name, wo_filter_stats, w_filter_stats, iter_rulelist, iter_rule, rulelist_avg, rule_avg, server_rules, client_rules, wof_avg, wf_avg)
 
     def create_report(self, scenario_name, wo_filter_stats, w_filter_stats, iter_rulelist, iter_rule, rulelist_avg, rule_avg, server_rules, client_rules, wof_avg, wf_avg):
+        print(f"### Perf Rule Package create_report### {self.identifiers}")
         self.col = ['Without Filter Driver', 'With Filter Driver + No Rule', 'Best Case Rule']
         if scenario_name in ["Server Upload", "Server Download"]:
             self.col.append('Server Rules (No. of Rules: {} Ids: {})'.format(len(server_rules), server_rules))

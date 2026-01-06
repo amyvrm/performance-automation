@@ -218,8 +218,13 @@ class PerformanceScenario(PerfCommon):
                     print(f"Dynamically extracted identifiers: {identifiers}")
                     # Submit perfRules as a separate task
                     with ThreadPoolExecutor(max_workers=len(all_instance_server)) as executor:
-                        if individual_rule_test == "False":
-                            print("Running PerfPackageRule task")
+                        # Handle both boolean False and string "False"/"false"
+                        run_individual_tests = individual_rule_test not in [False, "False", "false", "0", 0]
+                        print(f"individual_rule_test value: {individual_rule_test} (type: {type(individual_rule_test)})")
+                        print(f"run_individual_tests: {run_individual_tests}")
+                        
+                        if not run_individual_tests:
+                            print("Running PerfPackageRule task only (individual_rule_test is False)")
                             executor.submit(PerfPackageRule, dsm[0], scenario, path_json, grule, identifiers, suser, _sip[0], _spwd[0], _s_priv_ip[0],
                                     cuser, _cip[0], _cpwd[0], _c_priv_ip[0], summary, stats, graph,
                                     self._s_adap_name[0], self._c_adap_name[0], self.title, self.ip_type[0],
