@@ -2,6 +2,7 @@ from perform_scenario import PerformanceScenario
 from perf_common import PerfCommon
 from dsm_operation import DsmPolicy
 import pandas as pd
+import time
 
 class PerfPackageRule(PerfCommon, DsmPolicy):
     def __init__(self, dsm, scenario, path_json, grule, identifiers, suser, sip, spwd, s_priv_ip, cuser, cip, cpwd, c_priv_ip, summary, stats, graph, s_adap_name, c_adap_name, title, ip_type, path, best_iteration):
@@ -98,15 +99,32 @@ class PerfPackageRule(PerfCommon, DsmPolicy):
 
         print("{0}\n### {1} ###\n{0}".format("#" * 50, scenario_name))
         
+        # Extended pre-test stabilization: ensure clean slate before measurements
+        print(f"{self.header}\n→ Extended stabilization: allowing system to fully settle (30s)...\n{self.header}")
+        time.sleep(30)
+        
         # System warm-up: eliminate cold-start bias (DNS, ARP, TCP window, routing cache)
         print(f"{self.header}\n→ Running lightweight warm-up (3 iterations) to eliminate cold-start effects...\n{self.header}")
         warmup_stats = PerformanceScenario.run_warmup_test(self, self.suser, self.sip, self.spwd, self.s_priv_ip, self.cuser, self.cip, self.cpwd, self.c_priv_ip, scenario_name)
+        
+        # Post-warm-up settling: allow network stack to normalize after warm-up
+        print(f"{self.header}\n→ Post-warm-up settling (20s) to normalize network stack...\n{self.header}")
+        time.sleep(20)
         
         if scenario_name == "Client Download":
             # Run Without Filter first (baseline on warm system), then With Filter to show overhead
             print("{0}{0}\n# Without Filter Driver #\n{0}{0}".format(self.header))
             wo_filter_all_stats, wo_filter_stats, wof_avg = PerformanceScenario.apply_rule_get_stats(self, self.suser, self.sip, self.spwd, self.s_priv_ip, self.cuser, self.cip, self.cpwd, self.c_priv_ip, False, scenario_name, self.s_adap_name, self.c_adap_name, action="wo_filter", dsm=self.dsm)
             print("- Without Filter Driver Average Stats: {} MBps\n".format(wof_avg))
+            
+            # Extended settling between filter state changes
+            print(f"{self.header}\n→ Extended settling after filter state change (30s)...\n{self.header}")
+            time.sleep(30)
+            # Refresh DSM policy to ensure clean state
+            print("→ Refreshing DSM policy state...")
+            self.dsm.upload_basic_policy()
+            print("→ Post-policy refresh settling (15s)...")
+            time.sleep(15)
 
             print("{0}{0}\n# With Filter Driver #\n{0}{0}".format(self.header))
             w_filter_all_stats, w_filter_stats, wf_avg = PerformanceScenario.apply_rule_get_stats(self, self.suser, self.sip, self.spwd, self.s_priv_ip, self.cuser, self.cip, self.cpwd, self.c_priv_ip, False, scenario_name, self.s_adap_name, self.c_adap_name, action="filter", dsm=self.dsm)
@@ -116,6 +134,15 @@ class PerfPackageRule(PerfCommon, DsmPolicy):
             print("{0}{0}\n# Without Filter Driver #\n{0}{0}".format(self.header))
             wo_filter_all_stats, wo_filter_stats, wof_avg = PerformanceScenario.apply_rule_get_stats(self, self.suser, self.sip, self.spwd, self.s_priv_ip, self.cuser, self.cip, self.cpwd, self.c_priv_ip, False, scenario_name, self.s_adap_name, self.c_adap_name, action="wo_filter", dsm=self.dsm)
             print("- Without Filter Driver Average Stats: {} MBps\n".format(wof_avg))
+            
+            # Extended settling between filter state changes
+            print(f"{self.header}\n→ Extended settling after filter state change (30s)...\n{self.header}")
+            time.sleep(30)
+            # Refresh DSM policy to ensure clean state
+            print("→ Refreshing DSM policy state...")
+            self.dsm.upload_basic_policy()
+            print("→ Post-policy refresh settling (15s)...")
+            time.sleep(15)
 
             print("{0}{0}\n# With Filter Driver #\n{0}{0}".format(self.header))
             w_filter_all_stats, w_filter_stats, wf_avg = PerformanceScenario.apply_rule_get_stats(self, self.suser, self.sip, self.spwd, self.s_priv_ip, self.cuser, self.cip, self.cpwd, self.c_priv_ip, False, scenario_name, self.s_adap_name, self.c_adap_name, action="filter", dsm=self.dsm)
@@ -143,14 +170,31 @@ class PerfPackageRule(PerfCommon, DsmPolicy):
     def perf_scenario_test_reverse_package(self, scenario_name, server_rules, client_rules, grule_list):
         print("{0}\n### {1} ###\n{0}".format("#" * 50, scenario_name))
         
+        # Extended pre-test stabilization: ensure clean slate before measurements
+        print(f"{self.header}\n→ Extended stabilization: allowing system to fully settle (30s)...\n{self.header}")
+        time.sleep(30)
+        
         # System warm-up: eliminate cold-start bias (DNS, ARP, TCP window, routing cache)
         print(f"{self.header}\n→ Running lightweight warm-up (3 iterations) to eliminate cold-start effects...\n{self.header}")
         warmup_stats = PerformanceScenario.run_warmup_test(self, self.suser, self.sip, self.spwd, self.s_priv_ip, self.cuser, self.cip, self.cpwd, self.c_priv_ip, scenario_name)
+        
+        # Post-warm-up settling: allow network stack to normalize after warm-up
+        print(f"{self.header}\n→ Post-warm-up settling (20s) to normalize network stack...\n{self.header}")
+        time.sleep(20)
         
         # Without Filter Driver (run FIRST for Server Download to avoid warm-up bias)
         print("{0}{0}\n# Without Filter Driver #\n{0}{0}".format(self.header))
         wo_filter_all_stats, wo_filter_stats, wof_avg = PerformanceScenario.apply_rule_get_stats(self, self.suser, self.sip, self.spwd, self.s_priv_ip, self.cuser, self.cip, self.cpwd, self.c_priv_ip, False, scenario_name, self.s_adap_name, self.c_adap_name, action="wo_filter", dsm=self.dsm)
         print("- Without Filter Driver Average Stats: {} MBps\n".format(wof_avg))
+
+        # Extended settling between filter state changes
+        print(f"{self.header}\n→ Extended settling after filter state change (30s)...\n{self.header}")
+        time.sleep(30)
+        # Refresh DSM policy to ensure clean state
+        print("→ Refreshing DSM policy state...")
+        self.dsm.upload_basic_policy()
+        print("→ Post-policy refresh settling (15s)...")
+        time.sleep(15)
 
         # With Filter Driver
         print("{0}{0}\n# With Filter Driver #\n{0}{0}".format(self.header))
