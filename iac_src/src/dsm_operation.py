@@ -4,6 +4,7 @@ import os
 import re
 import zipfile
 import time
+import socket
 from backoff_utils import exponential_backoff_sleep
 import requests
 import urllib3
@@ -25,6 +26,7 @@ class DsmPolicy(object):
     def __init__(self, dsm_ver, jfrog_token, machine, path, policy_name, port, server_rule, client_rule, portlist_file, dsm_server):
         # dsm_ip = machine.get_dsm_public_ip()
         dsm_ip = dsm_server
+        self.dsm_ip = dsm_ip
         print("+ DSM IP: {} +".format(dsm_ip))
         self.header = "-" * 50
         self.policy_name = policy_name
@@ -44,11 +46,31 @@ class DsmPolicy(object):
         self.port_list_file = portlist_file
         self.connect()
 
+    def wait_for_dsm(self, max_wait=180, interval=10, port=4119):
+        """Fail fast if DSM is unreachable instead of burning infra time."""
+        deadline = time.time() + max_wait
+        last_err = None
+        while time.time() < deadline:
+            try:
+                with socket.create_connection((self.dsm_ip, port), timeout=5):
+                    print(f"DSM port {port} is reachable", flush=True)
+                    return
+            except OSError as exc:
+                last_err = exc
+                remaining = int(deadline - time.time())
+                print(f"DSM not reachable yet ({exc}); retrying in {interval}s (time left: {remaining}s)", flush=True)
+                time.sleep(interval)
+        raise RuntimeError(f"DSM unreachable on {self.dsm_ip}:{port} after {max_wait}s; last error: {last_err}")
+
     def connect(self):
+        # Quick reachability probe to avoid long waits when infra is not ready
+        self.wait_for_dsm()
+
         # Configure transport with timeouts to prevent indefinite hangs
         # Longer timeouts + slightly higher retry budget to tolerate transient DSM slowness
         transport = zeep.Transport(timeout=600, operation_timeout=1200, session=requests.Session())  # 10 min connect, 20 min operation
         transport.session.verify = False  # Bypass self-signed certificate errors
+        self.client = None
         for retry in range(3):
             print("Attempt-{} to Create DSM Connection...".format(retry+1), flush=True)
             try:
@@ -58,6 +80,9 @@ class DsmPolicy(object):
             except Exception as ex:
                 print("Exception!!! {}".format(ex), flush=True)
                 exponential_backoff_sleep(retry, base_delay=5, max_delay=20)
+
+        if not self.client:
+            raise RuntimeError(f"Failed to connect to DSM at {self.dsm_ip}:4119 after retries")
 
         self.session = requests.Session()
         self.session.verify = False
