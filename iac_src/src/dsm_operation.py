@@ -53,14 +53,21 @@ class DsmPolicy(object):
         while time.time() < deadline:
             try:
                 with socket.create_connection((self.dsm_ip, port), timeout=5):
-                    print(f"DSM port {port} is reachable", flush=True)
+                    print(f"✓ DSM port {port} is reachable", flush=True)
                     return
             except OSError as exc:
                 last_err = exc
                 remaining = int(deadline - time.time())
                 print(f"DSM not reachable yet ({exc}); retrying in {interval}s (time left: {remaining}s)", flush=True)
                 time.sleep(interval)
-        raise RuntimeError(f"DSM unreachable on {self.dsm_ip}:{port} after {max_wait}s; last error: {last_err}")
+        # Enhanced error message for debugging
+        error_msg = (
+            f"✗ DSM unreachable on {self.dsm_ip}:{port} after {max_wait}s; last error: {last_err}\n"
+            f"  → Verify: 1) DSM service is running (check /opt/dsm/log/dsm_s/)\n"
+            f"  → Verify: 2) Security group allows port {port} from automation host\n"
+            f"  → Verify: 3) DSM JVM fully started (can take 60s with -Xmx8g)"
+        )
+        raise RuntimeError(error_msg)
 
     def connect(self):
         # Quick reachability probe to avoid long waits when infra is not ready
