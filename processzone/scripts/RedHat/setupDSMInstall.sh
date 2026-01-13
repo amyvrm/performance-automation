@@ -50,4 +50,29 @@ sudo bash -lc 'cat > /opt/dsm/dsm_s.vmoptions <<EOF1
 EOF1'
 sudo service dsm_s restart
 
-echo "DSM installation finished with settings"
+# Wait for DSM Manager port (4119) to be listening before returning
+echo "Waiting for DSM Manager service to be ready on port 4119..."
+max_attempts=60
+attempt=0
+while [ $attempt -lt $max_attempts ]; do
+	if sudo ss -tlnp 2>/dev/null | grep -q ':4119 '; then
+		echo "✓ DSM Manager port 4119 is now listening"
+		break
+	fi
+	attempt=$((attempt + 1))
+	if [ $((attempt % 10)) -eq 0 ]; then
+		echo "  Still waiting... (attempt $attempt/$max_attempts)"
+	fi
+	sleep 1
+done
+
+if [ $attempt -ge $max_attempts ]; then
+	echo "⚠️  WARNING: DSM port 4119 did not become ready after ${max_attempts}s"
+	echo "DSM service status:"
+	sudo service dsm_s status || true
+	echo "Recent DSM logs:"
+	sudo tail -20 /opt/dsm/log/dsm_s/catalina.out || sudo tail -20 /var/log/dsm_s.log || echo "No logs found"
+	exit 1
+fi
+
+echo "DSM installation finished with settings and service confirmed ready"

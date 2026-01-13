@@ -35,7 +35,8 @@ resource "aws_instance" "rhel_dsm" {
       # Fast chmod for all scripts in one go
       "chmod +x /tmp/setupDSMInstall.sh /tmp/generatePropertiesDSM.sh /tmp/restartDSM.sh /tmp/setupPython3.6.sh /tmp/downloadAgents.sh /tmp/uploadDSAToDSM.py",
       "sudo sh /tmp/setupDSMInstall.sh ${var.dsm_redhat_url} ${var.dsm_license}",
-      "sh /tmp/downloadAgents.sh ${var.all_agent_urls}"
+      "sh /tmp/downloadAgents.sh ${var.all_agent_urls}",
+      "echo 'Waiting 10s for DSM service to fully stabilize after provisioning...' && sleep 10"
     ]
   }
 
