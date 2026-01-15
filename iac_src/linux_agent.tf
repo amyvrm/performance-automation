@@ -61,6 +61,8 @@ resource "null_resource" "run_automation" {
 			"cd /tmp/",
 			"echo python3 /tmp/src/perform_scenario.py --access_key ${var.access_key} --secret_key ${var.secret_key} --manifest_file ${var.manifest_file} --dsm_version ${var.dsmVersion} --stats ${var.stats} --graph ${var.graph} --path ${var.dsru_path} --jfrog_url ${var.jfrog_url} --jfrog_token ${var.jfrog_token} --scenario ${var.scenario} --rule_id ${var.rule_id} --individual_rule_test ${var.individual_rule_test}> cmd.txt",
 			"python3 /tmp/src/perform_scenario.py --access_key ${var.access_key} --secret_key ${var.secret_key} --manifest_file ${var.manifest_file} --dsm_version ${var.dsmVersion} --stats ${var.stats} --graph ${var.graph} --path ${var.dsru_path} --jfrog_url ${var.jfrog_url} --jfrog_token ${var.jfrog_token} --scenario ${var.scenario} --rule_id ${var.rule_id} --individual_rule_test ${var.individual_rule_test}",
+			"echo 'Performance tests completed. Waiting 15s for cleanup to settle before Terraform teardown...'",
+			"sleep 15"
 		]
 	}
 

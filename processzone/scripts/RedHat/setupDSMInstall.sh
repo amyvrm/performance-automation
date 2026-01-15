@@ -75,4 +75,28 @@ if [ $attempt -ge $max_attempts ]; then
 	exit 1
 fi
 
+echo "✓ DSM port 4119 is listening"
+echo "Now verifying DSM web service is responding (JVM fully started)..."
+
+# Additional check: Verify DSM web service actually responds
+max_web_attempts=30
+web_attempt=0
+while [ $web_attempt -lt $max_web_attempts ]; do
+	# Try to connect to the WSDL endpoint (doesn't require auth)
+	if curl -k -s --connect-timeout 5 "https://127.0.0.1:4119/webservice/Manager?WSDL" >/dev/null 2>&1; then
+		echo "✓ DSM web service is responding and ready"
+		break
+	fi
+	web_attempt=$((web_attempt + 1))
+	if [ $((web_attempt % 5)) -eq 0 ]; then
+		echo "  Web service initializing... (attempt $web_attempt/$max_web_attempts, JVM may take 60-90s)"
+	fi
+	sleep 2
+done
+
+if [ $web_attempt -ge $max_web_attempts ]; then
+	echo "⚠️  WARNING: DSM web service not responding after ${max_web_attempts} attempts"
+	echo "Port is listening but JVM may still be initializing"
+fi
+
 echo "DSM installation finished with settings and service confirmed ready"

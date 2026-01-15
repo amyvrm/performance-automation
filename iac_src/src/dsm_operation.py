@@ -46,20 +46,41 @@ class DsmPolicy(object):
         self.port_list_file = portlist_file
         self.connect()
 
-    def wait_for_dsm(self, max_wait=180, interval=10, port=4119):
+    def wait_for_dsm(self, max_wait=300, interval=10, port=4119):
         """Fail fast if DSM is unreachable instead of burning infra time."""
+        print(f"Waiting for DSM web service at {self.dsm_ip}:{port} (max {max_wait}s)...", flush=True)
         deadline = time.time() + max_wait
         last_err = None
+        attempt = 0
         while time.time() < deadline:
+            attempt += 1
             try:
+                # First check port connectivity
                 with socket.create_connection((self.dsm_ip, port), timeout=5):
-                    print(f"✓ DSM port {port} is reachable", flush=True)
+                    pass
+                
+                # Then verify web service is actually responding (not just port open)
+                test_url = f"https://{self.dsm_ip}:{port}/webservice/Manager?WSDL"
+                response = requests.get(test_url, verify=False, timeout=5)
+                if response.status_code == 200:
+                    print(f"✓ DSM web service ready on {self.dsm_ip}:{port} (after {attempt} attempts)", flush=True)
                     return
-            except OSError as exc:
+                else:
+                    last_err = f"HTTP {response.status_code}"
+                    
+            except socket.error as exc:
+                last_err = f"Port not reachable: {exc}"
+            except requests.exceptions.RequestException as exc:
+                last_err = f"Web service not ready: {exc}"
+            except Exception as exc:
                 last_err = exc
-                remaining = int(deadline - time.time())
-                print(f"DSM not reachable yet ({exc}); retrying in {interval}s (time left: {remaining}s)", flush=True)
+            
+            remaining = int(deadline - time.time())
+            if remaining > 0:
+                if attempt % 6 == 0:  # Log every minute
+                    print(f"  Attempt {attempt}: {last_err} | Retrying... ({remaining}s left)", flush=True)
                 time.sleep(interval)
+        
         # Enhanced error message for debugging
         error_msg = (
             f"✗ DSM unreachable on {self.dsm_ip}:{port} after {max_wait}s; last error: {last_err}\n"
