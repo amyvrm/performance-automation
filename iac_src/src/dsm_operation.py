@@ -90,6 +90,47 @@ class DsmPolicy(object):
         )
         raise RuntimeError(error_msg)
 
+    def verify_dsm_ready(self, max_retries=3):
+        """Verify DSM is healthy and reconnect if needed. Critical before baseline measurements."""
+        print("🔍 Verifying DSM health before critical operation...", flush=True)
+        
+        for attempt in range(max_retries):
+            try:
+                # Try a simple DSM API call to verify service is responsive
+                test_result = self.client.service.hostRetrieveAll(sID=self.sID)
+                if test_result is not None:
+                    print(f"✓ DSM health check passed (found {len(test_result)} hosts)", flush=True)
+                    return True
+            except Exception as e:
+                print(f"⚠️  DSM health check failed (attempt {attempt + 1}/{max_retries}): {e}", flush=True)
+                
+                if attempt < max_retries - 1:
+                    print(f"→ Attempting DSM reconnection in 10s...", flush=True)
+                    time.sleep(10)
+                    
+                    try:
+                        # Re-establish connection
+                        print("→ Re-establishing DSM connection...", flush=True)
+                        self.wait_for_dsm(max_wait=120)  # 2 minute timeout for recovery
+                        
+                        transport = zeep.Transport(timeout=600, operation_timeout=1200, session=requests.Session())
+                        transport.session.verify = False
+                        self.client = zeep.Client(wsdl=self.wsdl_url, transport=transport)
+                        
+                        self.session = requests.Session()
+                        self.session.verify = False
+                        
+                        self.sID = self.client.service.authenticate(username=self.uname, password=self.pwd)
+                        self.rID = self.login_gui()
+                        print("✓ DSM reconnection successful", flush=True)
+                        
+                    except Exception as reconnect_error:
+                        print(f"✗ DSM reconnection failed: {reconnect_error}", flush=True)
+                        if attempt == max_retries - 1:
+                            raise RuntimeError(f"DSM unhealthy and reconnection failed after {max_retries} attempts")
+        
+        raise RuntimeError(f"DSM health check failed after {max_retries} attempts")
+
     def connect(self):
         # Quick reachability probe to avoid long waits when infra is not ready
         self.wait_for_dsm()
