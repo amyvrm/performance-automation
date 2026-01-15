@@ -194,7 +194,6 @@ class PerfCommon(object):
                         time.sleep(30)
                         try:
                             print(f"  [{(check_interval + 1) * 30}s] Health check: verifying instances...")
-                            from pypsexec.client import Client
                             
                             test_srv = Client(sip, username=suser, password=spwd, encrypt=False)
                             test_srv.connect(timeout=10)
@@ -761,7 +760,7 @@ class PerfCommon(object):
         
         # Wait for WinRM to be ready (Windows fully booted)
         print(f"Waiting for WinRM service to be ready on {instance.ip_address}...")
-        max_attempts = 30  # 5 minutes max
+        max_attempts = 6  # 1 minute max (we have 90s stabilization period after reboot anyway)
         for attempt in range(max_attempts):
             try:
                 test_client = Client(instance.ip_address, username="Administrator", password="TempPassword", encrypt=False)
@@ -774,7 +773,7 @@ class PerfCommon(object):
                     print(f"  Attempt {attempt + 1}/{max_attempts}: WinRM not ready yet, waiting 10s...")
                     time.sleep(10)
                 else:
-                    print(f"⚠️  WinRM readiness check timed out, proceeding anyway")
+                    print(f"⚠️  WinRM readiness check timed out, proceeding anyway (90s stabilization period will follow)")
 
         return instance.ip_address, instance.private_ip_address
 
