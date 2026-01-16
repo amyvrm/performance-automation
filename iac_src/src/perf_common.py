@@ -492,6 +492,17 @@ class PerfCommon(object):
             " else { Write-Output 'Filter binding not found' }"
         )
         self.execute_cmd(ps, ip, user, pwd, tool=tool)
+        
+        # OPTIMIZATION FIX: After enabling filter, reset network stack to consistent state
+        # This prevents interaction between previous warm-up traffic and new filter-enabled traffic
+        print("→ Resetting network stack after filter enable...")
+        reset_ps = (
+            "ipconfig /flushdns; "  # Clear DNS cache
+            "Clear-DnsClientCache; "  # Alternative DNS flush
+            "Get-NetTCPConnection -State TimeWait | Stop-NetTCPConnection -Force -ErrorAction SilentlyContinue; "  # Close TIME_WAIT connections
+            "Write-Output 'Network stack reset complete'"
+        )
+        self.execute_cmd(reset_ps, ip, user, pwd, tool=tool)
 
     def disable_filter(self, ip, user, pwd, adaptor_name):
         print("{0}\n # {2}-{1} Disable Filter #\n{0}".format("+" * 50, ip, self.ip_type[ip]))
@@ -503,6 +514,17 @@ class PerfCommon(object):
             " else { Write-Output 'Filter binding not found' }"
         )
         self.execute_cmd(ps, ip, user, pwd, tool=tool)
+        
+        # OPTIMIZATION FIX: After disabling filter, reset network stack to ensure clean baseline
+        # This prevents cached packet buffers and connections from affecting next measurement
+        print("→ Resetting network stack after filter disable...")
+        reset_ps = (
+            "ipconfig /flushdns; "  # Clear DNS cache
+            "Clear-DnsClientCache; "  # Alternative DNS flush
+            "Get-NetTCPConnection -State TimeWait | Stop-NetTCPConnection -Force -ErrorAction SilentlyContinue; "  # Close TIME_WAIT connections
+            "Write-Output 'Network stack reset complete'"
+        )
+        self.execute_cmd(reset_ps, ip, user, pwd, tool=tool)
 
     def enable_filters_parallel(self, machines, max_workers=None):
         """

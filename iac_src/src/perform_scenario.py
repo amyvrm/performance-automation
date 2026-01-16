@@ -336,13 +336,18 @@ class PerformanceScenario(PerfCommon):
                     'adaptor_name': adaptor
                 }]
                 self.disable_filters_parallel(machines_to_disable)
-                # Wait for filter driver state to settle (increased to 20s for full network stack propagation)
+                # CRITICAL FIX: Increased settling time to let kernel network stack fully stabilize
+                # Previous 20s was insufficient for:
+                # - TCP connections to enter TIME_WAIT and be reaped
+                # - NIC ring buffers to fully drain
+                # - Interrupt coalescing settings to reset
                 import time
-                time.sleep(20)
+                print("→ Extended network stack stabilization (45s) for filter disable...")
+                time.sleep(45)
                 print("{0}\n{2}-{1} Agent: Disabled from DSM\n{2}-{1} Filter: Disabled from network driver\n{0}".format(self.header, ip, self.ip_type[ip]))
                 # Additional settling time before measurement to clear residual effects
-                print("→ Waiting 10s for network stack to fully stabilize before measurement...")
-                time.sleep(10)
+                print("→ Final pre-measurement stabilization (20s) to ensure clean baseline...")
+                time.sleep(20)
             elif action == "filter":
                 dsm.clean_rules_from_dsm()
                 # Activate Server Agent
@@ -355,13 +360,18 @@ class PerformanceScenario(PerfCommon):
                     'adaptor_name': adaptor
                 }]
                 self.enable_filters_parallel(machines_to_enable)
-                # Wait for filter driver state to settle (increased to 20s for full network stack propagation)
+                # CRITICAL FIX: Increased settling time for filter driver to initialize properly
+                # Previous 20s was insufficient for:
+                # - Filter driver kernel module to fully initialize
+                # - Driver to bind to network stack
+                # - Interrupt handling to stabilize with filter in path
                 import time
-                time.sleep(20)
+                print("→ Extended network stack stabilization (45s) for filter enable...")
+                time.sleep(45)
                 print("{0}\n{2}-{1} Agent: Enabled from DSM\n{2}-{1} Filter: Enabled from Network Driver\n{0}".format(self.header, ip, self.ip_type[ip]))
                 # Additional settling time before measurement to clear residual effects
-                print("→ Waiting 10s for network stack to fully stabilize before measurement...")
-                time.sleep(10)
+                print("→ Final pre-measurement stabilization (20s) to ensure consistent state...")
+                time.sleep(20)
             elif action == "rule":
                 dsm.connect()
                 identifier = dsm.apply_rule(scenario_name, rule_list=grule_list)
