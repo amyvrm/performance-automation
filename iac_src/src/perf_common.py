@@ -14,7 +14,6 @@ from backoff_utils import wait_for_nginx_ready
 import os
 import re
 
-
 class PerfCommon(object):
     def __init__(self, stats, graph):
         self.header = "-" * 50
@@ -151,8 +150,30 @@ class PerfCommon(object):
         elif scenario_name == "Server Upload":
             # receiver
             pid = self.run_pcattcp_rec(sip, suser, spwd, c_priv_ip, asynchronous=True)
-            print("Waiting 3 min, to flow the traffic")
-            time.sleep(180)
+            print("Waiting 3 min, to flow the traffic (with health checks every 30s)...")
+            
+            # Wait with periodic health checks instead of blind sleep
+            for check_interval in range(6):  # 6 x 30s = 180s
+                time.sleep(30)
+                # Quick connectivity check to both machines
+                try:
+                    print(f"  [{(check_interval + 1) * 30}s] Health check: verifying instances are still reachable...")
+                    
+                    # Check server (receiver)
+                    test_srv = Client(sip, username=suser, password=spwd, encrypt=False)
+                    test_srv.connect(timeout=10)
+                    test_srv.disconnect()
+                    
+                    # Check client (transmitter)
+                    test_cli = Client(cip, username=cuser, password=cpwd, encrypt=False)
+                    test_cli.connect(timeout=10)
+                    test_cli.disconnect()
+                    
+                    print(f"  ✓ Both instances responsive")
+                except Exception as health_err:
+                    print(f"  ⚠️  WARNING: Health check failed - {health_err}")
+                    print(f"     Instance may have rebooted! This test iteration may fail.")
+            
             # transmitter
             through_put = self.run_pcattcp_tran(cip, cuser, cpwd, s_priv_ip, bandwidth=True)
             print("Through put: {}".format(through_put))
@@ -166,8 +187,26 @@ class PerfCommon(object):
                     print("Exception: Attempt-{} to get the stats...Found stats=[{}]".format(retry, through_put))
                     # receiver
                     pid = self.run_pcattcp_rec(sip, suser, spwd, c_priv_ip, asynchronous=True)
-                    print("Waiting 3 min, to flow the traffic")
-                    time.sleep(180)
+                    print("Waiting 3 min, to flow the traffic (with health checks every 30s)...")
+                    
+                    # Wait with periodic health checks instead of blind sleep
+                    for check_interval in range(6):  # 6 x 30s = 180s
+                        time.sleep(30)
+                        try:
+                            print(f"  [{(check_interval + 1) * 30}s] Health check: verifying instances...")
+                            
+                            test_srv = Client(sip, username=suser, password=spwd, encrypt=False)
+                            test_srv.connect(timeout=10)
+                            test_srv.disconnect()
+                            
+                            test_cli = Client(cip, username=cuser, password=cpwd, encrypt=False)
+                            test_cli.connect(timeout=10)
+                            test_cli.disconnect()
+                            
+                            print(f"  ✓ Both instances responsive")
+                        except Exception as health_err:
+                            print(f"  ⚠️  WARNING: Health check failed - {health_err}")
+                    
                     # transmitter
                     through_put = self.run_pcattcp_tran(cip, cuser, cpwd, s_priv_ip, bandwidth=True)
                     print("Through put: {}".format(through_put))
@@ -177,8 +216,19 @@ class PerfCommon(object):
         raise Exception("Exception!!! Nginx access might be blocked, please check and try again")
 
     def execute_cmd(self, cmd, ip, user, pwd, tool="Powershell.exe", iteration=10, bandwidth=False, asynchronous=False):
+        # Configure connection timeout (30s instead of default ~90s)
         machine = Client(ip, username=user, password=pwd, encrypt=False)
-        machine.connect()
+        
+        try:
+            machine.connect(timeout=30)  # Add explicit timeout
+        except Exception as conn_err:
+            print(f"⚠️  Failed to connect to {ip}: {conn_err}")
+            # If connection fails during cleanup phase, log and return gracefully
+            if "timed out" in str(conn_err) or "refused" in str(conn_err):
+                print(f"→ Host {ip} may be shutting down or unreachable")
+                return None
+            raise
+        
         try:
             machine.create_service()
             print("# IP: {}, Tool: {}, Command: {} #".format(ip, tool, cmd))
@@ -221,12 +271,18 @@ class PerfCommon(object):
                 machine.remove_service()
             except SCMRException as exc:
                 if exc.return_code == 1072:  # ERROR_SERVICE_MARKED_FOR_DELETE
-                    pass
+                    print(f"⚠️  Service marked for delete on {ip} (expected during cleanup)")
+                elif exc.return_code == 1115:  # ERROR_SHUTDOWN_IN_PROGRESS
+                    print(f"⚠️  System shutdown in progress on {ip} (cleanup will be handled by OS)")
                 else:
-                    print("Error!!! Failed to remove service")
+                    print(f"⚠️  Failed to remove service on {ip}: {exc} (code: {exc.return_code})")
             except Exception as e:
-                print(e)
-            machine.disconnect()
+                print(f"⚠️  Cleanup exception on {ip}: {e}")
+            finally:
+                try:
+                    machine.disconnect()
+                except Exception as disc_err:
+                    print(f"⚠️  Disconnect failed for {ip}: {disc_err} (non-critical)")
 
     @staticmethod
     def get_bandwidth(cmd, stdout, stderr, all_through_put, index):
@@ -558,7 +614,15 @@ class PerfCommon(object):
 
     def clean_nginx(self, ip, user, pwd):
         print(f"- Clean Nginx in {self.ip_type[ip]}-{ip}")
-        return self.clean(ip, user, pwd, pid=False)
+        try:
+            return self.clean(ip, user, pwd, pid=False)
+        except Exception as e:
+            print(f"⚠️  Failed to clean nginx on {ip}: {e}")
+            # Check if it's a connection timeout/failure during shutdown
+            if "timed out" in str(e) or "Failed to connect" in str(e) or "No route to host" in str(e):
+                print(f"→ Host {ip} appears to be shutting down or unreachable (cleanup will be handled by system)")
+                return None
+            raise
 
     def run_pcattcp_rec(self, ip, user, pwd, target_ip, asynchronous=False):
         print(f"run_pcattcp_rec: {ip}, {user}, {pwd}, {target_ip}")
@@ -630,6 +694,17 @@ class PerfCommon(object):
     def disable_dsa(self, ip, user, pwd):
         print(f"{'+' * 50}\n # {self.ip_type[ip]}-{ip} Disable DSA #\n{'+' * 50}")
         tool = "Powershell.exe"
+        
+        # Check for pending reboots before disabling DSA
+        ps_check = (
+            "if (Test-Path 'HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Component Based Servicing\\RebootPending') { "
+            "Write-Output 'REBOOT_PENDING' } else { Write-Output 'NO_REBOOT' }"
+        )
+        reboot_status = self.execute_cmd(ps_check, ip, user, pwd, tool=tool)
+        if reboot_status and "REBOOT_PENDING" in str(reboot_status):
+            print(f"⚠️  WARNING: System {ip} has pending reboot flag set!")
+            print(f"   This may cause unexpected reboots during testing")
+        
         ps = (
             "$svc = Get-Service | Where-Object { $_.Name -like '*Deep*Security*Agent*' -or $_.DisplayName -like '*Deep*Security*Agent*' };"
             "if ($null -ne $svc) { Stop-Service -Name $svc.Name -ErrorAction SilentlyContinue; Write-Output ('Stopped ' + $svc.Name) }"
@@ -682,6 +757,23 @@ class PerfCommon(object):
         # Refresh instance info and return IPs
         instance.update()
         print(f"{instance_id} is running with Public IP: {instance.ip_address}, Private IP: {instance.private_ip_address}")
+        
+        # Wait for WinRM to be ready (Windows fully booted)
+        print(f"Waiting for WinRM service to be ready on {instance.ip_address}...")
+        max_attempts = 6  # 1 minute max (we have 90s stabilization period after reboot anyway)
+        for attempt in range(max_attempts):
+            try:
+                test_client = Client(instance.ip_address, username="Administrator", password="TempPassword", encrypt=False)
+                test_client.connect(timeout=10)
+                test_client.disconnect()
+                print(f"✓ WinRM ready on {instance.ip_address}")
+                break
+            except Exception as e:
+                if attempt < max_attempts - 1:
+                    print(f"  Attempt {attempt + 1}/{max_attempts}: WinRM not ready yet, waiting 10s...")
+                    time.sleep(10)
+                else:
+                    print(f"⚠️  WinRM readiness check timed out, proceeding anyway (90s stabilization period will follow)")
 
         return instance.ip_address, instance.private_ip_address
 

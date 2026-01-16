@@ -112,6 +112,10 @@ class PerfPackageRule(PerfCommon, DsmPolicy):
         time.sleep(20)
         
         if scenario_name == "Client Download":
+            # Verify DSM health before critical baseline measurement
+            print(f"{self.header}\n→ DSM health check before baseline measurement...\n{self.header}")
+            self.dsm.verify_dsm_ready()
+            
             # Run Without Filter first (baseline on warm system), then With Filter to show overhead
             print("{0}{0}\n# Without Filter Driver #\n{0}{0}".format(self.header))
             wo_filter_all_stats, wo_filter_stats, wof_avg = PerformanceScenario.apply_rule_get_stats(self, self.suser, self.sip, self.spwd, self.s_priv_ip, self.cuser, self.cip, self.cpwd, self.c_priv_ip, False, scenario_name, self.s_adap_name, self.c_adap_name, action="wo_filter", dsm=self.dsm)
@@ -130,6 +134,10 @@ class PerfPackageRule(PerfCommon, DsmPolicy):
             w_filter_all_stats, w_filter_stats, wf_avg = PerformanceScenario.apply_rule_get_stats(self, self.suser, self.sip, self.spwd, self.s_priv_ip, self.cuser, self.cip, self.cpwd, self.c_priv_ip, False, scenario_name, self.s_adap_name, self.c_adap_name, action="filter", dsm=self.dsm)
             print("- With Filter Driver Average Stats: {} MBps\n".format(wf_avg))
         else:
+            # Verify DSM health before critical baseline measurement
+            print(f"{self.header}\n→ DSM health check before baseline measurement...\n{self.header}")
+            self.dsm.verify_dsm_ready()
+            
             # For Server Upload: run Without Filter first (baseline on warm system), then With Filter to show overhead
             print("{0}{0}\n# Without Filter Driver #\n{0}{0}".format(self.header))
             wo_filter_all_stats, wo_filter_stats, wof_avg = PerformanceScenario.apply_rule_get_stats(self, self.suser, self.sip, self.spwd, self.s_priv_ip, self.cuser, self.cip, self.cpwd, self.c_priv_ip, False, scenario_name, self.s_adap_name, self.c_adap_name, action="wo_filter", dsm=self.dsm)

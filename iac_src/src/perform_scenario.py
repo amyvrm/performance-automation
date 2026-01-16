@@ -104,6 +104,15 @@ class PerformanceScenario(PerfCommon):
                     # Collect reboot results
                     results = {future_to_instance[future]: future.result() for future in future_to_instance}
                     print(f"✓ Reboot tasks completed for {len(results)} instances")
+                    
+                    # CRITICAL: Wait for Windows to fully boot and stabilize
+                    # This prevents mid-test reboots from DSA activation, Windows Updates, or filter driver installation
+                    print("\n" + "=" * 70)
+                    print("⏳ Waiting 90 seconds for Windows instances to fully stabilize...")
+                    print("   (Services starting, DSA initialization, pending updates)")
+                    print("=" * 70)
+                    time.sleep(90)
+                    print("✓ Windows stabilization period complete\n")
 
                     # Collect DSM task results (only call result() once per future)
                     print("Waiting for DSM tasks to complete...", flush=True)
@@ -269,12 +278,42 @@ class PerformanceScenario(PerfCommon):
         except Exception as e:
             print(f"Error in PerformanceScenario.__init__: {e}")
         finally:
-            print("PerformanceScenario Completed Closing DSM connections")
+            print("\n" + "=" * 50)
+            print("PerformanceScenario Cleanup Phase Starting")
+            print("=" * 50)
+            
+            # Step 1: Clean up test processes first (before disconnecting DSM)
+            try:
+                print("→ Step 1: Cleaning up nginx/test processes...")
+                if '_sip' in locals() and 'suser' in locals() and '_spwd' in locals():
+                    for idx, ip in enumerate(_sip):
+                        try:
+                            print(f"  Cleaning nginx on server {ip}...")
+                            self.clean_nginx(ip, suser, _spwd[idx])
+                        except Exception as e:
+                            print(f"  ⚠️  Failed to clean nginx on {ip}: {e}")
+                
+                if '_cip' in locals() and 'cuser' in locals() and '_cpwd' in locals():
+                    for idx, ip in enumerate(_cip):
+                        try:
+                            print(f"  Cleaning ab on client {ip}...")
+                            self.clean_ab(ip, cuser, _cpwd[idx])
+                        except Exception as e:
+                            print(f"  ⚠️  Failed to clean ab on {ip}: {e}")
+            except Exception as cleanup_err:
+                print(f"⚠️  Process cleanup encountered errors: {cleanup_err}")
+            
+            # Step 2: Disconnect from DSM servers
+            print("→ Step 2: Closing DSM connections...")
             for x in range(0, len(dsm)):
                 try:
                     dsm[x].disconnect()
                 except Exception as e:
-                    print(f"Error closing DSM connection for {x}: {e}")
+                    print(f"⚠️  Error closing DSM connection for instance {x}: {e}")
+            
+            print("=" * 50)
+            print("PerformanceScenario Cleanup Phase Completed")
+            print("=" * 50 + "\n")
 
     def apply_rule_get_stats(self, suser, sip, spwd, s_priv_ip, cuser, cip, cpwd, c_priv_ip, grule_list, scenario_name, c_adaptor=None, s_adaptor=None, action="reading", dsm=None):
         try:

@@ -36,7 +36,7 @@ resource "aws_instance" "rhel_dsm" {
       "chmod +x /tmp/setupDSMInstall.sh /tmp/generatePropertiesDSM.sh /tmp/restartDSM.sh /tmp/setupPython3.6.sh /tmp/downloadAgents.sh /tmp/uploadDSAToDSM.py",
       "sudo sh /tmp/setupDSMInstall.sh ${var.dsm_redhat_url} ${var.dsm_license}",
       "sh /tmp/downloadAgents.sh ${var.all_agent_urls}",
-      "echo 'Waiting 10s for DSM service to fully stabilize after provisioning...' && sleep 10"
+      "echo 'DSM provisioning complete. Allowing 30s buffer for full web service initialization...' && sleep 30"
     ]
   }
 
