@@ -57,7 +57,12 @@ resource "null_resource" "provision-agent" {
 					# "powershell.exe -File C:\\temp\\install_ab.ps1",
 				]
 	}
+
+	# Dependency chain for parallelization:
+	# - Scripts must be generated first (edit_user_data_script)
+	# - Instances must be ready (time_sleep.wait_for_instance_readiness)
+	# - These run in parallel with RHEL DSM provisioning
 	depends_on = [
-		null_resource.edit_user_data_script
+		time_sleep.wait_for_instance_readiness
 	]
 }
