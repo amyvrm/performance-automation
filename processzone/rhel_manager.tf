@@ -36,7 +36,7 @@ resource "aws_instance" "rhel_dsm" {
       "chmod +x /tmp/setupDSMInstall.sh /tmp/generatePropertiesDSM.sh /tmp/restartDSM.sh /tmp/setupPython3.6.sh /tmp/downloadAgents.sh /tmp/uploadDSAToDSM.py",
       "sudo sh /tmp/setupDSMInstall.sh ${var.dsm_redhat_url} ${var.dsm_license}",
       "sh /tmp/downloadAgents.sh ${var.all_agent_urls}",
-      "echo 'DSM provisioning complete. Allowing 30s buffer for full web service initialization...' && sleep 30"
+        "echo 'Waiting for DSM web service to be ready...' && for i in {1..60}; do if curl -sf https://localhost:4119/webservice/Manager?WSDL > /dev/null 2>&1; then echo '✓ DSM web service ready on attempt $i'; exit 0; fi; if [ $((i % 6)) -eq 0 ]; then echo \"Attempt $i/60 - DSM not ready yet...\"; fi; sleep 5; done && echo '✓ DSM ready' || echo '⚠️ DSM health check timed out - continuing anyway'"
     ]
   }
 
