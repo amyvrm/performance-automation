@@ -1,4 +1,4 @@
-﻿# Performance Automation
+# Performance Automation
 
 ## Overview
 Automated performance testing framework for Deep Security Agent (DSA) rule performance across multiple network scenarios. The pipeline provisions AWS infrastructure, deploys DSM and agents, and measures throughput impact of intrusion prevention rules with/without filter drivers.
@@ -29,9 +29,10 @@ Automated performance testing framework for Deep Security Agent (DSA) rule perfo
    └── Filter driver binding verification
 
 3. Performance Testing
-   ├── Lightweight warm-up (3 iterations)
-   ├── Without Filter Driver baseline
-   ├── With Filter Driver (no rules)
+   ├── Extended stabilization (30s) + lightweight warm-up (3 iterations)
+   ├── Baselines (scenario-specific):
+   │    ├── Server Upload, Client Download: With Filter Driver first → then Without Filter Driver
+   │    └── Server Download: Without Filter Driver first → then With Filter Driver
    ├── Best case rule (threshold + dependencies)
    └── All rules scenario
 
@@ -44,8 +45,15 @@ Automated performance testing framework for Deep Security Agent (DSA) rule perfo
 ## Test Methodology
 
 ### Baseline Measurements
-1. **Without Filter Driver**: Agent disabled, filter driver disabled (20s stabilization)
-2. **With Filter Driver**: Agent enabled, filter driver enabled, no rules active (20s stabilization)
+- **DSM health check** before baseline measurement
+- **Warm-up**: lightweight 3 iterations, followed by 20s post-warm-up settling
+- **Ordering (scenario-specific)**:
+   - Server Upload / Client Download:
+      1. **With Filter Driver (FIRST)** on cold system (30s stabilization)
+      2. **Without Filter Driver (SECOND)** after extended settling (35s) and DSM policy refresh (15s)
+   - Server Download:
+      1. **Without Filter Driver (FIRST)** baseline on warm system (30s pre-settle)
+      2. **With Filter Driver (SECOND)** after extended settling (30s) and DSM policy refresh (15s)
 
 ### Rule Performance
 3. **Best Case Rule**: Threshold rule + dependencies only
@@ -62,12 +70,15 @@ Automated performance testing framework for Deep Security Agent (DSA) rule perfo
 - **Adapter Name Caching**: 1-hour TTL to reduce remote PowerShell calls
 - **Efficient Warm-up**: Lightweight 3-iteration warm-up instead of full test cycles
 - **Stabilization Waits**: 20s after filter/agent state changes to avoid transient effects
+- **Parallel File Provisioning (Phase 2b)**: External Windows script `processzone/scripts/AgentDeploymentScript/ParallelFileCopy.ps1` consolidates copy operations to reduce WinRM sessions and speed instance setup
 
 ### Test Accuracy
 - Warm-up phase to eliminate cold-start bias (DNS, ARP, TCP window)
 - 20s stabilization periods after filter state changes
 - Multiple iterations with best-case selection
-- Consistent test ordering to identify sequence effects
+- Scenario-specific baseline ordering to avoid warm-up masking:
+   - Server Upload / Client Download: With FD first, then Without FD
+   - Server Download: Without FD first, then With FD
 
 ### Error Handling
 - Graceful adapter name fallback
@@ -139,10 +150,18 @@ python perform_scenario.py \
 - Test manifests archived
 - Console logs with detailed timing
 
+## Anomalies and Mitigation
+- **Inconsistencies**: Recent runs show second-phase tests sometimes measuring faster due to warm-up effects and accumulated system state.
+- **Mitigation (under evaluation)**:
+   - **Baseline isolation**: Add reboots between baselines to ensure clean state.
+   - **Scope**: Between With FD ↔ Without FD, and between Best Case Rule ↔ All Rules.
+- **Impact**: Adds ~3–4 minutes per scenario; improves measurement trustworthiness and reveals true overhead.
+- **Status**: Not enabled by default. Evaluation is ongoing alongside infrastructure checks for recent Client Download performance degradation.
+
 ## Important Notes
 
 ### Known Limitations
-- **Test Ordering Bias**: Sequential tests (Without FD → With FD) may show warm-up advantages in second test
+- **State Isolation**: Reboots between baselines are not enabled by default. Warm-up effects may still influence the second test; reboot-based isolation is under consideration for persistent anomalies.
 - **Adapter Name Handling**: Spaces in adapter names handled correctly with PowerShell single-quote literals
 - **Filter Enforcement**: NIC settings enforcement (RSC/RSS) and cache flushing are currently disabled
 
@@ -153,13 +172,33 @@ python perform_scenario.py \
 - **Nginx timeout**: Adaptive probing with exponential backoff (up to 60s)
 
 ## Jenkins Pipeline
-[Performance Automation Pipeline](https://dsjenkins.trendmicro.com/dslabs/job/Perf-Automation/job/performance-automation/)
+[Performance Automation Pipeline](https://dsjenkins.trendmicro.com/dslabs/job/Perf-Automation/)
 
 ## Documentation
 - [Development Wiki](https://trendmicro.atlassian.net/wiki/spaces/DSLABS/pages/214934595/Performance+Automation+Development)
-- [Rule-Based Testing Plan](https://trendmicro.atlassian.net/wiki/spaces/DSLABS/pages/1020659972/Performance+test+-+Implement+Rule-Based+testing+-+plan)
+
+- [Developer Notes - Perf Automation Pipeline](https://trendmicro.atlassian.net/wiki/spaces/DSLABS/pages/1113950577/Developer+Notes+-+Perf+Automation+Pipeline)
+
+- [Performance test Implement Rule-Based testing plan](https://trendmicro.atlassian.net/wiki/spaces/DSLABS/pages/1020659972/Performance+test+-+Implement+Rule-Based+testing+-+plan)
+
+- [Performance Automation – Performance Metric Improvements](https://trendmicro.atlassian.net/wiki/spaces/DSLABS/pages/2081825270/Performance+Automation+Performance+Metric+Improvements)
 
 ## Recent Updates
 - Implemented parallel filter enable/disable operations
 - Added adapter name caching with TTL
 - Stabilization waits set to 20s after filter/agent toggles
+- Added DSM health check prior to baseline measurements (Phase 2a)
+- Switched Windows file provisioning to external ParallelFileCopy.ps1 for faster setup (Phase 2b)
+
+## Performance Metric Improvements
+- **Scenario-specific baseline ordering**: Runs `With FD` first for Server Upload and Client Download, and `Without FD` first for Server Download to avoid warm-up masking and reveal true overhead.
+- **Extended stabilization + warm-up**: Adds 30s pre-test stabilization, 3-iteration warm-up, and 20–35s settling between state changes to reduce variance and cold-start effects.
+- **DSM health check**: Verifies DSM readiness before baselines to prevent mis-measurements due to policy sync issues.
+- **Parallel file provisioning**: Uses `processzone/scripts/AgentDeploymentScript/ParallelFileCopy.ps1` to consolidate copy steps, reducing WinRM overhead and speeding instance setup (≈1–3.5 minutes total).
+- **Parallel filter operations**: Enables/disables filter drivers across machines concurrently to shorten prep phases.
+- **Adapter name caching**: TTL reduces repeated remote queries, improving consistency and lowering setup latency.
+
+### Expected Impact
+- **Pipeline duration**: Reduced from ~60–75 minutes to ~30–40 minutes.
+- **Measurement stability**: Lower variance across iterations; baselines less affected by second-test warm-up.
+- **Result trustworthiness**: Better isolation of filter-driver and rule overheads; anomalies tracked under "Anomalies and Mitigation".
