@@ -277,19 +277,11 @@ node('aws&&docker')
                             
                             sh "terraform -chdir=${iac_path_dsm_dsa} plan -var=\'access_key=${AWS_ACCESS_KEY}\' -var=\'secret_key=${AWS_SECRET_KEY}\' -var=\'all_agent_urls=${agents_download_urls}\' -var=\'dsm_redhat_url=${dsm_package_url}\' -var=\'dsm_license=${dsm_key}\' -var=\'random_num=${env.BUILD_NUMBER}\' -var=\'instance_count=${env.count}\' -out ${plan_dsm_dsa}"
                             
-                            echo "Terraform Apply - Starting with parallelism optimization"
-                            echo "→ Parallelization enabled: Script generation + DSM setup + Windows provisioning run concurrently"
+                            echo "Terraform Apply"
 
-                            // Apply with increased parallelism for concurrent resource provisioning
-                            // Default parallelism=10, increased to 20 to allow DSM provisioning to run in parallel with Windows setup
-                            // This enables: 
-                            //   - RHEL DSM instances to provision while Windows instances boot
-                            //   - Script generation to run immediately after instance creation (not after provisioning)
-                            def startTime = System.currentTimeMillis()
-                            applyResult = sh(script: "terraform -chdir=${iac_path_dsm_dsa} apply -auto-approve -parallelism=20 ${plan_dsm_dsa}", returnStatus: true)
-                            def applyDuration = (System.currentTimeMillis() - startTime) / 1000 / 60
-                            
-                            echo "Terraform Apply completed in approximately ${applyDuration.toInteger()} minutes"
+                            // Try apply and capture exit code
+                            applyResult = sh(script: "terraform -chdir=${iac_path_dsm_dsa} apply -auto-approve ${plan_dsm_dsa}", returnStatus: true)
+
                             echo "Terraform Apply Result: ${applyResult}"
                     }
 
