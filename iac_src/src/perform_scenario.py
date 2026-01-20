@@ -89,6 +89,9 @@ class PerformanceScenario(PerfCommon):
                 except Exception as e:
                     print(f"Error in reboot_instance: {e}")
                     return None
+                
+            results = {}  # Initialize results before the try block
+            summary, identifiers = [], []  # Initialize defaults for DSM results
 
             with ThreadPoolExecutor(max_workers=len(all_instance)) as executor:
                 try:
@@ -125,7 +128,6 @@ class PerformanceScenario(PerfCommon):
                     print(f"Error in ThreadPoolExecutor block: {e}")
                     import traceback
                     traceback.print_exc()
-                    summary, identifiers, results = [], [], []
 
             _sip = [] 
             _cip = [] 
