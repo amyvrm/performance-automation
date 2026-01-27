@@ -62,7 +62,9 @@ node('aws&&docker')
 
             def jfrog_url = "https://jfrog.trendmicro.com/artifactory/dslabs-performance-generic-test-local"
 
-            def individual_rule_test = params.INDIVIDUAL_RULE_TEST
+            // Handle checkbox parameter: Jenkins may pass boolean or string, normalize to string "true"/"false"
+            def individual_rule_test = "${params.INDIVIDUAL_RULE_TEST}".toLowerCase() == "true" ? "true" : "false"
+            echo "INDIVIDUAL_RULE_TEST parameter value: ${individual_rule_test}"
 
             stage('Git checkout')
             {
@@ -144,8 +146,6 @@ node('aws&&docker')
                                                                         --bucket ${bucket_name}          \
                                                                         --path ${target_path}")
                     }
-
-                    individual_rule_test = individual_rule_test == "true" ? true : false
 
                     stage('Automation machine')
                     {
